@@ -129,8 +129,8 @@ function formatarNomeFrase(nome) {
         <a href="menubusca.html" class="voltar">← Voltar Para Página de Pesquisa</a>
         <h1>${formatarNomeFrase(dados.nome || dados.titulo || 'Sem nome')}</h1>
         
-        <p><strong>Tipo:</strong> ${tipo}</p>
-        <p><strong>Natureza:</strong> ${dados.natureza || dados.area || 'Não informado'}</p>
+        ${tipo !== 'Patente' ? `<p><strong>Tipo:</strong> ${tipo}</p>` : ''}
+        ${tipo !== 'Patente' ? `<p><strong>Natureza:</strong> ${dados.natureza || dados.area || 'Não informado'}</p>` : ''}
         ${dados.status ? `<p><strong>Status:</strong> ${dados.status}</p>` : ''}
         ${dados.dataDeposito ? `<p><strong>Data de Depósito:</strong> ${dados.dataDeposito}</p>` : ''}
         ${dados.instituicao ? `<p><strong>Instituição:</strong> ${dados.instituicao}</p>` : ''}
