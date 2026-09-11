@@ -1,0 +1,145 @@
+services:
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: inova27-postgres
+    restart: always
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    # Necessário para o sonar-scanner aguardar o banco estar pronto
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  backend:
+    build: ./backend
+    container_name: inova27-backend
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    build: ./frontend
+    container_name: inova27-frontend
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      CHOKIDAR_USEPOLLING: "true"
+      WATCHPACK_POLLING: "true"
+    command: sh -c "npm run build && npx next start -H 0.0.0.0"
+
+  sonar_db:
+    image: postgres:15-alpine
+    container_name: inova27-sonar-db
+    restart: always
+    environment:
+      POSTGRES_USER: sonar
+      POSTGRES_PASSWORD: sonar_password
+      POSTGRES_DB: sonarqube
+    volumes:
+      - sonar_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sonar -d sonarqube"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  sonarqube:
+    image: sonarqube:community
+    container_name: inova27-sonarqube
+    restart: always
+    depends_on:
+      sonar_db:
+        condition: service_healthy
+    ports:
+      - "9000:9000"
+    environment:
+      SONAR_JDBC_URL: jdbc:postgresql://sonar_db:5432/sonarqube
+      SONAR_JDBC_USERNAME: sonar
+      SONAR_JDBC_PASSWORD: sonar_password
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+    # Healthcheck que o sonar-scanner vai aguardar
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9000/api/system/status | grep -q '\"status\":\"UP\"' || exit 1"]
+      interval: 30s
+      timeout: 15s
+      retries: 20
+      start_period: 120s  # SonarQube demora para inicializar na primeira vez
+
+  # =============================================================================
+  # Serviço que roda os testes, gera o relatório Jacoco e envia ao SonarQube.
+  # Executa UMA VEZ por `docker compose up` e finaliza (restart: "no").
+  # Para re-executar manualmente: docker compose restart sonar-scanner
+  # =============================================================================
+  sonar-scanner:
+    image: gradle:8-jdk21
+    container_name: inova27-sonar-scanner
+    working_dir: /app
+    restart: "no"
+    depends_on:
+      sonarqube:
+        condition: service_healthy   # aguarda SonarQube estar UP
+      postgres:
+        condition: service_healthy   # aguarda banco estar pronto para os testes
+    environment:
+      # URL interna do Docker — NÃO usar localhost aqui
+      SONAR_HOST_URL: http://sonarqube:9000
+
+      # Autenticação: use SONAR_TOKEN (recomendado) ou admin/senha
+      SONAR_TOKEN: ${SONAR_TOKEN:-}
+      SONARQUBE_ADMIN_LOGIN: ${SONARQUBE_ADMIN_LOGIN:-admin}
+      SONARQUBE_ADMIN_PASSWORD: ${SONARQUBE_ADMIN_PASSWORD:-admin}
+
+      # Banco de dados para os testes de integração (Spring Boot lê automaticamente)
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+
+      # Desabilita o Gradle Daemon (não faz sentido em container)
+      GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+    volumes:
+      # Código-fonte do backend (compartilhado com o container)
+      - ./backend:/app
+      # Cache de dependências do Gradle para não baixar tudo toda vez
+      - gradle_home_cache:/home/gradle/.gradle
+    entrypoint: ["/bin/bash", "/app/entrypoint-sonar.sh"]
+
+volumes:
+  postgres_data:
+  sonar_db_data:
+  sonarqube_data:
+  sonarqube_extensions:
+  sonarqube_logs:
+  gradle_home_cache:   # Cache do Gradle entre execuções

@@ -1,0 +1,47 @@
+spring.application.name=inova27
+
+# ========================
+# DATASOURCE (Banco Local na porta 5432)
+# ========================
+spring.datasource.url=jdbc:postgresql://localhost:5432/inova27
+spring.datasource.username=postgres
+spring.datasource.password=145236
+spring.jpa.hibernate.ddl-auto=update
+
+# ========================
+# SEGURANÇA / JWT
+# ========================
+api.security.token.secret=minha_chave_super_secreta_123
+
+# ========================
+# EMAIL (GMAIL)
+# ========================
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+spring.mail.username=uece.gabrielbmo@gmail.com
+spring.mail.password=hkev pohy lcjq cigy
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+
+# ========================
+# VARIÁVEIS DE INTEGRAÇÃO (Frontend e Negócio)
+# ========================
+# Permite que o frontend na porta 3000 faça requisições sem erro de CORS
+app.cors.allowed-origins=http://localhost:3000
+app.frontend.url=http://localhost:3000
+
+# E-mail de destino fixo para testes
+email.destinatario.agin=uece.gabrielbmo@gmail.com
+
+# ========================
+# ROTAS CONFIGURÁVEIS
+# ========================
+api.paths.usuarios=/usuarios/**
+api.paths.pessoas-id=/pessoas/{id}
+api.paths.jogos-id=/jogos/{id}
+api.paths.laboratorios-id=/laboratorios/{id}
+api.paths.startups-id=/startups/{id}
+api.paths.protecoes-id=/protecoes/{id}
+api.paths.servicos-id=/servicos/{id}
+api.paths.engines-id=/engines/{id}
+api.paths.linguagens-id=/linguagens/{id}
