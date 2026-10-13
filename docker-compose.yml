@@ -134,6 +134,8 @@ services:
       - ./backend:/app
       # Cache de dependências do Gradle para não baixar tudo toda vez
       - gradle_home_cache:/home/gradle/.gradle
+      # build/ próprio do scanner, para não disputar os .class com o bootRun do backend
+      - /app/build
     entrypoint: ["/bin/bash", "/app/entrypoint-sonar.sh"]
 
 volumes:
