@@ -1,24 +1,55 @@
-node_modules/ **/node_modules/
+node_modules/ 
+**/node_modules/
 
-.next/ **/.next/ out/ **/out/
+.next/ 
+**/.next/ 
+out/ 
+**/out/
 
-build/ dist/ !.gradle/wrapper/gradle-wrapper.jar
+build/ 
+dist/ 
+!.gradle/wrapper/gradle-wrapper.jar
 
-.env .env.* !.env.example !.env.*.example
+.env 
 
-.gradle/ /build/ !/src/main//build/ !/src/test/**/build/
+.gradle/ 
+/build/ 
+!/src/main//build/ 
+!/src/test/**/build/
 
-*.class *.jar *.war *.ear
+*.class 
+*.jar 
+*.war 
+*.ear
 
-.idea/ .vscode/ *.iml *.iws *.ipr .classpath .project .settings/ .sts4-cache/ .factorypath .apt_generated/ bin/
+.idea/ 
+.vscode/ 
+*.iml 
+*.iws 
+*.ipr 
+.classpath 
+.project 
+.settings/ 
+.sts4-cache/ 
+.factorypath 
+.apt_generated/ 
+bin/
 
-*.tsbuildinfo next-env.d.ts
+*.tsbuildinfo 
+next-env.d.ts
 
 coverage/
 
-.log npm-debug.log yarn-debug.log* yarn-error.log* .pnpm-debug.log* sonar-output.txt
+.log 
+npm-debug.log 
+yarn-debug.log* 
+yarn-error.log* 
+.pnpm-debug.log* 
+sonar-output.txt
 
-.DS_Store Thumbs.db *.pem
+.DS_Store 
+Thumbs.db 
+*.pem
 
 .vercel/
 
@@ -29,3 +60,5 @@ HELP.md
 .scannerwork/
 .gradle/
 **/build/
+
+*.class

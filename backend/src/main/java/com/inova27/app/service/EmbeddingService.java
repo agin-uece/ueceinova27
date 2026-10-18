@@ -1,8 +1,8 @@
 package com.inova27.app.service;
 
 import com.inova27.app.exception.OllamaIntegrationException;
-import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -14,6 +14,9 @@ import java.util.Map;
 @Service
 @Slf4j
 public class EmbeddingService {
+
+    @Value("${ollama.base-url}")
+    private String ollamaBaseUrl;
 
     private RestTemplate restTemplate = new RestTemplate();
 
@@ -28,7 +31,7 @@ public class EmbeddingService {
     }
 
     public String expandirConsultaGlobal(String textoOriginal) {
-        String url = "http://localhost:11434/api/generate";
+        String url = ollamaBaseUrl + "/api/generate";
 
         String prompt = """
                 [SYSTEM: MOTOR DE BUSCA SEMÂNTICA]
@@ -75,7 +78,7 @@ public class EmbeddingService {
     }
 
     private List<Double> chamarOllama(String texto) {
-        String url = "http://host.docker.internal:11434/api/embed";
+        String url = ollamaBaseUrl + "/api/embed";
 
         Map<String, Object> body = Map.of(
                 "model", "mxbai-embed-large",
