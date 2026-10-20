@@ -77,7 +77,7 @@ Configure as variáveis necessárias no arquivo `.env`:
 
 - `POSTGRES_PASSWORD`: senha do banco de dados.
 - `JWT_SECRET`: chave para assinatura de tokens, com no mínimo 64 caracteres.
- - `OLLAMA_BASE_URL`: endereço da API do Ollama.
+- `OLLAMA_BASE_URL`: endereço da API do Ollama.
   - Para o backend executado **dentro do Docker**: `http://ollama:11434`
   - Para o backend executado **fora do Docker**: `http://localhost:11434`
 
