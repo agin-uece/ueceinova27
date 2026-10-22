@@ -15,8 +15,8 @@ public class AdminInitializer {
     @Bean
     CommandLineRunner criarAdmin(UsuarioRepository repository,
                                  PasswordEncoder passwordEncoder,
-                                 @Value("${app.admin.email:admin@inova27.com}") String email,
-                                 @Value("${app.admin.senha}") String senha) {
+                                 @Value("${app.admin.email:inova.27.uece@gmail.com}") String email,
+                                 @Value("${app.admin.senha:145236}") String senha) {
         return args -> {
             if (repository.findByEmail(email).isEmpty()) {
                 Usuario admin = new Usuario();
