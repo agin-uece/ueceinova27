@@ -1,54 +1,171 @@
+# =============================================================================
+# INOVA27 - Docker Compose com Profiles
+#
+#   dev   -> app com hot reload + SonarQube + sonar-scanner (ferramentas de dev)
+#   test  -> banco descartável + execução dos testes do backend
+#   prod  -> somente o necessário para rodar a aplicação (imagens otimizadas)
+#
+# Uso:
+#   docker compose --profile dev  up --build -d
+#   docker compose --profile test run --rm backend-tests
+#   docker compose --profile prod up --build -d
+#
+# `dev` e `prod` publicam as mesmas portas (3000/8080): suba um por vez.
+# =============================================================================
+
+# ----------------------------- blocos reutilizáveis --------------------------
+x-restart: &restart
+  restart: always
+
+x-postgres: &postgres
+  image: pgvector/pgvector:pg16
+  environment: &postgres-env
+    POSTGRES_DB: ${POSTGRES_DB:?defina POSTGRES_DB no .env}
+    POSTGRES_USER: ${POSTGRES_USER:?defina POSTGRES_USER no .env}
+    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+    interval: 10s
+    timeout: 5s
+    retries: 5
+    start_period: 15s
+
+# Variáveis que o backend precisa DENTRO do Docker (sobrepõem o que vem do .env,
+# onde as URLs apontam para localhost).
+x-backend-env: &backend-env
+  SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+  OLLAMA_BASE_URL: http://ollama:11434
+  ADMIN_EMAIL: ${APP_ADMIN_EMAIL:-}
+  ADMIN_SENHA: ${APP_ADMIN_SENHA:-}
+
+x-backend: &backend
+  <<: *restart
+  depends_on:
+    postgres:
+      condition: service_healthy
+    ollama-pull:
+      condition: service_completed_successfully
+  ports:
+    - "8080:8080"
+  env_file:
+    - .env
+  environment:
+    <<: *backend-env
+  networks: [inova27]
+
+x-frontend: &frontend
+  <<: *restart
+  ports:
+    - "3000:3000"
+  env_file:
+    - .env
+  networks: [inova27]
+
+# Imagem gradle usada para testes e análise Sonar (código montado do host)
+x-gradle-runner: &gradle-runner
+  image: gradle:8-jdk21
+  working_dir: /app
+  restart: "no"
+  volumes:
+    - ./backend:/app
+    - gradle_home_cache:/home/gradle/.gradle
+
 services:
 
+  # ===========================================================================
+  # Núcleo (dev + prod)
+  # ===========================================================================
   postgres:
-    image: pgvector/pgvector:pg16
+    <<: [*postgres, *restart]
     container_name: inova27-postgres
-    restart: always
+    profiles: [dev, prod]
     env_file:
       - .env
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-    # Necessário para o sonar-scanner aguardar o banco estar pronto
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks: [inova27]
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: inova27-ollama
+    <<: *restart
+    profiles: [dev, prod]
+    ports:
+      - "127.0.0.1:11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB"]
+      test: ["CMD", "ollama", "list"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
       start_period: 15s
+    networks: [inova27]
 
-  backend:
-    build: ./backend
-    container_name: inova27-backend
-    restart: always
+  # Baixa os modelos uma vez e finaliza
+  ollama-pull:
+    image: ollama/ollama:latest
+    container_name: inova27-ollama-pull
+    restart: "no"
+    profiles: [dev, prod]
     depends_on:
-      postgres:
+      ollama:
         condition: service_healthy
-      ollama-pull:
-        condition: service_completed_successfully
-    ports:
-      - "8080:8080"
-    env_file:
-      - .env
-    volumes:
-      - ./backend:/app
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ["/bin/sh", "-c", "ollama pull mxbai-embed-large && ollama pull phi3"]
+    networks: [inova27]
+
+  # ===========================================================================
+  # Aplicação - PROD (imagens multi-stage, sem bind mounts)
+  # ===========================================================================
+  backend:
+    <<: *backend
+    container_name: inova27-backend
+    profiles: [prod]
+    build:
+      context: ./backend
+      target: prod
 
   frontend:
-    build: ./frontend
+    <<: *frontend
     container_name: inova27-frontend
-    restart: always
+    profiles: [prod]
     depends_on:
       - backend
-    ports:
-      - "3000:3000"
-    env_file:
-      - .env
+    build:
+      context: ./frontend
+      target: prod
+      args:
+        # NEXT_PUBLIC_* é embutida no bundle em tempo de build
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080}
+
+  # ===========================================================================
+  # Aplicação - DEV (hot reload, código montado do host)
+  # ===========================================================================
+  backend-dev:
+    <<: *backend
+    container_name: inova27-backend-dev
+    profiles: [dev]
+    build:
+      context: ./backend
+      target: dev
+    volumes:
+      - ./backend:/app
+      - gradle_home_cache:/home/gradle/.gradle
+
+  frontend-dev:
+    <<: *frontend
+    container_name: inova27-frontend-dev
+    profiles: [dev]
+    depends_on:
+      - backend-dev
+    build:
+      context: ./frontend
+      target: dev
     volumes:
       - ./frontend:/app
       - /app/node_modules
@@ -56,15 +173,19 @@ services:
     environment:
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
-    command: sh -c "npm run build && npx next start -H 0.0.0.0"
+    command: ["npm", "run", "dev", "--", "-H", "0.0.0.0"]
 
+  # ===========================================================================
+  # Ferramentas de desenvolvimento - SonarQube (somente dev)
+  # ===========================================================================
   sonar_db:
     image: postgres:15-alpine
     container_name: inova27-sonar-db
-    restart: always
+    <<: *restart
+    profiles: [dev]
     environment:
       POSTGRES_USER: sonar
-      POSTGRES_PASSWORD: sonar_password
+      POSTGRES_PASSWORD: ${SONAR_DB_PASSWORD:-sonar_password}
       POSTGRES_DB: sonarqube
     volumes:
       - sonar_db_data:/var/lib/postgresql/data
@@ -74,11 +195,13 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+    networks: [sonar]
 
   sonarqube:
     image: sonarqube:community
     container_name: inova27-sonarqube
-    restart: always
+    <<: *restart
+    profiles: [dev]
     depends_on:
       sonar_db:
         condition: service_healthy
@@ -87,83 +210,82 @@ services:
     environment:
       SONAR_JDBC_URL: jdbc:postgresql://sonar_db:5432/sonarqube
       SONAR_JDBC_USERNAME: sonar
-      SONAR_JDBC_PASSWORD: sonar_password
+      SONAR_JDBC_PASSWORD: ${SONAR_DB_PASSWORD:-sonar_password}
     volumes:
       - sonarqube_data:/opt/sonarqube/data
       - sonarqube_extensions:/opt/sonarqube/extensions
       - sonarqube_logs:/opt/sonarqube/logs
-    # Healthcheck que o sonar-scanner vai aguardar
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9000/api/system/status | grep -q '\"status\":\"UP\"' || exit 1"]
       interval: 30s
       timeout: 15s
       retries: 20
-      start_period: 120s  # SonarQube demora para inicializar na primeira vez
+      start_period: 120s  # primeira inicialização é demorada
+    networks: [sonar]
 
-  # =============================================================================
-  # Serviço que roda os testes, gera o relatório Jacoco e envia ao SonarQube.
-  # Executa UMA VEZ por `docker compose up` e finaliza (restart: "no").
-  # Para re-executar manualmente: docker compose restart sonar-scanner
-  # =============================================================================
+  # Roda testes + Jacoco e envia ao SonarQube. Executa uma vez e finaliza.
+  # Reexecutar: docker compose --profile dev run --rm sonar-scanner
   sonar-scanner:
-    image: gradle:8-jdk21
+    <<: *gradle-runner
     container_name: inova27-sonar-scanner
-    working_dir: /app
-    restart: "no"
+    profiles: [dev]
     depends_on:
       sonarqube:
-        condition: service_healthy   # aguarda SonarQube estar UP
+        condition: service_healthy
       postgres:
-        condition: service_healthy   # aguarda banco estar pronto para os testes
+        condition: service_healthy
     environment:
-      # URL interna do Docker — NÃO usar localhost aqui
       SONAR_HOST_URL: http://sonarqube:9000
-
-      # Autenticação: use SONAR_TOKEN (recomendado) ou admin/senha
       SONAR_TOKEN: ${SONAR_TOKEN:-}
       SONARQUBE_ADMIN_LOGIN: ${SONARQUBE_ADMIN_LOGIN:-admin}
       SONARQUBE_ADMIN_PASSWORD: ${SONARQUBE_ADMIN_PASSWORD:-admin}
-
-      # Banco de dados para os testes de integração (Spring Boot lê automaticamente)
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
-
-      # Desabilita o Gradle Daemon (não faz sentido em container)
       GRADLE_OPTS: "-Dorg.gradle.daemon=false"
-    volumes:
-      # Código-fonte do backend (compartilhado com o container)
-      - ./backend:/app
-      # Cache de dependências do Gradle para não baixar tudo toda vez
-      - gradle_home_cache:/home/gradle/.gradle
     entrypoint: ["/bin/bash", "/app/entrypoint-sonar.sh"]
+    networks: [inova27, sonar]
 
-  ollama:
-    image: ollama/ollama:latest
-    container_name: inova27-ollama
-    restart: always
-    ports:
-      - "11434:11434"
+  # ===========================================================================
+  # Testes (somente test): banco descartável, sem portas no host
+  # ===========================================================================
+  postgres-test:
+    <<: *postgres
+    container_name: inova27-postgres-test
+    profiles: [test]
+    tmpfs:
+      - /var/lib/postgresql/data
     volumes:
-      - ollama_data:/root/.ollama
-    healthcheck:
-      test: ["CMD", "ollama", "list"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 15s
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks: [inova27-test]
 
-  # Baixa os modelos uma vez e finaliza
-  ollama-pull:
-    image: ollama/ollama:latest
-    container_name: inova27-ollama-pull
-    restart: "no"
+  # Executa: docker compose --profile test run --rm backend-tests
+  backend-tests:
+    <<: *gradle-runner
+    container_name: inova27-backend-tests
+    profiles: [test]
     depends_on:
-      ollama:
+      postgres-test:
         condition: service_healthy
     environment:
-      OLLAMA_HOST: http://ollama:11434
-    entrypoint: ["/bin/sh", "-c", "ollama pull mxbai-embed-large && ollama pull phi3"]
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-test:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_USERNAME: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:-test-secret}
+      OLLAMA_BASE_URL: http://ollama:11434
+      GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+    command: ["sh", "-c", "chmod +x ./gradlew 2>/dev/null; ./gradlew test --no-daemon"]
+    networks: [inova27-test]
+
+networks:
+  inova27:
+    name: inova27-net
+  inova27-test:
+    name: inova27-test-net
+  sonar:
+    name: inova27-sonar-net
 
 volumes:
   postgres_data:
@@ -171,5 +293,5 @@ volumes:
   sonarqube_data:
   sonarqube_extensions:
   sonarqube_logs:
-  gradle_home_cache:   # Cache do Gradle entre execuções
+  gradle_home_cache:   # cache do Gradle entre execuções
   ollama_data:
