@@ -3,6 +3,7 @@ package com.inova27.app.service;
 import com.inova27.app.dto.usuarios.UsuarioResponseDTO;
 import com.inova27.app.dto.usuarios.UsuarioUpdateDTO;
 import com.inova27.app.exception.BusinessException;
+import com.inova27.app.exception.ResourceNotFoundException;
 import com.inova27.app.model.AcaoAuditoria;
 import com.inova27.app.model.EmailType;
 import com.inova27.app.model.UserRole;
@@ -21,7 +22,8 @@ public class UsuarioService {
     // 🔥 CONSTANTES CRIADAS PARA RESOLVER OS AVISOS DO SONARQUBE
     private static final String ENTIDADE_USUARIO = "Usuario";
     private static final String MSG_USUARIO_NAO_ENCONTRADO = "Usuário não encontrado.";
-    private static final String MSG_CONTA_NAO_ENCONTRADA = "Conta não encontrada.";
+    // Mesma mensagem para conta inexistente e código errado: não revela quais contas existem
+    private static final String MSG_CODIGO_INVALIDO = "Código de segurança inválido ou expirado.";
 
     private final UsuarioRepository repository;
     private final AuditoriaService auditoriaService;
@@ -37,7 +39,7 @@ public class UsuarioService {
 
     public UsuarioResponseDTO atualizar(Long id, UsuarioUpdateDTO dados, Long adminId) {
         Usuario usuario = repository.findById(id)
-                .orElseThrow(() -> new BusinessException(MSG_USUARIO_NAO_ENCONTRADO));
+                .orElseThrow(() -> new ResourceNotFoundException(MSG_USUARIO_NAO_ENCONTRADO));
 
         if (dados.nome() != null) usuario.setNome(dados.nome());
         if (dados.email() != null) usuario.setEmail(dados.email());
@@ -53,7 +55,7 @@ public class UsuarioService {
     @Transactional
     public UsuarioResponseDTO atualizarMeusDados(Long id, UsuarioUpdateDTO dados) {
         Usuario usuario = repository.findById(id)
-                .orElseThrow(() -> new BusinessException(MSG_USUARIO_NAO_ENCONTRADO));
+                .orElseThrow(() -> new ResourceNotFoundException(MSG_USUARIO_NAO_ENCONTRADO));
 
         if (dados.nome() != null && !dados.nome().isBlank()) {
             usuario.setNome(dados.nome());
@@ -86,34 +88,72 @@ public class UsuarioService {
         return toResponse(atualizado);
     }
 
+    // ==========================================
+    // 🔹 RECUPERAÇÃO DE E-MAIL (3 passos)
+    //  1. solicitar: PIN enviado ao e-mail secundário
+    //  2. confirmar: valida o PIN e envia um código ao NOVO e-mail principal
+    //  3. concluir:  valida o código do novo e-mail e aplica a troca
+    // ==========================================
+
+    /** Sempre "sucesso" para quem chama: não revela se a conta existe ou tem e-mail secundário. */
     public void solicitarRecuperacaoEmail(String emailAtual) {
         Usuario usuario = repository.findByEmail(emailAtual)
-                .orElseThrow(() -> new BusinessException(MSG_CONTA_NAO_ENCONTRADA));
-
-        if (usuario.getEmailSecundario() == null || usuario.getEmailSecundario().isBlank()) {
-            throw new BusinessException("Nenhum e-mail de recuperação (secundário) cadastrado para esta conta. Entre em contato com o suporte.");
+                .filter(u -> u.getEmailSecundario() != null && !u.getEmailSecundario().isBlank())
+                .orElse(null);
+        if (usuario == null) {
+            return;
         }
 
-        String pin = mfaService.gerarCodigoMfa(usuario.getId());
+        String chave = String.valueOf(usuario.getId());
+        if (!mfaService.podeReenviar(MfaService.FINALIDADE_RECUPERACAO_EMAIL, chave)) {
+            return;
+        }
+
+        String pin = mfaService.gerarCodigo(MfaService.FINALIDADE_RECUPERACAO_EMAIL, chave);
 
         emailService.sendEmail(
                 usuario.getEmailSecundario(),
                 "Recuperação de Acesso - Inova27",
-                "Você solicitou a alteração do seu e-mail principal. Seu código de segurança é: " + pin,
+                "Você solicitou a alteração do seu e-mail principal. Seu código de segurança é: " + pin
+                        + " (válido por 10 minutos).",
+                EmailType.CONTACT
+        );
+    }
+
+    public void confirmarRecuperacaoEmail(String emailAtual, String pin, String novoEmailPrincipal, String novoEmailSecundario) {
+        Usuario usuario = repository.findByEmail(emailAtual)
+                .orElseThrow(() -> new BusinessException(MSG_CODIGO_INVALIDO));
+
+        if (!mfaService.validarCodigo(MfaService.FINALIDADE_RECUPERACAO_EMAIL, String.valueOf(usuario.getId()), pin)) {
+            throw new BusinessException(MSG_CODIGO_INVALIDO);
+        }
+
+        validarNovoEmailPrincipal(usuario, novoEmailPrincipal);
+        validarNovoEmailSecundario(usuario, novoEmailSecundario);
+
+        String codigo = mfaService.gerarCodigo(MfaService.FINALIDADE_CONFIRMACAO_NOVO_EMAIL,
+                chaveNovoEmail(usuario, novoEmailPrincipal, novoEmailSecundario));
+
+        emailService.sendEmail(
+                novoEmailPrincipal,
+                "Confirme seu novo e-mail - Inova27",
+                "Para concluir a troca do e-mail principal da sua conta Inova27, use o código: " + codigo
+                        + " (válido por 10 minutos). Se você não solicitou isso, ignore este e-mail.",
                 EmailType.CONTACT
         );
     }
 
     @Transactional
-    public void confirmarRecuperacaoEmail(String emailAtual, String pin, String novoEmailPrincipal, String novoEmailSecundario) {
+    public void concluirRecuperacaoEmail(String emailAtual, String codigo, String novoEmailPrincipal, String novoEmailSecundario) {
         Usuario usuario = repository.findByEmail(emailAtual)
-                .orElseThrow(() -> new BusinessException(MSG_CONTA_NAO_ENCONTRADA));
+                .orElseThrow(() -> new BusinessException(MSG_CODIGO_INVALIDO));
 
-        if (!mfaService.validarCodigoMfa(usuario.getId(), pin)) {
-            throw new BusinessException("Código de segurança inválido ou expirado.");
+        if (!mfaService.validarCodigo(MfaService.FINALIDADE_CONFIRMACAO_NOVO_EMAIL,
+                chaveNovoEmail(usuario, novoEmailPrincipal, novoEmailSecundario), codigo)) {
+            throw new BusinessException(MSG_CODIGO_INVALIDO);
         }
 
-        // Delegação para métodos privados
+        // Revalida: os e-mails podem ter sido ocupados entre o passo 2 e o 3
         validarNovoEmailPrincipal(usuario, novoEmailPrincipal);
         validarNovoEmailSecundario(usuario, novoEmailSecundario);
 
@@ -131,6 +171,12 @@ public class UsuarioService {
     // ==========================================
     // 🔹 MÉTODOS PRIVADOS AUXILIARES (Refatoração do SonarQube)
     // ==========================================
+
+    // O código do novo e-mail só vale para exatamente estes e-mails (o cliente não pode trocá-los no passo 3)
+    private static String chaveNovoEmail(Usuario usuario, String novoEmailPrincipal, String novoEmailSecundario) {
+        String secundario = novoEmailSecundario == null ? "" : novoEmailSecundario.trim().toLowerCase();
+        return usuario.getId() + ":" + novoEmailPrincipal.trim().toLowerCase() + ":" + secundario;
+    }
 
     private void validarNovoEmailPrincipal(Usuario usuario, String novoEmailPrincipal) {
         // 🔥 CORREÇÃO SONAR: Ifs mesclados com &&
@@ -162,7 +208,7 @@ public class UsuarioService {
         }
 
         Usuario usuario = repository.findById(id)
-                .orElseThrow(() -> new BusinessException(MSG_USUARIO_NAO_ENCONTRADO));
+                .orElseThrow(() -> new ResourceNotFoundException(MSG_USUARIO_NAO_ENCONTRADO));
 
         if (usuario.isValidado()) {
             throw new BusinessException("Usuário já está validado.");
@@ -180,7 +226,7 @@ public class UsuarioService {
 
     public UsuarioResponseDTO buscarPorId(Long id) {
         Usuario usuario = repository.findById(id)
-                .orElseThrow(() -> new BusinessException(MSG_USUARIO_NAO_ENCONTRADO));
+                .orElseThrow(() -> new ResourceNotFoundException(MSG_USUARIO_NAO_ENCONTRADO));
         return toResponse(usuario);
     }
 
@@ -194,7 +240,7 @@ public class UsuarioService {
     @Transactional
     public void deletar(Long id, Long adminId) {
         Usuario usuario = repository.findById(id)
-                .orElseThrow(() -> new BusinessException(MSG_USUARIO_NAO_ENCONTRADO));
+                .orElseThrow(() -> new ResourceNotFoundException(MSG_USUARIO_NAO_ENCONTRADO));
 
         UsuarioResponseDTO retrato = toResponse(usuario);
         repository.delete(usuario);

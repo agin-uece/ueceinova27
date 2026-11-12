@@ -85,10 +85,7 @@ class AuthenticationControllerTest {
         doThrow(new TokenExpiradoException("Token expirado"))
                 .when(authenticationService).ativarPrimeiroAcesso(dto.token(), dto.novaSenha());
 
-        ResponseEntity<String> response = controller.primeiroAcesso(dto);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(response.getBody()).isEqualTo("Token expirado. Solicite um novo convite ao administrador.");
+        assertThatThrownBy(() -> controller.primeiroAcesso(dto)).isInstanceOf(TokenExpiradoException.class);
     }
 
     @Test
@@ -99,10 +96,7 @@ class AuthenticationControllerTest {
         doThrow(new RuntimeException("Banco caiu"))
                 .when(authenticationService).ativarPrimeiroAcesso(dto.token(), dto.novaSenha());
 
-        ResponseEntity<String> response = controller.primeiroAcesso(dto);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-        assertThat(response.getBody()).isEqualTo("Erro interno ao ativar conta.");
+        assertThatThrownBy(() -> controller.primeiroAcesso(dto)).isInstanceOf(RuntimeException.class);
     }
 
     // ==========================================
@@ -127,10 +121,7 @@ class AuthenticationControllerTest {
         doThrow(new RuntimeException("Token não encontrado"))
                 .when(passwordResetService).resetPassword(dto.token(), dto.novaSenha());
 
-        ResponseEntity<String> response = controller.resetPassword(dto);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(response.getBody()).isEqualTo("Token não encontrado");
+        assertThatThrownBy(() -> controller.resetPassword(dto)).isInstanceOf(RuntimeException.class);
     }
 
     // ==========================================
@@ -144,10 +135,7 @@ class AuthenticationControllerTest {
         AuthenticationDTO dto = new AuthenticationDTO("admin", "senha");
         when(authenticationService.login(dto)).thenThrow(new IllegalStateException("Conta inativa"));
 
-        ResponseEntity<Object> response = controller.login(dto);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
-        assertThat(response.getBody()).isEqualTo("Conta inativa");
+        assertThatThrownBy(() -> controller.login(dto)).isInstanceOf(IllegalStateException.class);
     }
 
     @Test
@@ -156,10 +144,7 @@ class AuthenticationControllerTest {
         AuthenticationDTO dto = new AuthenticationDTO("admin", "senha_errada");
         when(authenticationService.login(dto)).thenThrow(new BadCredentialsException("Bad creds"));
 
-        ResponseEntity<Object> response = controller.login(dto);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
-        assertThat(response.getBody()).isEqualTo("Erro: Usuário ou senha inválidos.");
+        assertThatThrownBy(() -> controller.login(dto)).isInstanceOf(BadCredentialsException.class);
     }
 
     @Test
@@ -169,10 +154,7 @@ class AuthenticationControllerTest {
         // AccountExpiredException estende AuthenticationException
         when(authenticationService.login(dto)).thenThrow(new AccountExpiredException("Expirado"));
 
-        ResponseEntity<Object> response = controller.login(dto);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
-        assertThat(response.getBody()).isEqualTo("Erro: Falha na autenticação.");
+        assertThatThrownBy(() -> controller.login(dto)).isInstanceOf(AccountExpiredException.class);
     }
 
     // ==========================================
@@ -199,10 +181,7 @@ class AuthenticationControllerTest {
         doThrow(new IllegalArgumentException("Dados inválidos"))
                 .when(authenticationService).registrar(dto, authentication, null);
 
-        ResponseEntity<String> response = controller.registrar(dto, null, authentication);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(response.getBody()).isEqualTo("Dados inválidos");
+        assertThatThrownBy(() -> controller.registrar(dto, null, authentication)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -212,10 +191,7 @@ class AuthenticationControllerTest {
         doThrow(new AccessDeniedException("Acesso negado"))
                 .when(authenticationService).registrar(dto, authentication, null);
 
-        ResponseEntity<String> response = controller.registrar(dto, null, authentication);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
-        assertThat(response.getBody()).isEqualTo("Acesso negado");
+        assertThatThrownBy(() -> controller.registrar(dto, null, authentication)).isInstanceOf(AccessDeniedException.class);
     }
 
     @Test
@@ -225,10 +201,7 @@ class AuthenticationControllerTest {
         doThrow(new DataIntegrityViolationException("Duplicado"))
                 .when(authenticationService).registrar(dto, authentication, null);
 
-        ResponseEntity<String> response = controller.registrar(dto, null, authentication);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
-        assertThat(response.getBody()).isEqualTo("Erro: Conflito de dados ao tentar registrar o usuário. O login pode já ter sido reservado.");
+        assertThatThrownBy(() -> controller.registrar(dto, null, authentication)).isInstanceOf(DataIntegrityViolationException.class);
     }
 
     @Test
@@ -238,9 +211,6 @@ class AuthenticationControllerTest {
         doThrow(new RuntimeException("Caiu o servidor"))
                 .when(authenticationService).registrar(dto, authentication, null);
 
-        ResponseEntity<String> response = controller.registrar(dto, null, authentication);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-        assertThat(response.getBody()).isEqualTo("Erro interno no servidor ao registrar usuário. Tente novamente mais tarde.");
+        assertThatThrownBy(() -> controller.registrar(dto, null, authentication)).isInstanceOf(RuntimeException.class);
     }
 }

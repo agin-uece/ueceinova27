@@ -9,12 +9,13 @@ import com.inova27.app.model.Usuario;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 
 @Service
 public class TokenService {
+
+    static final Duration VALIDADE_TOKEN = Duration.ofHours(2);
 
     // Essa variável vai puxar o valor lá do seu application.properties22__
     @Value("${api.security.token.secret}")
@@ -51,8 +52,8 @@ public class TokenService {
         }
     }
 
+    // O claim "exp" do JWT é um instante absoluto (UTC); não depende do fuso do servidor.
     private Instant gerarDataExpiracao() {
-        // O token expira em 2 horas. O ZoneOffset de -03:00 garante que o fuso horário esteja alinhado com o seu local atual no Brasil.
-        return LocalDateTime.now().plusHours(20000000).toInstant(ZoneOffset.of("-03:00"));
+        return Instant.now().plus(VALIDADE_TOKEN);
     }
 }

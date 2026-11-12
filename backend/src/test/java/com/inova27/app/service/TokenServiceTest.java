@@ -1,5 +1,6 @@
 package com.inova27.app.service;
 
+import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTCreationException;
 import com.inova27.app.exception.BusinessException;
@@ -11,6 +12,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+
+import java.time.Duration;
+import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -70,6 +74,20 @@ class TokenServiceTest {
         assertThatThrownBy(() -> tokenService.validarToken(tokenFalso))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage("Token inválido ou expirado");
+    }
+
+    @Test
+    @DisplayName("Token deve expirar em 2 horas")
+    void testGerarToken_ExpiraEmDuasHoras() {
+        Usuario usuario = mock(Usuario.class, RETURNS_DEEP_STUBS);
+        when(usuario.getEmail()).thenReturn("professor@uece.br");
+        when(usuario.getRole().name()).thenReturn("PROFESSOR");
+
+        Instant antes = Instant.now();
+        Instant exp = JWT.decode(tokenService.gerarToken(usuario)).getExpiresAtAsInstant();
+
+        assertThat(exp).isBetween(antes.plus(Duration.ofHours(2)).minusSeconds(5),
+                Instant.now().plus(Duration.ofHours(2)).plusSeconds(5));
     }
 
     @Test

@@ -1,5 +1,6 @@
 package com.inova27.app.service;
 
+import com.inova27.app.exception.ResourceNotFoundException;
 import com.inova27.app.dto.servico.*;
 import com.inova27.app.mapper.DocumentoSemanticoMapper;
 import com.inova27.app.model.AcaoAuditoria;
@@ -75,7 +76,7 @@ public class ServicoService {
     @Transactional(readOnly = true)
     public ServicoResponseDTO buscarPorId(Long id) {
         Servico servico = repository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException(MSG_SERVICO_NAO_ENCONTRADO));
+                .orElseThrow(() -> new ResourceNotFoundException(MSG_SERVICO_NAO_ENCONTRADO));
 
         return toResponseDTO(servico);
     }
@@ -85,7 +86,7 @@ public class ServicoService {
     public ServicoResponseDTO atualizar(Long id, ServicoUpdateDTO dto, Long usuarioId) {
 
         Servico servico = repository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException(MSG_SERVICO_NAO_ENCONTRADO));
+                .orElseThrow(() -> new ResourceNotFoundException(MSG_SERVICO_NAO_ENCONTRADO));
 
         if (dto.prestadoresIds() != null) {
             List<Pessoa> prestadoresEncontrados = pessoaRepository.findAllById(dto.prestadoresIds());
@@ -115,7 +116,7 @@ public class ServicoService {
     @Transactional
     public void deletar(Long id, Long usuarioId) {
         Servico servico = repository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException(MSG_SERVICO_NAO_ENCONTRADO));
+                .orElseThrow(() -> new ResourceNotFoundException(MSG_SERVICO_NAO_ENCONTRADO));
 
         // 🛡️ AUDITORIA: "Tira a foto" do registro antes de apagá-lo
         ServicoResponseDTO retrato = toResponseDTO(servico);

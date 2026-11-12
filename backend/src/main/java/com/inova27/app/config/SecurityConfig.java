@@ -53,15 +53,19 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(
             HttpSecurity httpSecurity,
             SecurityFilter securityFilter,
-            CustomAccessDeniedHandler customAccessDeniedHandler
+            SecurityErrorHandler securityErrorHandler
     ) {
 
         return httpSecurity
                 .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(securityErrorHandler) // 401
+                        .accessDeniedHandler(securityErrorHandler))     // 403
                 .authorizeHttpRequests(authorize -> authorize
 
+                        .requestMatchers("/error").permitAll()
                         .requestMatchers(HttpMethod.POST, "/contato").permitAll()
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/primeiro-acesso").permitAll()
@@ -73,15 +77,19 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/menu/permitidas").permitAll()
                         .requestMatchers(HttpMethod.POST, "/usuarios/recuperar-email/solicitar").permitAll()
                         .requestMatchers(HttpMethod.POST, "/usuarios/recuperar-email/confirmar").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/usuarios/recuperar-email/concluir").permitAll()
                         .requestMatchers(HttpMethod.PUT, "/usuarios/meus-dados").hasAnyRole(ROLE_ADMIN, ROLE_PROFESSOR)
                         .requestMatchers(HttpMethod.GET, "/usuarios/meus-dados").hasAnyRole(ROLE_ADMIN, ROLE_PROFESSOR)
                         .requestMatchers(HttpMethod.GET, pathUsuariosWildcard).hasRole(ROLE_ADMIN)
                         .requestMatchers(HttpMethod.PUT, pathUsuariosWildcard).hasRole(ROLE_ADMIN)
                         .requestMatchers(HttpMethod.DELETE, pathUsuariosWildcard).hasRole(ROLE_ADMIN)
+                        // Rotas nomeadas (antes das regras /{id}, que só aceitam números)
+                        .requestMatchers(HttpMethod.GET, "/pessoas/buscar", "/pessoas/prestadores",
+                                "/jogos/buscar", "/laboratorios/buscar", "/startups/buscar", "/servicos/buscar").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/pessoas/minhas", "/jogos/meus", "/laboratorios/meus").authenticated()
                         .requestMatchers(HttpMethod.GET, "/pessoas").permitAll()
                         .requestMatchers(HttpMethod.GET, pathPessoasId).permitAll()
                         .requestMatchers(HttpMethod.POST, "/pessoas").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/pessoas/minhas").authenticated()
                         .requestMatchers(HttpMethod.PUT, pathPessoasId).authenticated()
                         .requestMatchers(HttpMethod.DELETE, pathPessoasId).authenticated()
                         .requestMatchers(HttpMethod.GET, "/jogos").permitAll()

@@ -82,7 +82,8 @@ public class Laboratorio {
     @Column(name = "tag")
     private Set<String> tags = new HashSet<>();//CRIAR//OK//EDITAR//
 
-    @OneToMany(mappedBy = "laboratorio", cascade = CascadeType.ALL)
+    // Sem cascade: excluir um laboratório não pode apagar as pessoas vinculadas a ele
+    @OneToMany(mappedBy = "laboratorio")
     private Set<Pessoa> pessoas = new HashSet<>();//CRIAR//NAOO!!
 
     private String instagram;

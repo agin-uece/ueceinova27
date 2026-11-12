@@ -1,5 +1,6 @@
 package com.inova27.app.service;
 
+import com.inova27.app.exception.ResourceNotFoundException;
 import com.inova27.app.dto.startup.StartupCreateDTO;
 import com.inova27.app.dto.startup.StartupResponseDTO;
 import com.inova27.app.dto.startup.StartupUpdateDTO;
@@ -151,7 +152,7 @@ class StartupServiceTest {
             when(repository.findById(99L)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> startupService.buscarPorId(99L))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Startup não encontrada");
         }
     }
@@ -183,7 +184,7 @@ class StartupServiceTest {
             when(repository.findById(99L)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> startupService.atualizar(99L, dtoUpdate("Nome"), 1L))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Startup não encontrada");
         }
     }
@@ -210,7 +211,7 @@ class StartupServiceTest {
             when(repository.findById(99L)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> startupService.deletar(99L, 1L))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Startup não encontrada");
 
             verify(repository, never()).delete((Startup) any());

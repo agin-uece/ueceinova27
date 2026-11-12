@@ -58,13 +58,11 @@ class PasswordResetServiceTest {
     class ForgotPassword {
 
         @Test
-        @DisplayName("Deve lançar exceção quando usuário não encontrado")
-        void deveLancarExcecaoQuandoUsuarioNaoEncontrado() {
+        @DisplayName("E-mail não cadastrado: não envia nada e não revela que a conta não existe")
+        void naoRevelaUsuarioInexistente() {
             when(usuarioRepository.findByEmail("naoexiste@email.com")).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> passwordResetService.forgotPassword("naoexiste@email.com"))
-                    .isInstanceOf(RuntimeException.class)
-                    .hasMessage("Usuário não encontrado");
+            assertThatCode(() -> passwordResetService.forgotPassword("naoexiste@email.com")).doesNotThrowAnyException();
 
             verify(tokenRepository, never()).save(any());
             verify(emailService, never()).sendEmail(any(), any(), any(), any());
