@@ -30,10 +30,10 @@ public class Protecao {
 
     private String codId;
 
-    @Column(nullable = false, length = 200)
+    @Column(nullable = false, length = 500)
     private String nome;
 
-    @Column(length = 1000)
+    @Column(columnDefinition = "TEXT")
     private String resumo;
 
     @Column(length = 150)
@@ -46,7 +46,7 @@ public class Protecao {
     @Column(name = "data_deposito")
     private LocalDate dataDeposito;
 
-    @Column(name = "info_extra", length = 1000)
+    @Column(name = "info_extra", columnDefinition = "TEXT")
     private String infoExtra;
 
     @ElementCollection(targetClass = TipoProtecao.class)
@@ -75,8 +75,10 @@ public class Protecao {
 
     private List<String> inventores;
 
+    @Column(length = 500)
     private String titular;
 
+    @Column(name = "diferencial_tecnologico", columnDefinition = "TEXT")
     private String diferencialTecnologico;
 
     private String numeroProtocolo;
