@@ -4,6 +4,7 @@ import com.inova27.app.dto.authentication.AuthenticationDTO;
 import com.inova27.app.dto.authentication.LoginResponseDTO;
 import com.inova27.app.dto.authentication.RegisterDTO;
 import com.inova27.app.dto.usuarios.UsuarioResponseDTO;
+import com.inova27.app.exception.PermissaoNegadaException;
 import com.inova27.app.exception.TokenExpiradoException;
 import com.inova27.app.exception.TokenInvalidoException;
 import com.inova27.app.model.AcaoAuditoria;
@@ -50,13 +51,12 @@ public class AuthenticationService {
         var auth = this.authenticationManager.authenticate(usernamePassword);
         var usuario = (Usuario) auth.getPrincipal();
 
-        assert usuario != null;
         if (!usuario.isValidado()) {
-            throw new IllegalStateException("Usuário ainda não foi validado por um administrador.");
+            throw new PermissaoNegadaException("Usuário ainda não foi validado por um administrador.");
         }
 
         var token = tokenService.gerarToken(usuario);
-        return new LoginResponseDTO(token, auth.getName());
+        return new LoginResponseDTO(token, usuario.getNome());
     }
 
     @Transactional

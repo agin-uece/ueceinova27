@@ -124,8 +124,7 @@ class JogoServiceTest {
             when(repository.existsByNome("Tetris")).thenReturn(true);
 
             assertThatThrownBy(() -> jogoService.criar(dto, admin))
-                    .isInstanceOf(RuntimeException.class)
-                    .hasCauseInstanceOf(JogoJaExisteException.class);
+                    .isInstanceOf(JogoJaExisteException.class);
         }
     }
 
@@ -212,8 +211,7 @@ class JogoServiceTest {
             when(repository.findById(10L)).thenReturn(Optional.of(jogoPadrao));
 
             assertThatThrownBy(() -> jogoService.atualizar(10L, dto, outroUsuario))
-                    .isInstanceOf(RuntimeException.class)
-                    .hasCauseInstanceOf(PermissaoNegadaException.class);
+                    .isInstanceOf(PermissaoNegadaException.class);
         }
     }
 
@@ -249,6 +247,19 @@ class JogoServiceTest {
             verify(auditoriaService).registrarLog(eq("Jogo"), eq(10L), eq(AcaoAuditoria.DELECAO), eq(1L), any());
         }
 
+        @Test
+        @DisplayName("Excluir jogo NÃO apaga as proteções: apenas desvincula")
+        void deletarJogoDesvinculaProtecoes() {
+            Protecao protecao = new Protecao();
+            protecao.setJogo(jogoPadrao);
+            jogoPadrao.getProtecoes().add(protecao);
+            when(repository.findById(10L)).thenReturn(Optional.of(jogoPadrao));
+
+            jogoService.deletar(10L, admin);
+
+            assertThat(protecao.getJogo()).isNull();
+        }
+
 
     }
 
@@ -262,12 +273,25 @@ class JogoServiceTest {
         @Test
         @DisplayName("Deve buscar jogo por ID com sucesso")
         void deveBuscarPorId() {
+            jogoPadrao.setStatus(StatusValidacao.APROVADO);
             when(repository.findById(10L)).thenReturn(Optional.of(jogoPadrao));
 
-            JogoResponseDTO response = jogoService.buscarPorId(10L);
+            JogoResponseDTO response = jogoService.buscarPorId(10L, null);
 
             assertThat(response.id()).isEqualTo(10L);
             assertThat(response.nome()).isEqualTo("Jogo Educativo");
+        }
+
+        @Test
+        @DisplayName("Jogo pendente é 404 para anônimo, mas visível para o dono")
+        void pendenteVisivelSoParaDono() {
+            when(repository.findById(10L)).thenReturn(Optional.of(jogoPadrao)); // PENDENTE, userInclusaoId = 2
+            Usuario dono = new Usuario();
+            dono.setId(2L);
+            dono.setRole(UserRole.PROFESSOR);
+
+            assertThatThrownBy(() -> jogoService.buscarPorId(10L, null)).isInstanceOf(JogoNaoEncontradoException.class);
+            assertThat(jogoService.buscarPorId(10L, dono).id()).isEqualTo(10L);
         }
 
         @Test
@@ -275,9 +299,8 @@ class JogoServiceTest {
         void deveLancarNaoEncontrado() {
             when(repository.findById(99L)).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> jogoService.buscarPorId(99L))
-                    .isInstanceOf(RuntimeException.class)
-                    .hasCauseInstanceOf(JogoNaoEncontradoException.class);
+            assertThatThrownBy(() -> jogoService.buscarPorId(99L, null))
+                    .isInstanceOf(JogoNaoEncontradoException.class);
         }
 
         @Test

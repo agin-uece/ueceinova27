@@ -34,16 +34,11 @@ public class SolicitacaoAlteracaoController {
             @RequestParam(required = false) StatusValidacao status,
             @PageableDefault(size = 20, sort = "dataSolicitacao") Pageable pageable,
             Authentication authentication) {
-        try {
-            if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuario) || usuario.getRole() != UserRole.ADMIN) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(KEY_ERRO, "Acesso negado. Apenas administradores podem ver esta área."));
-            }
-            Page<SolicitacaoAlteracao> resultados = service.buscarComFiltros(entidade, acao, status, pageable);
-            return ResponseEntity.ok(resultados);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(KEY_ERRO, "Erro ao buscar solicitações: " + e.getMessage()));
+        if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuario) || usuario.getRole() != UserRole.ADMIN) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(KEY_ERRO, "Acesso negado. Apenas administradores podem ver esta área."));
         }
+        Page<SolicitacaoAlteracao> resultados = service.buscarComFiltros(entidade, acao, status, pageable);
+        return ResponseEntity.ok(resultados);
     }
 
     @PutMapping("/{id}/avaliar")
@@ -52,21 +47,12 @@ public class SolicitacaoAlteracaoController {
             @RequestBody AvaliarSolicitacaoDTO dto,
             Authentication authentication,
             @RequestHeader(value = "X-MFA-PIN", required = false) String pin) {
-        try {
-            if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuario) || usuario.getRole() != UserRole.ADMIN) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(KEY_ERRO, "Acesso negado. Apenas administradores podem aprovar alterações."));
-            }
-            mfaGuard.check((Usuario) authentication.getPrincipal(), pin);
-            service.avaliarSolicitacao(id, dto.aprovado(), dto.justificativa(), usuario);
-            String statusFinal = dto.aprovado() ? "aprovada e aplicada" : "rejeitada";
-            return ResponseEntity.ok(Map.of(KEY_MENSAGEM, "Solicitação " + statusFinal + " com sucesso."));
-        } catch (com.inova27.app.exception.MfaRequiredException e) {
-            throw e;
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(KEY_ERRO, e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(KEY_ERRO, "Erro interno ao processar a avaliação: " + e.getMessage()));
+        if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuario) || usuario.getRole() != UserRole.ADMIN) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(KEY_ERRO, "Acesso negado. Apenas administradores podem aprovar alterações."));
         }
+        mfaGuard.check((Usuario) authentication.getPrincipal(), pin);
+        service.avaliarSolicitacao(id, dto.aprovado(), dto.justificativa(), usuario);
+        String statusFinal = dto.aprovado() ? "aprovada e aplicada" : "rejeitada";
+        return ResponseEntity.ok(Map.of(KEY_MENSAGEM, "Solicitação " + statusFinal + " com sucesso."));
     }
 }

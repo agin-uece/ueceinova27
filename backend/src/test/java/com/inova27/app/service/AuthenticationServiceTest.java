@@ -1,5 +1,6 @@
 package com.inova27.app.service;
 
+import com.inova27.app.exception.PermissaoNegadaException;
 import com.inova27.app.dto.authentication.AuthenticationDTO;
 import com.inova27.app.dto.authentication.LoginResponseDTO;
 import com.inova27.app.dto.authentication.RegisterDTO;
@@ -92,19 +93,19 @@ class AuthenticationServiceTest {
 
             when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authMock);
             when(authMock.getPrincipal()).thenReturn(usuarioPadrao);
-            when(authMock.getName()).thenReturn("professor@uece.br");
             when(tokenService.gerarToken(usuarioPadrao)).thenReturn("token-jwt-valido");
 
             LoginResponseDTO resposta = authenticationService.login(authDTO);
 
             assertThat(resposta).isNotNull();
             assertThat(resposta.token()).isEqualTo("token-jwt-valido");
+            assertThat(resposta.nome()).isEqualTo(usuarioPadrao.getNome()); // nome, não o e-mail
             verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
             verify(tokenService).gerarToken(usuarioPadrao);
         }
 
         @Test
-        @DisplayName("Deve lançar IllegalStateException quando usuário não está validado")
+        @DisplayName("Deve lançar PermissaoNegadaException (403) quando usuário não está validado")
         void deveLancarExcecaoQuandoNaoValidado() {
             usuarioPadrao.setValidado(false);
             AuthenticationDTO authDTO = new AuthenticationDTO("professor@uece.br", "senha123");
@@ -114,7 +115,7 @@ class AuthenticationServiceTest {
             when(authMock.getPrincipal()).thenReturn(usuarioPadrao);
 
             assertThatThrownBy(() -> authenticationService.login(authDTO))
-                    .isInstanceOf(IllegalStateException.class)
+                    .isInstanceOf(PermissaoNegadaException.class)
                     .hasMessage("Usuário ainda não foi validado por um administrador.");
 
             verify(tokenService, never()).gerarToken(any());

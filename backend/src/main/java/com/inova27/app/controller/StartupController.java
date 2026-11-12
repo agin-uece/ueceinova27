@@ -39,35 +39,22 @@ public class StartupController {
             @RequestBody @Valid StartupCreateDTO dto,
             Authentication authentication,
             @RequestHeader(value = "X-MFA-PIN", required = false) String pin) {
-        try {
-            if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuario)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
-            }
-            mfaGuard.check((Usuario) authentication.getPrincipal(), pin);
-            StartupResponseDTO response = service.criar(dto, usuario.getId());
-            return ResponseEntity
-                    .created(URI.create("/api/startups/" + response.id()))
-                    .body(response);
-        } catch (com.inova27.app.exception.MfaRequiredException e) {
-            throw e;
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(KEY_ERRO, "Erro ao criar startup."));
+        if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuario)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
         }
+        mfaGuard.check((Usuario) authentication.getPrincipal(), pin);
+        StartupResponseDTO response = service.criar(dto, usuario.getId());
+        return ResponseEntity
+                .created(URI.create("/startups/" + response.id()))
+                .body(response);
     }
 
     @GetMapping("/buscar")
     public ResponseEntity<Object> buscarComFiltros(
             StartupFiltroDTO filtro,
             @PageableDefault(size = 10, sort = "nome") Pageable pageable) {
-        try {
-            Page<StartupResponseDTO> resultados = service.buscarComFiltrosPaginado(filtro, pageable);
-            return ResponseEntity.ok(resultados);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of(KEY_ERRO, "Erro nos parâmetros de busca: " + e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(Map.of(KEY_ERRO, "Ocorreu um erro interno ao tentar buscar as startups."));
-        }
+        Page<StartupResponseDTO> resultados = service.buscarComFiltrosPaginado(filtro, pageable);
+        return ResponseEntity.ok(resultados);
     }
 
     @PutMapping("/{id}")
@@ -76,43 +63,24 @@ public class StartupController {
             @RequestBody @Valid StartupUpdateDTO dto,
             Authentication authentication,
             @RequestHeader(value = "X-MFA-PIN", required = false) String pin) {
-        try {
-            if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuario)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
-            }
-            mfaGuard.check((Usuario) authentication.getPrincipal(), pin);
-            StartupResponseDTO response = service.atualizar(id, dto, usuario.getId());
-            return ResponseEntity.ok(response);
-        } catch (com.inova27.app.exception.MfaRequiredException e) {
-            throw e;
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(KEY_ERRO, "Erro ao atualizar startup."));
+        if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuario)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
         }
+        mfaGuard.check((Usuario) authentication.getPrincipal(), pin);
+        StartupResponseDTO response = service.atualizar(id, dto, usuario.getId());
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping
     public ResponseEntity<Object> listarTodas() {
-        try {
-            List<StartupResponseDTO> startups = service.listarTodas();
-            return ResponseEntity.ok(startups);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(KEY_ERRO, "Erro ao buscar a lista de startups."));
-        }
+        List<StartupResponseDTO> startups = service.listarTodas();
+        return ResponseEntity.ok(startups);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<Object> buscarPorId(@PathVariable Long id) {
-        try {
-            StartupResponseDTO startup = service.buscarPorId(id);
-            return ResponseEntity.ok(startup);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(KEY_ERRO, e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(KEY_ERRO, "Erro interno ao buscar startup."));
-        }
+        StartupResponseDTO startup = service.buscarPorId(id);
+        return ResponseEntity.ok(startup);
     }
 
     @DeleteMapping("/{id}")
@@ -120,20 +88,11 @@ public class StartupController {
             @PathVariable Long id,
             Authentication authentication,
             @RequestHeader(value = "X-MFA-PIN", required = false) String pin) {
-        try {
-            if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuario)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
-            }
-            mfaGuard.check((Usuario) authentication.getPrincipal(), pin);
-            service.deletar(id, usuario.getId());
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
-        } catch (com.inova27.app.exception.MfaRequiredException e) {
-            throw e;
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(KEY_ERRO, e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(KEY_ERRO, "Erro ao excluir a startup."));
+        if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuario)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
         }
+        mfaGuard.check((Usuario) authentication.getPrincipal(), pin);
+        service.deletar(id, usuario.getId());
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 }

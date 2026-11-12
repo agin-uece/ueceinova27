@@ -9,6 +9,7 @@ import com.inova27.app.dto.laboratorio.LaboratorioUpdateDTO;
 import com.inova27.app.dto.startup.StartupUpdateDTO;
 import com.inova27.app.dto.protecao.ProtecaoUpdateDTO;
 import com.inova27.app.exception.BusinessException;
+import com.inova27.app.exception.ResourceNotFoundException;
 import com.inova27.app.model.*;
 import com.inova27.app.repository.SolicitacaoAlteracaoRepository;
 
@@ -167,13 +168,13 @@ public class SolicitacaoAlteracaoService {
     // AVALIAR
     // ==========================================
     @Transactional
-    public void avaliarSolicitacao(Long id, boolean aprovado, String justificativa, Usuario admin) throws Exception {
+    public void avaliarSolicitacao(Long id, boolean aprovado, String justificativa, Usuario admin) {
 
         SolicitacaoAlteracao s = repository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Não encontrada"));
+                .orElseThrow(() -> new ResourceNotFoundException("Solicitação não encontrada."));
 
         if (s.getStatus() != StatusValidacao.PENDENTE)
-            throw new IllegalArgumentException("Já avaliada");
+            throw new BusinessException("Esta solicitação já foi avaliada.");
 
         s.setAvaliadorId(admin.getId());
         s.setDataAvaliacao(LocalDateTime.now());
@@ -195,7 +196,7 @@ public class SolicitacaoAlteracaoService {
     // ==========================================
     // CORE (COMPLEXIDADE REDUZIDA)
     // ==========================================
-    private void aplicarAlteracaoNaEntidadeReal(SolicitacaoAlteracao s, Usuario admin) throws Exception {
+    private void aplicarAlteracaoNaEntidadeReal(SolicitacaoAlteracao s, Usuario admin) {
 
 
         if (s.getTipoAcao() == TipoAcao.EXCLUSAO) {
@@ -221,7 +222,7 @@ public class SolicitacaoAlteracaoService {
     }
 
     // 🔥 DIVISÃO 2: LIDA APENAS COM EDIÇÃO E DESSERIALIZAÇÃO DE DADOS
-    private void executarEdicao(SolicitacaoAlteracao s, Usuario admin) throws Exception {
+    private void executarEdicao(SolicitacaoAlteracao s, Usuario admin) {
         String json = s.getDadosNovos();
         if (json == null) throw new IllegalArgumentException("Dados vazios");
 
@@ -229,22 +230,22 @@ public class SolicitacaoAlteracaoService {
 
         switch (s.getEntidade()) {
             case JOGO:
-                jogoService.atualizar(id, objectMapper.readValue(json, JogoUpdateDTO.class), admin);
+                jogoService.atualizar(id, ler(json, JogoUpdateDTO.class), admin);
                 break;
             case LABORATORIO:
-                laboratorioService.atualizar(id, objectMapper.readValue(json, LaboratorioUpdateDTO.class), admin);
+                laboratorioService.atualizar(id, ler(json, LaboratorioUpdateDTO.class), admin);
                 break;
             case STARTUP:
-                startupService.atualizar(id, objectMapper.readValue(json, StartupUpdateDTO.class), admin.getId());
+                startupService.atualizar(id, ler(json, StartupUpdateDTO.class), admin.getId());
                 break;
             case PESSOA:
-                pessoaService.atualizar(id, objectMapper.readValue(json, PessoaUpdateDTO.class), admin);
+                pessoaService.atualizar(id, ler(json, PessoaUpdateDTO.class), admin);
                 break;
             case SERVICO:
-                servicoService.atualizar(id, objectMapper.readValue(json, ServicoUpdateDTO.class), admin.getId());
+                servicoService.atualizar(id, ler(json, ServicoUpdateDTO.class), admin.getId());
                 break;
             case PROTECAO:
-                protecaoService.atualizar(id, objectMapper.readValue(json, ProtecaoUpdateDTO.class), admin.getId());
+                protecaoService.atualizar(id, ler(json, ProtecaoUpdateDTO.class), admin.getId());
                 break;
             default:
                 throw new IllegalArgumentException("Entidade não suportada: " + s.getEntidade());
@@ -254,6 +255,14 @@ public class SolicitacaoAlteracaoService {
     // ==========================================
     // UTIL
     // ==========================================
+    private <T> T ler(String json, Class<T> tipo) {
+        try {
+            return objectMapper.readValue(json, tipo);
+        } catch (JsonProcessingException e) {
+            throw new BusinessException("Os dados desta solicitação estão corrompidos e não podem ser aplicados.");
+        }
+    }
+
     private String formatarEntidade(TipoEntidade entidade) {
         String nome = entidade.name();
         return nome.substring(0, 1).toUpperCase() + nome.substring(1).toLowerCase();

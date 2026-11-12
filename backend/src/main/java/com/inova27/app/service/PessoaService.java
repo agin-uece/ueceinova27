@@ -167,8 +167,9 @@ public class PessoaService {
         boolean isAdmin = usuario != null && usuario.getRole() == UserRole.ADMIN;
         boolean isOwner = usuario != null && usuario.getId().equals(pessoa.getUserInclusaoId());
 
+        // Pessoa não aprovada só é visível para o admin e para quem a cadastrou (404 para os demais)
         if (!isAdmin && !isOwner && pessoa.getStatus() != StatusValidacao.APROVADO) {
-            throw new BusinessException("Pessoa ainda não validada.");
+            throw new ResourceNotFoundException(msgPadraoNaoEncontrada());
         }
 
         return toResponseDTO(pessoa);
@@ -204,71 +205,64 @@ public class PessoaService {
     // 🔹 UPDATE (COMPLEXIDADE COGNITIVA REDUZIDA)
     @Transactional
     public PessoaResponseDTO atualizar(Long id, PessoaUpdateDTO dto, Usuario usuario) {
-        try {
-            Pessoa pessoa = repository.findById(id)
-                    .orElseThrow(() -> new ResourceNotFoundException(msgPadraoNaoEncontrada()));
+        Pessoa pessoa = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(msgPadraoNaoEncontrada()));
 
-            boolean isAdmin = usuario != null && usuario.getRole() == UserRole.ADMIN;
-            boolean isOwner = usuario != null && pessoa.getUserInclusaoId() != null
-                    && pessoa.getUserInclusaoId().equals(usuario.getId());
+        boolean isAdmin = usuario != null && usuario.getRole() == UserRole.ADMIN;
+        boolean isOwner = usuario != null && pessoa.getUserInclusaoId() != null
+                && pessoa.getUserInclusaoId().equals(usuario.getId());
 
-            if (!isAdmin && !isOwner) {
-                throw new SecurityException("Você não tem permissão para atualizar esta pessoa.");
-            }
-
-            if (!isAdmin) {
-                solicitacaoService.registrarSolicitacao(
-                        TipoEntidade.PESSOA,
-                        id,
-                        TipoAcao.EDICAO,
-                        dto,
-                        usuario.getId()
-                );
-                return null;
-            }
-
-            // 🔥 EXTRAÇÃO DA ATRIBUIÇÃO PARA MÉTODO AUXILIAR PRIVADO (Diminui complexidade)
-            mapearCamposAtualizacao(pessoa, dto);
-            pessoa.setStatus(StatusValidacao.APROVADO);
-
-
-            // ... (código que seta nome, email, telefone na pessoa) ...
-
-            // 🔥 1. VÍNCULO DE LABORATÓRIO (ManyToOne)
-            if (dto.laboratorioId() != null) {
-                Laboratorio lab = laboratorioRepository.findById(dto.laboratorioId())
-                        .orElseThrow(() -> new IllegalArgumentException(MSG_LAB_NAO_ENCONTRADO));
-                pessoa.setLaboratorio(lab);
-            }
-
-            // 🔥 2. VÍNCULO DE STARTUPS (ManyToMany - Pessoa é a Dona)
-            if (dto.startupIds() != null && !dto.startupIds().isEmpty()) {
-                List<Startup> startups = startupRepository.findAllById(dto.startupIds());
-                pessoa.setStartups(new HashSet<>(startups));
-            }
-
-            // 🔥 3. VÍNCULO DE PROTEÇÕES (ManyToMany - Pessoa é a Dona)
-            if (dto.protecaoIds() != null && !dto.protecaoIds().isEmpty()) {
-                List<Protecao> protecoes = protecaoRepository.findAllById(dto.protecaoIds());
-                pessoa.setProtecoes(new HashSet<>(protecoes));
-            }
-
-            // 🚀 Salva a pessoa E todas as relações de uma vez só!
-            Pessoa updated = repository.save(pessoa);
-
-            indexador.removerIndex("pessoas", id);
-            var doc = mapper.fromPessoa(updated);
-            indexador.indexar(doc);
-
-            auditoriaService.registrarLog(ENTIDADE_PESSOA, updated.getId(), AcaoAuditoria.EDICAO, usuario.getId(), dto);
-
-            return toResponseDTO(updated);
-
-        } catch (ResourceNotFoundException | SecurityException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new BusinessException("Erro interno ao atualizar pessoa: " + e.getMessage());
+        if (!isAdmin && !isOwner) {
+            throw new SecurityException("Você não tem permissão para atualizar esta pessoa.");
         }
+
+        if (!isAdmin) {
+            solicitacaoService.registrarSolicitacao(
+                    TipoEntidade.PESSOA,
+                    id,
+                    TipoAcao.EDICAO,
+                    dto,
+                    usuario.getId()
+            );
+            return null;
+        }
+
+        // 🔥 EXTRAÇÃO DA ATRIBUIÇÃO PARA MÉTODO AUXILIAR PRIVADO (Diminui complexidade)
+        mapearCamposAtualizacao(pessoa, dto);
+        pessoa.setStatus(StatusValidacao.APROVADO);
+
+
+        // ... (código que seta nome, email, telefone na pessoa) ...
+
+        // 🔥 1. VÍNCULO DE LABORATÓRIO (ManyToOne)
+        if (dto.laboratorioId() != null) {
+            Laboratorio lab = laboratorioRepository.findById(dto.laboratorioId())
+                    .orElseThrow(() -> new IllegalArgumentException(MSG_LAB_NAO_ENCONTRADO));
+            pessoa.setLaboratorio(lab);
+        }
+
+        // 🔥 2. VÍNCULO DE STARTUPS (ManyToMany - Pessoa é a Dona)
+        if (dto.startupIds() != null && !dto.startupIds().isEmpty()) {
+            List<Startup> startups = startupRepository.findAllById(dto.startupIds());
+            pessoa.setStartups(new HashSet<>(startups));
+        }
+
+        // 🔥 3. VÍNCULO DE PROTEÇÕES (ManyToMany - Pessoa é a Dona)
+        if (dto.protecaoIds() != null && !dto.protecaoIds().isEmpty()) {
+            List<Protecao> protecoes = protecaoRepository.findAllById(dto.protecaoIds());
+            pessoa.setProtecoes(new HashSet<>(protecoes));
+        }
+
+        // 🚀 Salva a pessoa E todas as relações de uma vez só!
+        Pessoa updated = repository.save(pessoa);
+
+        indexador.removerIndex("pessoas", id);
+        var doc = mapper.fromPessoa(updated);
+        indexador.indexar(doc);
+
+        auditoriaService.registrarLog(ENTIDADE_PESSOA, updated.getId(), AcaoAuditoria.EDICAO, usuario.getId(), dto);
+
+        return toResponseDTO(updated);
     }
 
     // 🔹 MÉTODO PRIVADO AUXILIAR PARA CORRIGIR O AVISO DE COMPLEXIDADE
@@ -292,42 +286,35 @@ public class PessoaService {
     // 🔹 DELETE (HÍBRIDO)
     @Transactional
     public boolean deletar(Long id, Usuario usuario) {
-        try {
-            Pessoa pessoa = repository.findById(id)
-                    .orElseThrow(() -> new ResourceNotFoundException(msgPadraoNaoEncontrada()));
+        Pessoa pessoa = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(msgPadraoNaoEncontrada()));
 
-            if (usuario == null) throw new SecurityException("Usuário não autenticado.");
+        if (usuario == null) throw new SecurityException("Usuário não autenticado.");
 
-            boolean isAdmin = usuario.getRole() == UserRole.ADMIN;
-            boolean isOwner = pessoa.getUserInclusaoId() != null && pessoa.getUserInclusaoId().equals(usuario.getId());
+        boolean isAdmin = usuario.getRole() == UserRole.ADMIN;
+        boolean isOwner = pessoa.getUserInclusaoId() != null && pessoa.getUserInclusaoId().equals(usuario.getId());
 
-            if (!isAdmin && !isOwner) {
-                throw new SecurityException("Você não tem permissão para excluir esta pessoa.");
-            }
-
-            if (!isAdmin) {
-                solicitacaoService.registrarSolicitacao(
-                        TipoEntidade.PESSOA,
-                        id,
-                        TipoAcao.EXCLUSAO,
-                        null,
-                        usuario.getId()
-                );
-                return false;
-            }
-
-            PessoaResponseDTO retrato = toResponseDTO(pessoa);
-            repository.delete(pessoa);
-            indexador.removerIndex("pessoas", id);
-            auditoriaService.registrarLog(ENTIDADE_PESSOA, id, AcaoAuditoria.DELECAO, usuario.getId(), retrato);
-
-            return true;
-
-        } catch (ResourceNotFoundException | SecurityException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new BusinessException("Erro interno ao deletar pessoa: " + e.getMessage());
+        if (!isAdmin && !isOwner) {
+            throw new SecurityException("Você não tem permissão para excluir esta pessoa.");
         }
+
+        if (!isAdmin) {
+            solicitacaoService.registrarSolicitacao(
+                    TipoEntidade.PESSOA,
+                    id,
+                    TipoAcao.EXCLUSAO,
+                    null,
+                    usuario.getId()
+            );
+            return false;
+        }
+
+        PessoaResponseDTO retrato = toResponseDTO(pessoa);
+        repository.delete(pessoa);
+        indexador.removerIndex("pessoas", id);
+        auditoriaService.registrarLog(ENTIDADE_PESSOA, id, AcaoAuditoria.DELECAO, usuario.getId(), retrato);
+
+        return true;
     }
 
     private PessoaResponseDTO toResponseDTO(Pessoa pessoa) {
@@ -357,112 +344,77 @@ public class PessoaService {
 
     @Transactional
     public void vincularLaboratorio(Long pessoaId, Long laboratorioId, Usuario usuario) {
-        try {
-            Pessoa pessoa = repository.findById(pessoaId)
-                    .orElseThrow(() -> new ResourceNotFoundException(msgPadraoNaoEncontrada()));
-            Laboratorio laboratorio = laboratorioRepository.findById(laboratorioId)
-                    .orElseThrow(() -> new ResourceNotFoundException(MSG_LAB_NAO_ENCONTRADO));
+        Pessoa pessoa = repository.findById(pessoaId)
+                .orElseThrow(() -> new ResourceNotFoundException(msgPadraoNaoEncontrada()));
+        Laboratorio laboratorio = laboratorioRepository.findById(laboratorioId)
+                .orElseThrow(() -> new ResourceNotFoundException(MSG_LAB_NAO_ENCONTRADO));
 
-            pessoa.setLaboratorio(laboratorio);
-            repository.save(pessoa);
-            Long auditUserId = (usuario != null) ? usuario.getId() : null;
-            auditoriaService.registrarLog(ENTIDADE_PESSOA, pessoaId, AcaoAuditoria.VINCULO, auditUserId, "Laboratório ID " + laboratorioId + " vinculado à pessoa.");
-        } catch (ResourceNotFoundException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new BusinessException("Erro ao vincular laboratório");
-
-        }
+        pessoa.setLaboratorio(laboratorio);
+        repository.save(pessoa);
+        Long auditUserId = (usuario != null) ? usuario.getId() : null;
+        auditoriaService.registrarLog(ENTIDADE_PESSOA, pessoaId, AcaoAuditoria.VINCULO, auditUserId, "Laboratório ID " + laboratorioId + " vinculado à pessoa.");
     }
 
     @Transactional
     public void desvincularLaboratorio(Long pessoaId, Long laboratorioId, Usuario usuario) {
-        try {
-            Pessoa pessoa = repository.findById(pessoaId)
-                    .orElseThrow(() -> new ResourceNotFoundException(msgPadraoNaoEncontrada()));
+        Pessoa pessoa = repository.findById(pessoaId)
+                .orElseThrow(() -> new ResourceNotFoundException(msgPadraoNaoEncontrada()));
 
-            if (pessoa.getLaboratorio() == null || !pessoa.getLaboratorio().getId().equals(laboratorioId)) {
-                throw new ResourceNotFoundException("Esta pessoa não está vinculada a este laboratório (ID incompatível).");
-            }
-
-            pessoa.setLaboratorio(null);
-            repository.save(pessoa);
-            Long auditUserId = (usuario != null) ? usuario.getId() : null;
-            auditoriaService.registrarLog(ENTIDADE_PESSOA, pessoaId, AcaoAuditoria.DESVINCULO, auditUserId, "Laboratório ID " + laboratorioId + " desvinculado da pessoa.");
-
-        } catch (ResourceNotFoundException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new BusinessException("Erro ao desvincular laboratório: " + e.getMessage());
+        if (pessoa.getLaboratorio() == null || !pessoa.getLaboratorio().getId().equals(laboratorioId)) {
+            throw new ResourceNotFoundException("Esta pessoa não está vinculada a este laboratório (ID incompatível).");
         }
+
+        pessoa.setLaboratorio(null);
+        repository.save(pessoa);
+        Long auditUserId = (usuario != null) ? usuario.getId() : null;
+        auditoriaService.registrarLog(ENTIDADE_PESSOA, pessoaId, AcaoAuditoria.DESVINCULO, auditUserId, "Laboratório ID " + laboratorioId + " desvinculado da pessoa.");
     }
 
     @Transactional
     public void vincularStartup(Long pessoaId, Long startupId, Usuario usuario) {
-        try {
-            Pessoa pessoa = repository.findById(pessoaId)
-                    .orElseThrow(() -> new ResourceNotFoundException(msgPadraoNaoEncontrada()));
-            Startup startup = startupRepository.findById(startupId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Startup não encontrada."));
+        Pessoa pessoa = repository.findById(pessoaId)
+                .orElseThrow(() -> new ResourceNotFoundException(msgPadraoNaoEncontrada()));
+        Startup startup = startupRepository.findById(startupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Startup não encontrada."));
 
-            pessoa.getStartups().add(startup);
-            repository.save(pessoa);
-            Long auditUserId = (usuario != null) ? usuario.getId() : null;
-            auditoriaService.registrarLog(ENTIDADE_PESSOA, pessoaId, AcaoAuditoria.VINCULO, auditUserId, "Startup ID " + startupId + " vinculada à pessoa.");
-
-        } catch (ResourceNotFoundException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new BusinessException("Erro ao vincular startup: " + e.getMessage());
-        }
+        pessoa.getStartups().add(startup);
+        repository.save(pessoa);
+        Long auditUserId = (usuario != null) ? usuario.getId() : null;
+        auditoriaService.registrarLog(ENTIDADE_PESSOA, pessoaId, AcaoAuditoria.VINCULO, auditUserId, "Startup ID " + startupId + " vinculada à pessoa.");
     }
 
     @Transactional
     public void desvincularStartup(Long pessoaId, Long startupId, Usuario usuario) {
-        try {
-            Pessoa pessoa = repository.findById(pessoaId)
-                    .orElseThrow(() -> new ResourceNotFoundException(msgPadraoNaoEncontrada()));
+        Pessoa pessoa = repository.findById(pessoaId)
+                .orElseThrow(() -> new ResourceNotFoundException(msgPadraoNaoEncontrada()));
 
-            if (pessoa.getStartups() == null) {
-                throw new ResourceNotFoundException("A pessoa não possui nenhuma startup vinculada.");
-            }
-
-            boolean removido = pessoa.getStartups().removeIf(s -> s.getId().equals(startupId));
-
-            if (!removido) {
-                throw new ResourceNotFoundException("Esta startup não estava vinculada a esta pessoa.");
-            }
-
-            repository.save(pessoa);
-
-            Long auditUserId = (usuario != null) ? usuario.getId() : null;
-            auditoriaService.registrarLog(ENTIDADE_PESSOA, pessoaId, AcaoAuditoria.DESVINCULO, auditUserId, "Startup ID " + startupId + " desvinculada da pessoa.");
-
-        } catch (ResourceNotFoundException e) {
-            throw e;
-        } catch (Exception e) {
-            String causa = e.getMessage() != null ? e.getMessage() : "Erro interno de referência nula.";
-            throw new BusinessException("Erro ao desvincular startup: " + causa);
+        if (pessoa.getStartups() == null) {
+            throw new ResourceNotFoundException("A pessoa não possui nenhuma startup vinculada.");
         }
+
+        boolean removido = pessoa.getStartups().removeIf(s -> s.getId().equals(startupId));
+
+        if (!removido) {
+            throw new ResourceNotFoundException("Esta startup não estava vinculada a esta pessoa.");
+        }
+
+        repository.save(pessoa);
+
+        Long auditUserId = (usuario != null) ? usuario.getId() : null;
+        auditoriaService.registrarLog(ENTIDADE_PESSOA, pessoaId, AcaoAuditoria.DESVINCULO, auditUserId, "Startup ID " + startupId + " desvinculada da pessoa.");
     }
 
     @Transactional
     public void vincularProtecao(Long pessoaId, Long protecaoId, Usuario usuario) {
-        try {
-            Pessoa pessoa = repository.findById(pessoaId)
-                    .orElseThrow(() -> new ResourceNotFoundException(msgPadraoNaoEncontrada()));
-            Protecao protecao = protecaoRepository.findById(protecaoId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Proteção não encontrada."));
+        Pessoa pessoa = repository.findById(pessoaId)
+                .orElseThrow(() -> new ResourceNotFoundException(msgPadraoNaoEncontrada()));
+        Protecao protecao = protecaoRepository.findById(protecaoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Proteção não encontrada."));
 
-            pessoa.getProtecoes().add(protecao);
-            repository.save(pessoa);
-            Long auditUserId = (usuario != null) ? usuario.getId() : null;
-            auditoriaService.registrarLog(ENTIDADE_PESSOA, pessoaId, AcaoAuditoria.VINCULO, auditUserId, "Proteção ID " + protecaoId + " vinculada à pessoa.");
-        } catch (ResourceNotFoundException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new BusinessException("Erro ao vincular proteção: " + e.getMessage());
-        }
+        pessoa.getProtecoes().add(protecao);
+        repository.save(pessoa);
+        Long auditUserId = (usuario != null) ? usuario.getId() : null;
+        auditoriaService.registrarLog(ENTIDADE_PESSOA, pessoaId, AcaoAuditoria.VINCULO, auditUserId, "Proteção ID " + protecaoId + " vinculada à pessoa.");
     }
 
     @Transactional(readOnly = true)
@@ -475,21 +427,15 @@ public class PessoaService {
 
     @Transactional
     public void desvincularProtecao(Long pessoaId, Long protecaoId, Usuario usuario) {
-        try {
-            Pessoa pessoa = repository.findById(pessoaId)
-                    .orElseThrow(() -> new ResourceNotFoundException(msgPadraoNaoEncontrada()));
-            Protecao protecao = protecaoRepository.findById(protecaoId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Proteção não encontrada."));
+        Pessoa pessoa = repository.findById(pessoaId)
+                .orElseThrow(() -> new ResourceNotFoundException(msgPadraoNaoEncontrada()));
+        Protecao protecao = protecaoRepository.findById(protecaoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Proteção não encontrada."));
 
-            pessoa.getProtecoes().remove(protecao);
-            repository.save(pessoa);
-            Long auditUserId = (usuario != null) ? usuario.getId() : null;
-            auditoriaService.registrarLog(ENTIDADE_PESSOA, pessoaId, AcaoAuditoria.DESVINCULO, auditUserId, "Proteção ID " + protecaoId + " desvinculada da pessoa.");
-        } catch (ResourceNotFoundException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new BusinessException("Erro ao desvincular proteção: " + e.getMessage());
-        }
+        pessoa.getProtecoes().remove(protecao);
+        repository.save(pessoa);
+        Long auditUserId = (usuario != null) ? usuario.getId() : null;
+        auditoriaService.registrarLog(ENTIDADE_PESSOA, pessoaId, AcaoAuditoria.DESVINCULO, auditUserId, "Proteção ID " + protecaoId + " desvinculada da pessoa.");
     }
 
     // Método utilitário interno para simplificar as chamadas de exceção mantendo a constante

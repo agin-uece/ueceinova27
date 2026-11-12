@@ -2,6 +2,7 @@ package com.inova27.app.service;
 
 import com.inova27.app.exception.OllamaIntegrationException;
 import org.junit.jupiter.api.BeforeEach;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -35,8 +36,15 @@ class EmbeddingServiceTest {
     @InjectMocks
     private EmbeddingService embeddingService;
 
-    private final String URL_GENERATE = "http://localhost:11434/api/generate";
-    private final String URL_EMBED = "http://host.docker.internal:11434/api/embed";
+    // A URL base vem de "ollama.base-url" (@Value), que não é injetado fora do contexto Spring
+    private static final String BASE_URL = "http://localhost:11434";
+    private final String URL_GENERATE = BASE_URL + "/api/generate";
+    private final String URL_EMBED = BASE_URL + "/api/embed";
+
+    @BeforeEach
+    void configurarUrlBase() {
+        ReflectionTestUtils.setField(embeddingService, "ollamaBaseUrl", BASE_URL);
+    }
 
     // =========================================================
     // expandirConsultaGlobal

@@ -5,7 +5,6 @@ import com.inova27.app.dto.engine.EngineResponseDTO;
 import com.inova27.app.dto.engine.EngineUpdateDTO;
 import com.inova27.app.exception.EngineJaExisteException;
 import com.inova27.app.exception.EngineNaoEncontradaException;
-import com.inova27.app.exception.EngineServiceException;
 import com.inova27.app.model.Engine;
 import com.inova27.app.repository.EngineRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,80 +23,58 @@ public class EngineService {
     // 🔹 CREATE
     @Transactional
     public EngineResponseDTO criar(EngineCreateDTO dto) {
-        try {
-            if (repository.existsByNome(dto.nome())) {
-                throw new EngineJaExisteException(dto.nome());
-            }
-
-            Engine engine = new Engine();
-            engine.setNome(dto.nome());
-
-            Engine salva = repository.save(engine);
-            return toResponseDTO(salva);
-
-        } catch (Exception e) {
-            throw new EngineServiceException("Erro interno ao criar engine", e);
+        if (repository.existsByNome(dto.nome())) {
+            throw new EngineJaExisteException(dto.nome());
         }
+
+        Engine engine = new Engine();
+        engine.setNome(dto.nome());
+
+        Engine salva = repository.save(engine);
+        return toResponseDTO(salva);
     }
 
     // 🔹 READ ALL
     @Transactional(readOnly = true)
     public List<EngineResponseDTO> listarTodos() {
-        try {
-            return repository.findAll()
-                    .stream()
-                    .map(this::toResponseDTO)
-                    .toList();
-        } catch (Exception e) {
-            throw new EngineServiceException("Erro ao buscar a lista de engines", e);
-        }
+        return repository.findAll()
+                .stream()
+                .map(this::toResponseDTO)
+                .toList();
     }
 
     // 🔹 READ BY ID
     @Transactional(readOnly = true)
     public EngineResponseDTO buscarPorId(Long id) {
-        try {
-            Engine engine = repository.findById(id)
-                    .orElseThrow(() -> new EngineNaoEncontradaException(id));
-            return toResponseDTO(engine);
-        } catch (Exception e) {
-            throw new EngineServiceException("Erro interno ao buscar engine", e);
-        }
+        Engine engine = repository.findById(id)
+                .orElseThrow(() -> new EngineNaoEncontradaException(id));
+        return toResponseDTO(engine);
     }
 
     // 🔹 UPDATE
     @Transactional
     public EngineResponseDTO atualizar(Long id, EngineUpdateDTO dto) {
-        try {
-            Engine engine = repository.findById(id)
-                    .orElseThrow(EngineNaoEncontradaException::new);
+        Engine engine = repository.findById(id)
+                .orElseThrow(EngineNaoEncontradaException::new);
 
-            // Verifica se o novo nome já existe e pertence a outra engine
-            if (!engine.getNome().equalsIgnoreCase(dto.nome()) && repository.existsByNome(dto.nome())) {
-                throw new EngineJaExisteException(dto.nome());
-            }
-
-            engine.setNome(dto.nome());
-            Engine atualizada = repository.save(engine);
-
-            return toResponseDTO(atualizada);
-
-        } catch (Exception e) {
-            throw new EngineServiceException("Erro interno ao atualizar engine", e);
+        // Verifica se o novo nome já existe e pertence a outra engine
+        if (!engine.getNome().equalsIgnoreCase(dto.nome()) && repository.existsByNome(dto.nome())) {
+            throw new EngineJaExisteException(dto.nome());
         }
+
+        engine.setNome(dto.nome());
+        Engine atualizada = repository.save(engine);
+
+        return toResponseDTO(atualizada);
     }
 
     // 🔹 DELETE
     @Transactional
     public void deletar(Long id) {
-        try {
-            Engine engine = repository.findById(id)
-                    .orElseThrow(EngineNaoEncontradaException::new);
+        Engine engine = repository.findById(id)
+                .orElseThrow(EngineNaoEncontradaException::new);
 
-            repository.delete(engine);
-        } catch (Exception e) {
-            throw new EngineServiceException("Erro interno ao deletar engine", e);
-        }
+        repository.delete(engine);
     }
 
     // 🔹 MAPPER

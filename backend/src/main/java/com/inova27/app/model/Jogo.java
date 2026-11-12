@@ -77,7 +77,8 @@ public class Jogo {
     private StatusValidacao status;//criar//OK//EDITAR//OK////EXPANDIDO//OK
 
     // 🔹 Relacionamento 1:N (Jogo -> Protecao)
-    @OneToMany(mappedBy = "jogo", cascade = CascadeType.ALL, orphanRemoval = true)
+    // Sem cascade: excluir um jogo não pode apagar as proteções (PI) vinculadas a ele
+    @OneToMany(mappedBy = "jogo")
     private Set<Protecao> protecoes = new HashSet<>();//criar//NÃO//EDITAR//NÃO////EXPANDIDO//NÃO
 
     @Column(name = "faixa-etaria")

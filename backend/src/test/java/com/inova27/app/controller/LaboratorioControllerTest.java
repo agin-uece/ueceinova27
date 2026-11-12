@@ -86,9 +86,7 @@ class LaboratorioControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         doThrow(new IllegalArgumentException("Lab não encontrado")).when(service).validarLaboratorio(1L, true, mockUsuario);
 
-        ResponseEntity<Object> response = controller.validar(1L, true, authentication);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThatThrownBy(() -> controller.validar(1L, true, authentication)).isInstanceOf(IllegalArgumentException.class);
     }
 
     // ==========================================
@@ -109,9 +107,7 @@ class LaboratorioControllerTest {
     void testListarPorStatus_ErroGenerico() {
         when(service.listarPorStatus(any())).thenThrow(new RuntimeException("Erro banco"));
 
-        ResponseEntity<Object> response = controller.listarPorStatus(StatusValidacao.APROVADO);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThatThrownBy(() -> controller.listarPorStatus(StatusValidacao.APROVADO)).isInstanceOf(RuntimeException.class);
     }
 
     // ==========================================
@@ -152,9 +148,7 @@ class LaboratorioControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         when(service.criar(dto, mockUsuario)).thenThrow(new IllegalArgumentException("Dados inválidos"));
 
-        ResponseEntity<Object> response = controller.criar(dto, authentication, "123");
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThatThrownBy(() -> controller.criar(dto, authentication, "123")).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -164,9 +158,7 @@ class LaboratorioControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         when(service.criar(dto, mockUsuario)).thenThrow(new SecurityException("Sem acesso"));
 
-        ResponseEntity<Object> response = controller.criar(dto, authentication, "123");
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThatThrownBy(() -> controller.criar(dto, authentication, "123")).isInstanceOf(SecurityException.class);
     }
 
     @Test
@@ -176,9 +168,7 @@ class LaboratorioControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         when(service.criar(dto, mockUsuario)).thenThrow(new RuntimeException("Falha"));
 
-        ResponseEntity<Object> response = controller.criar(dto, authentication, "123");
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThatThrownBy(() -> controller.criar(dto, authentication, "123")).isInstanceOf(RuntimeException.class);
     }
 
     // ==========================================
@@ -213,9 +203,7 @@ class LaboratorioControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         when(service.atualizar(1L, dto, mockUsuario)).thenThrow(new IllegalArgumentException("Não achou"));
 
-        ResponseEntity<Object> response = controller.atualizar(1L, dto, authentication, "123");
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThatThrownBy(() -> controller.atualizar(1L, dto, authentication, "123")).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -225,9 +213,7 @@ class LaboratorioControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         when(service.atualizar(1L, dto, mockUsuario)).thenThrow(new SecurityException("Sem acesso"));
 
-        ResponseEntity<Object> response = controller.atualizar(1L, dto, authentication, "123");
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThatThrownBy(() -> controller.atualizar(1L, dto, authentication, "123")).isInstanceOf(SecurityException.class);
     }
 
     @Test
@@ -237,9 +223,7 @@ class LaboratorioControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         when(service.atualizar(1L, dto, mockUsuario)).thenThrow(new RuntimeException("Falhou"));
 
-        ResponseEntity<Object> response = controller.atualizar(1L, dto, authentication, "123");
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThatThrownBy(() -> controller.atualizar(1L, dto, authentication, "123")).isInstanceOf(RuntimeException.class);
     }
 
     // ==========================================
@@ -257,24 +241,22 @@ class LaboratorioControllerTest {
     @DisplayName("Deve retornar INTERNAL_SERVER_ERROR em listar todos")
     void testListarTodos_ErroGenerico() {
         when(service.listarTodos()).thenThrow(new RuntimeException("Erro"));
-        ResponseEntity<Object> response = controller.listarTodos();
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThatThrownBy(() -> controller.listarTodos()).isInstanceOf(RuntimeException.class);
     }
 
     @Test
     @DisplayName("Deve buscar por ID com sucesso")
     void testBuscarPorId_Sucesso() {
-        when(service.buscarPorId(1L)).thenReturn(mockResponseDTO);
-        ResponseEntity<Object> response = controller.buscarPorId(1L);
+        when(service.buscarPorId(1L, null)).thenReturn(mockResponseDTO);
+        ResponseEntity<Object> response = controller.buscarPorId(1L, null);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
     @Test
     @DisplayName("Deve retornar NOT_FOUND ao buscar por ID inexistente")
     void testBuscarPorId_NotFound() {
-        when(service.buscarPorId(1L)).thenThrow(new RuntimeException("Erro")); // A sua regra de negócio joga RuntimeException como NOT_FOUND
-        ResponseEntity<Object> response = controller.buscarPorId(1L);
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        when(service.buscarPorId(1L, null)).thenThrow(new RuntimeException("Erro")); // A sua regra de negócio joga RuntimeException como NOT_FOUND
+        assertThatThrownBy(() -> controller.buscarPorId(1L, null)).isInstanceOf(RuntimeException.class);
     }
 
     // ==========================================
@@ -296,16 +278,14 @@ class LaboratorioControllerTest {
     @DisplayName("Deve retornar BAD_REQUEST em buscarComFiltros por argumento inválido")
     void testBuscarComFiltros_IllegalArgument() {
         when(service.buscarComFiltrosPaginado(any(), any())).thenThrow(new IllegalArgumentException("Filtro errado"));
-        ResponseEntity<Object> response = controller.buscarComFiltros(mock(LaboratorioFiltroDTO.class), Pageable.unpaged());
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThatThrownBy(() -> controller.buscarComFiltros(mock(LaboratorioFiltroDTO.class), Pageable.unpaged())).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     @DisplayName("Deve retornar INTERNAL_SERVER_ERROR em buscarComFiltros com falha genérica")
     void testBuscarComFiltros_Exception() {
         when(service.buscarComFiltrosPaginado(any(), any())).thenThrow(new RuntimeException("Banco fora"));
-        ResponseEntity<Object> response = controller.buscarComFiltros(mock(LaboratorioFiltroDTO.class), Pageable.unpaged());
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThatThrownBy(() -> controller.buscarComFiltros(mock(LaboratorioFiltroDTO.class), Pageable.unpaged())).isInstanceOf(RuntimeException.class);
     }
 
     // ==========================================
@@ -346,9 +326,7 @@ class LaboratorioControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         when(service.listarPorUsuario(1L)).thenThrow(new RuntimeException("Erro"));
 
-        ResponseEntity<Object> response = controller.listarMinhas(authentication, null);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThatThrownBy(() -> controller.listarMinhas(authentication, null)).isInstanceOf(RuntimeException.class);
     }
 
     // ==========================================
@@ -358,12 +336,24 @@ class LaboratorioControllerTest {
     @DisplayName("Deve deletar laboratório com sucesso e retornar 204 NO_CONTENT")
     void testDeletar_Sucesso() {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
+        when(service.deletar(1L, mockUsuario)).thenReturn(true); // admin: exclusão imediata
 
         ResponseEntity<Object> response = controller.deletar(1L, authentication, "123");
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
         verify(service, times(1)).deletar(1L, mockUsuario);
         verify(mfaGuard, times(1)).check(mockUsuario, "123");
+    }
+
+    @Test
+    @DisplayName("Professor: exclusão vira solicitação e retorna 202 ACCEPTED")
+    void testDeletar_ViraSolicitacao() {
+        when(authentication.getPrincipal()).thenReturn(mockUsuario);
+        when(service.deletar(1L, mockUsuario)).thenReturn(false);
+
+        ResponseEntity<Object> response = controller.deletar(1L, authentication, null);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
     }
 
     @Test
@@ -380,9 +370,7 @@ class LaboratorioControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         doThrow(new IllegalArgumentException("Não achou")).when(service).deletar(1L, mockUsuario);
 
-        ResponseEntity<Object> response = controller.deletar(1L, authentication, "123");
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThatThrownBy(() -> controller.deletar(1L, authentication, "123")).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -391,9 +379,7 @@ class LaboratorioControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         doThrow(new SecurityException("Sem acesso")).when(service).deletar(1L, mockUsuario);
 
-        ResponseEntity<Object> response = controller.deletar(1L, authentication, "123");
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThatThrownBy(() -> controller.deletar(1L, authentication, "123")).isInstanceOf(SecurityException.class);
     }
 
     @Test
@@ -402,8 +388,6 @@ class LaboratorioControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         doThrow(new RuntimeException("Banco falhou")).when(service).deletar(1L, mockUsuario);
 
-        ResponseEntity<Object> response = controller.deletar(1L, authentication, "123");
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThatThrownBy(() -> controller.deletar(1L, authentication, "123")).isInstanceOf(RuntimeException.class);
     }
 }

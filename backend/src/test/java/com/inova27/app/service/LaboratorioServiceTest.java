@@ -127,6 +127,20 @@ class LaboratorioServiceTest {
         }
 
         @Test
+        @DisplayName("Excluir laboratório NÃO apaga as pessoas: apenas desvincula")
+        void deletarLabDesvinculaPessoas() {
+            Pessoa pessoa = new Pessoa();
+            pessoa.setLaboratorio(labPadrao);
+            labPadrao.getPessoas().add(pessoa);
+            when(repository.findById(10L)).thenReturn(Optional.of(labPadrao));
+
+            assertThat(laboratorioService.deletar(10L, admin)).isTrue();
+
+            assertThat(pessoa.getLaboratorio()).isNull();
+            verify(repository).delete(labPadrao);
+        }
+
+        @Test
         @DisplayName("Pesquisador deve ter pedido negado ao deletar lab de outro")
         void pesquisadorNaoDeletaAlheio() {
             Usuario outro = new Usuario(); outro.setId(99L);
@@ -152,11 +166,12 @@ class LaboratorioServiceTest {
     @DisplayName("Tratamento de Exceções")
     class Excecoes {
         @Test
-        @DisplayName("Deve lançar BusinessException em caso de erro genérico")
+        @DisplayName("Erro genérico do banco é propagado (vira 500 no handler global)")
         void erroGenerico() {
             when(repository.findById(99L)).thenThrow(new RuntimeException("DB Error"));
-            assertThatThrownBy(() -> laboratorioService.buscarPorId(99L))
-                    .isInstanceOf(BusinessException.class);
+            assertThatThrownBy(() -> laboratorioService.buscarPorId(99L, null))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessage("DB Error");
         }
     }
 }

@@ -41,110 +41,92 @@ public class ProtecaoService {
             throw new BusinessException("Já existe uma proteção com este Código ID.");
         }
 
-        try {
-            Protecao protecao = new Protecao();
-            protecao.setCodId(dto.codId());
-            protecao.setNome(dto.nome());
-            protecao.setResumo(dto.resumo());
-            protecao.setInstituicao(dto.instituicao());
-            protecao.setNatureza(dto.natureza());
-            protecao.setDataDeposito(dto.dataDeposito());
-            protecao.setInfoExtra(dto.infoExtra());
+        Protecao protecao = new Protecao();
+        protecao.setCodId(dto.codId());
+        protecao.setNome(dto.nome());
+        protecao.setResumo(dto.resumo());
+        protecao.setInstituicao(dto.instituicao());
+        protecao.setNatureza(dto.natureza());
+        protecao.setDataDeposito(dto.dataDeposito());
+        protecao.setInfoExtra(dto.infoExtra());
 
-            protecao.setArea(dto.area());
-            protecao.setNivelMaturidade(dto.nivelMaturidade());
-            protecao.setAplicacao(dto.aplicacao());
-            protecao.setStatus(dto.status());
+        protecao.setArea(dto.area());
+        protecao.setNivelMaturidade(dto.nivelMaturidade());
+        protecao.setAplicacao(dto.aplicacao());
+        protecao.setStatus(dto.status());
 
-            protecao.setInventores(dto.inventores());
-            protecao.setTitular(dto.titular());
-            protecao.setDiferencialTecnologico(dto.diferencialTecnologico());
-            protecao.setNumeroProtocolo(dto.numeroProtocolo());
+        protecao.setInventores(dto.inventores());
+        protecao.setTitular(dto.titular());
+        protecao.setDiferencialTecnologico(dto.diferencialTecnologico());
+        protecao.setNumeroProtocolo(dto.numeroProtocolo());
 
-            protecao.setUserInclusaoId(usuarioId);
+        protecao.setUserInclusaoId(usuarioId);
 
-            if (dto.tipos() != null) {
-                protecao.setTipos(dto.tipos());
-            }
-
-            if (dto.jogoId() != null) {
-                if (dto.natureza() != NaturezaProtecao.SOFTWARE &&
-                        dto.natureza() != NaturezaProtecao.DESENHO_INDUSTRIAL) {
-                    throw new BusinessException("Jogo só pode ser vinculado em proteções do tipo SOFTWARE ou DESENHO_INDUSTRIAL.");
-                }
-                Jogo jogo = jogoRepository.findById(dto.jogoId())
-                        .orElseThrow(() -> new ResourceNotFoundException("Jogo informado não encontrado."));
-                protecao.setJogo(jogo);
-            }
-
-            Protecao salva = repository.save(protecao);
-            var doc = mapper.fromProtecao(salva);
-            indexador.indexar(doc);
-            ProtecaoResponseDTO responseDTO = toResponseDTO(salva);
-
-            auditoriaService.registrarLog(
-                    ENTIDADE_PROTECAO,
-                    salva.getId(),
-                    AcaoAuditoria.CRIACAO,
-                    usuarioId,
-                    responseDTO
-            );
-
-            return responseDTO;
-
-        } catch (Exception e) {
-            throw new BusinessException("Erro interno ao criar proteção");
+        if (dto.tipos() != null) {
+            protecao.setTipos(dto.tipos());
         }
+
+        if (dto.jogoId() != null) {
+            if (dto.natureza() != NaturezaProtecao.SOFTWARE &&
+                    dto.natureza() != NaturezaProtecao.DESENHO_INDUSTRIAL) {
+                throw new BusinessException("Jogo só pode ser vinculado em proteções do tipo SOFTWARE ou DESENHO_INDUSTRIAL.");
+            }
+            Jogo jogo = jogoRepository.findById(dto.jogoId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Jogo informado não encontrado."));
+            protecao.setJogo(jogo);
+        }
+
+        Protecao salva = repository.save(protecao);
+        var doc = mapper.fromProtecao(salva);
+        indexador.indexar(doc);
+        ProtecaoResponseDTO responseDTO = toResponseDTO(salva);
+
+        auditoriaService.registrarLog(
+                ENTIDADE_PROTECAO,
+                salva.getId(),
+                AcaoAuditoria.CRIACAO,
+                usuarioId,
+                responseDTO
+        );
+
+        return responseDTO;
     }
 
     public List<ProtecaoResponseDTO> listarTodas() {
-        try {
-            return repository.findAll()
-                    .stream()
-                    .map(this::toResponseDTO)
-                    .toList();
-        } catch (Exception e) {
-            throw new BusinessException("Erro ao buscar a lista de proteções");
-        }
+        return repository.findAll()
+                .stream()
+                .map(this::toResponseDTO)
+                .toList();
     }
 
     public ProtecaoResponseDTO buscarPorId(Long id) {
-        try {
-            Protecao protecao = repository.findById(id)
-                    .orElseThrow(() -> new ResourceNotFoundException("Proteção não encontrada com o ID: " + id));
-            return toResponseDTO(protecao);
-        } catch (Exception e) {
-            throw new BusinessException("Erro interno ao buscar proteção");
-        }
+        Protecao protecao = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Proteção não encontrada com o ID: " + id));
+        return toResponseDTO(protecao);
     }
 
     @Transactional
     public ProtecaoResponseDTO atualizar(Long id, ProtecaoUpdateDTO dto, Long usuarioId) {
-        try {
-            Protecao protecao = repository.findById(id)
-                    .orElseThrow(() -> new ResourceNotFoundException("Proteção não encontrada para atualização."));
+        Protecao protecao = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Proteção não encontrada para atualização."));
 
-            mapearCamposAtualizacao(protecao, dto);
+        mapearCamposAtualizacao(protecao, dto);
 
-            Protecao atualizada = repository.save(protecao);
+        Protecao atualizada = repository.save(protecao);
 
-            indexador.removerIndex("protecoes", id);
-            var doc = mapper.fromProtecao(atualizada);
-            indexador.indexar(doc);
+        indexador.removerIndex("protecoes", id);
+        var doc = mapper.fromProtecao(atualizada);
+        indexador.indexar(doc);
 
-            auditoriaService.registrarLog(
-                    ENTIDADE_PROTECAO,
-                    atualizada.getId(),
-                    AcaoAuditoria.EDICAO,
-                    usuarioId,
-                    dto
-            );
+        auditoriaService.registrarLog(
+                ENTIDADE_PROTECAO,
+                atualizada.getId(),
+                AcaoAuditoria.EDICAO,
+                usuarioId,
+                dto
+        );
 
-            return toResponseDTO(atualizada);
-
-        } catch (Exception e) {
-            throw new BusinessException("Erro interno ao atualizar proteção");
-        }
+        return toResponseDTO(atualizada);
     }
 
     private void mapearCamposAtualizacao(Protecao protecao, ProtecaoUpdateDTO dto) {
@@ -185,25 +167,20 @@ public class ProtecaoService {
 
     @Transactional
     public void deletar(Long id, Long usuarioId) {
-        try {
-            Protecao protecao = repository.findById(id)
-                    .orElseThrow(() -> new ResourceNotFoundException("Proteção não encontrada para exclusão."));
+        Protecao protecao = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Proteção não encontrada para exclusão."));
 
-            ProtecaoResponseDTO retrato = toResponseDTO(protecao);
+        ProtecaoResponseDTO retrato = toResponseDTO(protecao);
 
-            repository.delete(protecao);
-            indexador.removerIndex("protecoes", id);
-            auditoriaService.registrarLog(
-                    ENTIDADE_PROTECAO,
-                    id,
-                    AcaoAuditoria.DELECAO,
-                    usuarioId,
-                    retrato
-            );
-
-        } catch (Exception e) {
-            throw new BusinessException("Erro interno ao deletar proteção");
-        }
+        repository.delete(protecao);
+        indexador.removerIndex("protecoes", id);
+        auditoriaService.registrarLog(
+                ENTIDADE_PROTECAO,
+                id,
+                AcaoAuditoria.DELECAO,
+                usuarioId,
+                retrato
+        );
     }
 
     private ProtecaoResponseDTO toResponseDTO(Protecao protecao) {
@@ -231,51 +208,41 @@ public class ProtecaoService {
 
     @Transactional
     public void vincularJogo(Long protecaoId, Long jogoId, Long usuarioId) {
-        try {
-            Protecao protecao = repository.findById(protecaoId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Proteção não encontrada."));
-            Jogo jogo = jogoRepository.findById(jogoId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Jogo não encontrado."));
+        Protecao protecao = repository.findById(protecaoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Proteção não encontrada."));
+        Jogo jogo = jogoRepository.findById(jogoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Jogo não encontrado."));
 
-            protecao.setJogo(jogo);
-            repository.save(protecao);
+        protecao.setJogo(jogo);
+        repository.save(protecao);
 
-            auditoriaService.registrarLog(
-                    ENTIDADE_PROTECAO,
-                    protecaoId,
-                    AcaoAuditoria.VINCULO,
-                    usuarioId,
-                    "Jogo ID " + jogoId + " vinculado à proteção."
-            );
-
-        } catch (Exception e) {
-            throw new BusinessException("Erro ao vincular jogo");
-        }
+        auditoriaService.registrarLog(
+                ENTIDADE_PROTECAO,
+                protecaoId,
+                AcaoAuditoria.VINCULO,
+                usuarioId,
+                "Jogo ID " + jogoId + " vinculado à proteção."
+        );
     }
 
     @Transactional
     public void desvincularJogo(Long protecaoId, Long jogoId, Long usuarioId) {
-        try {
-            Protecao protecao = repository.findById(protecaoId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Proteção não encontrada."));
+        Protecao protecao = repository.findById(protecaoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Proteção não encontrada."));
 
-            if (protecao.getJogo() == null || !protecao.getJogo().getId().equals(jogoId)) {
-                throw new BusinessException("Esta proteção não está vinculada a este jogo.");
-            }
-
-            protecao.setJogo(null);
-            repository.save(protecao);
-
-            auditoriaService.registrarLog(
-                    ENTIDADE_PROTECAO,
-                    protecaoId,
-                    AcaoAuditoria.DESVINCULO,
-                    usuarioId,
-                    "Jogo ID " + jogoId + " desvinculado da proteção."
-            );
-
-        } catch (Exception e) {
-            throw new BusinessException("Erro ao desvincular jogo");
+        if (protecao.getJogo() == null || !protecao.getJogo().getId().equals(jogoId)) {
+            throw new BusinessException("Esta proteção não está vinculada a este jogo.");
         }
+
+        protecao.setJogo(null);
+        repository.save(protecao);
+
+        auditoriaService.registrarLog(
+                ENTIDADE_PROTECAO,
+                protecaoId,
+                AcaoAuditoria.DESVINCULO,
+                usuarioId,
+                "Jogo ID " + jogoId + " desvinculado da proteção."
+        );
     }
 }

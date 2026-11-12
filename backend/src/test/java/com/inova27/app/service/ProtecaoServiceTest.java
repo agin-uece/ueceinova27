@@ -1,5 +1,6 @@
 package com.inova27.app.service;
 
+import com.inova27.app.exception.ResourceNotFoundException;
 import com.inova27.app.dto.protecao.ProtecaoCreateDTO;
 import com.inova27.app.dto.protecao.ProtecaoResponseDTO;
 import com.inova27.app.dto.protecao.ProtecaoUpdateDTO;
@@ -167,8 +168,7 @@ class ProtecaoServiceTest {
             when(repository.findById(99L)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> protecaoService.buscarPorId(99L))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("Erro interno ao buscar proteção");
+                    .isInstanceOf(ResourceNotFoundException.class);
         }
     }
 
@@ -205,8 +205,7 @@ class ProtecaoServiceTest {
             when(repository.findById(99L)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> protecaoService.atualizar(99L, dto, 1L))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessage("Erro interno ao atualizar proteção");
+                    .isInstanceOf(ResourceNotFoundException.class);
         }
     }
 
@@ -274,7 +273,7 @@ class ProtecaoServiceTest {
 
             assertThatThrownBy(() -> protecaoService.desvincularJogo(10L, 5L, 1L))
                     .isInstanceOf(BusinessException.class)
-                    .hasMessage("Erro ao desvincular jogo"); // Exceção interna engolida pelo catch
+                    .hasMessage("Esta proteção não está vinculada a este jogo.");
         }
     }
 }

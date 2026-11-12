@@ -70,7 +70,7 @@ class StartupControllerTest {
         ResponseEntity<Object> response = controller.criar(dto, authentication, "1234");
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        assertThat(response.getHeaders().getLocation()).hasPath("/api/startups/100");
+        assertThat(response.getHeaders().getLocation()).hasPath("/startups/100");
         verify(mfaGuard, times(1)).check(mockUsuario, "1234");
     }
 
@@ -91,9 +91,7 @@ class StartupControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         when(service.criar(dto, mockUsuario.getId())).thenThrow(new RuntimeException("Erro banco"));
 
-        ResponseEntity<Object> response = controller.criar(dto, authentication, "1234");
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThatThrownBy(() -> controller.criar(dto, authentication, "1234")).isInstanceOf(RuntimeException.class);
     }
 
     // ==========================================
@@ -116,9 +114,7 @@ class StartupControllerTest {
     void testBuscarComFiltros_IllegalArgument() {
         when(service.buscarComFiltrosPaginado(any(), any())).thenThrow(new IllegalArgumentException("Filtro incorreto"));
 
-        ResponseEntity<Object> response = controller.buscarComFiltros(mock(StartupFiltroDTO.class), Pageable.unpaged());
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThatThrownBy(() -> controller.buscarComFiltros(mock(StartupFiltroDTO.class), Pageable.unpaged())).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -126,9 +122,7 @@ class StartupControllerTest {
     void testBuscarComFiltros_Exception() {
         when(service.buscarComFiltrosPaginado(any(), any())).thenThrow(new RuntimeException("Falha DB"));
 
-        ResponseEntity<Object> response = controller.buscarComFiltros(mock(StartupFiltroDTO.class), Pageable.unpaged());
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThatThrownBy(() -> controller.buscarComFiltros(mock(StartupFiltroDTO.class), Pageable.unpaged())).isInstanceOf(RuntimeException.class);
     }
 
     // ==========================================
@@ -164,9 +158,7 @@ class StartupControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         when(service.atualizar(1L, dto, mockUsuario.getId())).thenThrow(new RuntimeException("Erro banco"));
 
-        ResponseEntity<Object> response = controller.atualizar(1L, dto, authentication, "1234");
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThatThrownBy(() -> controller.atualizar(1L, dto, authentication, "1234")).isInstanceOf(RuntimeException.class);
     }
 
     // ==========================================
@@ -188,9 +180,7 @@ class StartupControllerTest {
     void testListarTodas_Exception() {
         when(service.listarTodas()).thenThrow(new RuntimeException("Erro"));
 
-        ResponseEntity<Object> response = controller.listarTodas();
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThatThrownBy(() -> controller.listarTodas()).isInstanceOf(RuntimeException.class);
     }
 
     // ==========================================
@@ -212,9 +202,7 @@ class StartupControllerTest {
     void testBuscarPorId_NotFound() {
         when(service.buscarPorId(1L)).thenThrow(new IllegalArgumentException("Não achou"));
 
-        ResponseEntity<Object> response = controller.buscarPorId(1L);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThatThrownBy(() -> controller.buscarPorId(1L)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -222,9 +210,7 @@ class StartupControllerTest {
     void testBuscarPorId_Exception() {
         when(service.buscarPorId(1L)).thenThrow(new RuntimeException("Erro catastrófico"));
 
-        ResponseEntity<Object> response = controller.buscarPorId(1L);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThatThrownBy(() -> controller.buscarPorId(1L)).isInstanceOf(RuntimeException.class);
     }
 
     // ==========================================
@@ -257,9 +243,7 @@ class StartupControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         doThrow(new IllegalArgumentException("Não achou")).when(service).deletar(1L, mockUsuario.getId());
 
-        ResponseEntity<Object> response = controller.deletar(1L, authentication, "1234");
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThatThrownBy(() -> controller.deletar(1L, authentication, "1234")).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -268,8 +252,6 @@ class StartupControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         doThrow(new RuntimeException("Erro BD")).when(service).deletar(1L, mockUsuario.getId());
 
-        ResponseEntity<Object> response = controller.deletar(1L, authentication, "1234");
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThatThrownBy(() -> controller.deletar(1L, authentication, "1234")).isInstanceOf(RuntimeException.class);
     }
 }

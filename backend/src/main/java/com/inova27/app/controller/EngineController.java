@@ -24,71 +24,37 @@ public class EngineController {
     // 🔹 POST
     @PostMapping
     public ResponseEntity<Object> criar(@RequestBody @Valid EngineCreateDTO dto) {
-        try {
-            EngineResponseDTO novaEngine = service.criar(dto);
-            return ResponseEntity
-                    .created(URI.create("/api/engines/" + novaEngine.id()))
-                    .body(novaEngine);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("erro", e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("erro", "Erro ao criar engine."));
-        }
+        EngineResponseDTO novaEngine = service.criar(dto);
+        return ResponseEntity
+                .created(URI.create("/engines/" + novaEngine.id()))
+                .body(novaEngine);
     }
 
     // 🔹 GET (TODOS)
     @GetMapping
     public ResponseEntity<Object> listarTodos() {
-        try {
-            List<EngineResponseDTO> engines = service.listarTodos();
-            return ResponseEntity.ok(engines);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("erro", "Erro ao buscar a lista de engines."));
-        }
+        List<EngineResponseDTO> engines = service.listarTodos();
+        return ResponseEntity.ok(engines);
     }
 
     // 🔹 GET (POR ID)
     @GetMapping("/{id}")
     public ResponseEntity<Object> buscarPorId(@PathVariable Long id) {
-        try {
-            EngineResponseDTO engine = service.buscarPorId(id);
-            return ResponseEntity.ok(engine);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("erro", e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("erro", "Erro interno ao buscar engine."));
-        }
+        EngineResponseDTO engine = service.buscarPorId(id);
+        return ResponseEntity.ok(engine);
     }
 
     // 🔹 PUT (UPDATE)
     @PutMapping("/{id}")
     public ResponseEntity<Object> atualizar(@PathVariable Long id, @RequestBody @Valid EngineUpdateDTO dto) {
-        try {
-            EngineResponseDTO engineAtualizada = service.atualizar(id, dto);
-            return ResponseEntity.ok(engineAtualizada);
-        } catch (IllegalArgumentException e) {
-            HttpStatus status = e.getMessage().contains("não encontrada") ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
-            return ResponseEntity.status(status).body(Map.of("erro", e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("erro", "Erro ao atualizar engine."));
-        }
+        EngineResponseDTO engineAtualizada = service.atualizar(id, dto);
+        return ResponseEntity.ok(engineAtualizada);
     }
 
     // 🔹 DELETE
     @DeleteMapping("/{id}")
     public ResponseEntity<Object> deletar(@PathVariable Long id) {
-        try {
-            service.deletar(id);
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("erro", e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("erro", "Erro ao excluir a engine."));
-        }
+        service.deletar(id);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 }

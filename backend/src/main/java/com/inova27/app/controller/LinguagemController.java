@@ -26,71 +26,37 @@ public class LinguagemController {
     // 🔹 POST
     @PostMapping
     public ResponseEntity<Object> criar(@RequestBody @Valid LinguagemCreateDTO dto) {
-        try {
-            LinguagemResponseDTO novaLinguagem = service.criar(dto);
-            return ResponseEntity
-                    .created(URI.create("/api/linguagens/" + novaLinguagem.id()))
-                    .body(novaLinguagem);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(KEY_ERRO, e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(KEY_ERRO, "Erro ao criar linguagem."));
-        }
+        LinguagemResponseDTO novaLinguagem = service.criar(dto);
+        return ResponseEntity
+                .created(URI.create("/linguagens/" + novaLinguagem.id()))
+                .body(novaLinguagem);
     }
 
     // 🔹 GET (TODOS)
     @GetMapping
     public ResponseEntity<Object> listarTodos() {
-        try {
-            List<LinguagemResponseDTO> linguagens = service.listarTodos();
-            return ResponseEntity.ok(linguagens);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(KEY_ERRO, "Erro ao buscar a lista de linguagens."));
-        }
+        List<LinguagemResponseDTO> linguagens = service.listarTodos();
+        return ResponseEntity.ok(linguagens);
     }
 
     // 🔹 GET (POR ID)
     @GetMapping("/{id}")
     public ResponseEntity<Object> buscarPorId(@PathVariable Long id) {
-        try {
-            LinguagemResponseDTO linguagem = service.buscarPorId(id);
-            return ResponseEntity.ok(linguagem);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(KEY_ERRO, e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(KEY_ERRO, "Erro interno ao buscar linguagem."));
-        }
+        LinguagemResponseDTO linguagem = service.buscarPorId(id);
+        return ResponseEntity.ok(linguagem);
     }
 
     // 🔹 PUT (UPDATE)
     @PutMapping("/{id}")
     public ResponseEntity<Object> atualizar(@PathVariable Long id, @RequestBody @Valid LinguagemUpdateDTO dto) {
-        try {
-            LinguagemResponseDTO linguagemAtualizada = service.atualizar(id, dto);
-            return ResponseEntity.ok(linguagemAtualizada);
-        } catch (IllegalArgumentException e) {
-            HttpStatus status = e.getMessage().contains("não encontrada") ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
-            return ResponseEntity.status(status).body(Map.of(KEY_ERRO, e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(KEY_ERRO, "Erro ao atualizar linguagem."));
-        }
+        LinguagemResponseDTO linguagemAtualizada = service.atualizar(id, dto);
+        return ResponseEntity.ok(linguagemAtualizada);
     }
 
     // 🔹 DELETE
     @DeleteMapping("/{id}")
     public ResponseEntity<Object> deletar(@PathVariable Long id) {
-        try {
-            service.deletar(id);
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(KEY_ERRO, e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(KEY_ERRO, "Erro ao excluir a linguagem."));
-        }
+        service.deletar(id);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 }
