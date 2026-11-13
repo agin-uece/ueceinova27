@@ -48,6 +48,8 @@ class GlobalExceptionHandlerTest {
     void conflito() {
         assertResposta(handler.handleConflito(new JogoJaExisteException("Xadrez")),
                 HttpStatus.CONFLICT, "Já existe um jogo com o nome: Xadrez");
+        assertResposta(handler.handleConflito(new ConflitoException("Já existe uma startup cadastrada com este CNPJ.")),
+                HttpStatus.CONFLICT, "Já existe uma startup cadastrada com este CNPJ.");
         ResponseEntity<Object> r = handler.handleIntegridade(new DataIntegrityViolationException("duplicate key value violates unique constraint uk_x"));
         assertThat(r.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
         assertThat(erro(r)).doesNotContain("uk_x");

@@ -8,4 +8,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface StartupRepository extends JpaRepository<Startup, Long>, JpaSpecificationExecutor<Startup> {
     boolean existsByNome(String nome);
+    boolean existsByCnpj(String cnpj);
+    boolean existsByCnpjAndIdNot(String cnpj, Long id);
 }

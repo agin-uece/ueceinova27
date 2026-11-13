@@ -1,5 +1,6 @@
 package com.inova27.app.service;
 
+import com.inova27.app.exception.ConflitoException;
 import com.inova27.app.exception.ResourceNotFoundException;
 import com.inova27.app.dto.startup.StartupCreateDTO;
 import com.inova27.app.dto.startup.StartupResponseDTO;
@@ -59,6 +60,68 @@ class StartupServiceTest {
     // StartupUpdateDTO(nome, descricao, area, dataFundacao, site, email, telefone, logo, status, fotos, cnpj, instagram, pessoasIds)
     private StartupUpdateDTO dtoUpdate(String nome) {
         return new StartupUpdateDTO(nome, null, null, null, null, null, null, null, null, null, null, null, null);
+    }
+
+    @Nested
+    @DisplayName("CNPJ único")
+    class CnpjUnico {
+
+        private StartupCreateDTO criarComCnpj(String cnpj) {
+            return new StartupCreateDTO("Startup Y", null, null, null, null, null, null, null, null, null, cnpj, null, null);
+        }
+
+        private StartupUpdateDTO atualizarCnpj(String cnpj) {
+            return new StartupUpdateDTO(null, null, null, null, null, null, null, null, null, null, cnpj, null, null);
+        }
+
+        @Test
+        @DisplayName("Cadastro com CNPJ já usado por outra startup: 409 (ConflitoException)")
+        void cadastroComCnpjDuplicado() {
+            when(repository.existsByNome("Startup Y")).thenReturn(false);
+            when(repository.existsByCnpj("12ABC34501DE35")).thenReturn(true);
+
+            // a máscara é removida no DTO: a checagem compara o valor normalizado
+            assertThatThrownBy(() -> startupService.criar(criarComCnpj("12.abc.345/01de-35"), 1L))
+                    .isInstanceOf(ConflitoException.class)
+                    .hasMessage("Já existe uma startup cadastrada com este CNPJ.");
+            verify(repository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Cadastro com CNPJ novo grava o valor normalizado")
+        void cadastroGravaNormalizado() {
+            when(repository.existsByNome("Startup Y")).thenReturn(false);
+            when(repository.existsByCnpj("12ABC34501DE35")).thenReturn(false);
+            when(repository.save(any(Startup.class))).thenAnswer(i -> i.getArgument(0));
+
+            startupService.criar(criarComCnpj("12.ABC.345/01DE-35"), 1L);
+
+            verify(repository).save(argThat(st -> "12ABC34501DE35".equals(st.getCnpj())));
+        }
+
+        @Test
+        @DisplayName("Edição para um CNPJ de outra startup: 409")
+        void edicaoComCnpjDeOutra() {
+            when(repository.findById(1L)).thenReturn(Optional.of(startupPadrao));
+            when(repository.existsByCnpjAndIdNot("11222333000181", 1L)).thenReturn(true);
+
+            assertThatThrownBy(() -> startupService.atualizar(1L, atualizarCnpj("11.222.333/0001-81"), 1L))
+                    .isInstanceOf(ConflitoException.class);
+            verify(repository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Edição mantendo o próprio CNPJ é permitida")
+        void edicaoMantendoProprioCnpj() {
+            startupPadrao.setCnpj("11222333000181");
+            when(repository.findById(1L)).thenReturn(Optional.of(startupPadrao));
+            when(repository.existsByCnpjAndIdNot("11222333000181", 1L)).thenReturn(false);
+            when(repository.save(any(Startup.class))).thenReturn(startupPadrao);
+
+            startupService.atualizar(1L, atualizarCnpj("11222333000181"), 1L);
+
+            assertThat(startupPadrao.getCnpj()).isEqualTo("11222333000181");
+        }
     }
 
     @Nested
