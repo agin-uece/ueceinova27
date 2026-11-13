@@ -7,12 +7,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Configuration
 public class AdminInitializer {
 
     @Bean
+    @Order(1)
     CommandLineRunner criarAdmin(UsuarioRepository repository,
                                  PasswordEncoder passwordEncoder,
                                  @Value("${app.admin.email:inova.27.uece@gmail.com}") String email,

@@ -1,5 +1,6 @@
 package com.inova27.app.controller;
 
+import com.inova27.app.dto.usuarios.ConcluirRecuperacaoEmailDTO;
 import com.inova27.app.dto.usuarios.ConfirmarRecuperacaoEmailDTO;
 import com.inova27.app.dto.usuarios.SolicitarRecuperacaoEmailDTO;
 import com.inova27.app.dto.usuarios.UsuarioResponseDTO;
@@ -32,20 +33,15 @@ public class UsuarioController {
 
     @GetMapping("/pendentes")
     public ResponseEntity<Object> listarPendentes(Authentication authentication) {
-        try {
-            if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuario)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
-            }
-            if (usuario.getRole() != UserRole.ADMIN) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body("Apenas administradores podem ver usuários pendentes.");
-            }
-            List<UsuarioResponseDTO> lista = service.listarNaoValidados();
-            return ResponseEntity.ok(lista);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(KEY_ERRO, "Erro ao buscar usuários pendentes."));
+        if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuario)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
         }
+        if (usuario.getRole() != UserRole.ADMIN) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("Apenas administradores podem ver usuários pendentes.");
+        }
+        List<UsuarioResponseDTO> lista = service.listarNaoValidados();
+        return ResponseEntity.ok(lista);
     }
 
     @PutMapping("/{id}/validar")
@@ -53,57 +49,36 @@ public class UsuarioController {
             @PathVariable Long id,
             @RequestHeader(value = "X-MFA-PIN", required = false) String pin,
             Authentication authentication) {
-        try {
-            if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuarioLogado)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
-            }
-            mfaGuard.check((Usuario) authentication.getPrincipal(), pin);
-            UsuarioResponseDTO usuario = service.validarUsuario(id, usuarioLogado.getRole(), usuarioLogado.getId());
-            return ResponseEntity.ok(usuario);
-        } catch (com.inova27.app.exception.MfaRequiredException e) {
-            throw e;
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(KEY_ERRO, e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(KEY_ERRO, "Erro ao validar usuário."));
+        if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuarioLogado)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
         }
+        mfaGuard.check((Usuario) authentication.getPrincipal(), pin);
+        UsuarioResponseDTO usuario = service.validarUsuario(id, usuarioLogado.getRole(), usuarioLogado.getId());
+        return ResponseEntity.ok(usuario);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<Object> buscarPorId(@PathVariable Long id) {
-        try {
-            UsuarioResponseDTO usuario = service.buscarPorId(id);
-            return ResponseEntity.ok(usuario);
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(KEY_ERRO, e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(KEY_ERRO, "Erro ao buscar usuário."));
-        }
+        UsuarioResponseDTO usuario = service.buscarPorId(id);
+        return ResponseEntity.ok(usuario);
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<Object> atualizar(
             @PathVariable Long id,
             @RequestBody UsuarioUpdateDTO dados,
+            @RequestHeader(value = "X-MFA-PIN", required = false) String pin,
             Authentication authentication) {
-        try {
-            if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuarioLogado)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
-            }
-            if (usuarioLogado.getRole() != UserRole.ADMIN) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body("Apenas administradores podem atualizar usuários.");
-            }
-            UsuarioResponseDTO atualizado = service.atualizar(id, dados, usuarioLogado.getId());
-            return ResponseEntity.ok(atualizado);
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(KEY_ERRO, e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(KEY_ERRO, "Erro ao atualizar usuário."));
+        if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuarioLogado)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
         }
+        if (usuarioLogado.getRole() != UserRole.ADMIN) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("Apenas administradores podem atualizar usuários.");
+        }
+        mfaGuard.check(usuarioLogado, pin); // pode alterar o perfil (ex.: promover a ADMIN)
+        UsuarioResponseDTO atualizado = service.atualizar(id, dados, usuarioLogado.getId());
+        return ResponseEntity.ok(atualizado);
     }
 
     @PutMapping("/meus-dados")
@@ -111,85 +86,58 @@ public class UsuarioController {
             @RequestBody UsuarioUpdateDTO dados,
             @RequestHeader(value = "X-MFA-PIN", required = false) String pin,
             Authentication authentication) {
-        try {
-            if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuarioLogado)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
-            }
-            mfaGuard.check((Usuario) authentication.getPrincipal(), pin);
-            UsuarioResponseDTO atualizado = service.atualizarMeusDados(usuarioLogado.getId(), dados);
-            return ResponseEntity.ok(atualizado);
-        } catch (com.inova27.app.exception.MfaRequiredException e) {
-            throw e;
-        } catch (RuntimeException e) {
-            if (e.getMessage().contains("inválido")) {
-                throw e;
-            }
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(KEY_ERRO, e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(KEY_ERRO, "Erro interno."));
+        if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuarioLogado)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
         }
+        mfaGuard.check((Usuario) authentication.getPrincipal(), pin);
+        UsuarioResponseDTO atualizado = service.atualizarMeusDados(usuarioLogado.getId(), dados);
+        return ResponseEntity.ok(atualizado);
     }
 
     @GetMapping("/meus-dados")
     public ResponseEntity<Object> buscarMeusDados(Authentication authentication) {
-        try {
-            if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuarioLogado)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
-            }
-            UsuarioResponseDTO meusDados = service.buscarPorId(usuarioLogado.getId());
-            return ResponseEntity.ok(meusDados);
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(KEY_ERRO, e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(KEY_ERRO, "Erro ao buscar os seus dados."));
+        if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuarioLogado)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
         }
+        UsuarioResponseDTO meusDados = service.buscarPorId(usuarioLogado.getId());
+        return ResponseEntity.ok(meusDados);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Object> deletar(
             @PathVariable Long id,
+            @RequestHeader(value = "X-MFA-PIN", required = false) String pin,
             Authentication authentication) {
-        try {
-            if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuarioLogado)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
-            }
-            if (usuarioLogado.getRole() != UserRole.ADMIN) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body("Apenas administradores podem deletar usuários.");
-            }
-            service.deletar(id, usuarioLogado.getId());
-            return ResponseEntity.noContent().build();
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(KEY_ERRO, e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(KEY_ERRO, "Erro ao deletar usuário."));
+        if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuarioLogado)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
         }
+        if (usuarioLogado.getRole() != UserRole.ADMIN) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("Apenas administradores podem deletar usuários.");
+        }
+        mfaGuard.check(usuarioLogado, pin);
+        service.deletar(id, usuarioLogado.getId());
+        return ResponseEntity.noContent().build();
     }
 
+    // Passo 1: PIN enviado ao e-mail secundário (resposta idêntica exista ou não a conta)
     @PostMapping("/recuperar-email/solicitar")
     public ResponseEntity<Object> solicitarRecuperacaoEmail(@RequestBody @Valid SolicitarRecuperacaoEmailDTO dto) {
-        try {
-            service.solicitarRecuperacaoEmail(dto.emailAtual());
-            return ResponseEntity.ok(Map.of("message", "Se um e-mail secundário estiver cadastrado, um código foi enviado para ele."));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(KEY_ERRO, e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(KEY_ERRO, "Erro interno."));
-        }
+        service.solicitarRecuperacaoEmail(dto.emailAtual());
+        return ResponseEntity.ok(Map.of("message", "Se a conta possuir um e-mail secundário cadastrado, um código foi enviado para ele."));
     }
 
+    // Passo 2: valida o PIN e envia um código de confirmação ao novo e-mail principal
     @PostMapping("/recuperar-email/confirmar")
     public ResponseEntity<Object> confirmarRecuperacaoEmail(@RequestBody @Valid ConfirmarRecuperacaoEmailDTO dto) {
-        try {
-            service.confirmarRecuperacaoEmail(dto.emailAtual(), dto.pin(), dto.novoEmailPrincipal(), dto.novoEmailSecundario());
-            return ResponseEntity.ok(Map.of("message", "E-mails atualizados com sucesso. Você já pode fazer login com o novo e-mail."));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(KEY_ERRO, e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(KEY_ERRO, "Erro interno ao confirmar alteração."));
-        }
+        service.confirmarRecuperacaoEmail(dto.emailAtual(), dto.pin(), dto.novoEmailPrincipal(), dto.novoEmailSecundario());
+        return ResponseEntity.accepted().body(Map.of("message", "Enviamos um código de confirmação para o novo e-mail principal."));
+    }
+
+    // Passo 3: valida o código recebido no novo e-mail e aplica a troca
+    @PostMapping("/recuperar-email/concluir")
+    public ResponseEntity<Object> concluirRecuperacaoEmail(@RequestBody @Valid ConcluirRecuperacaoEmailDTO dto) {
+        service.concluirRecuperacaoEmail(dto.emailAtual(), dto.codigo(), dto.novoEmailPrincipal(), dto.novoEmailSecundario());
+        return ResponseEntity.ok(Map.of("message", "E-mails atualizados com sucesso. Você já pode fazer login com o novo e-mail."));
     }
 }

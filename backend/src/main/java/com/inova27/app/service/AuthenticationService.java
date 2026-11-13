@@ -1,9 +1,11 @@
 package com.inova27.app.service;
 
+import org.springframework.web.util.HtmlUtils;
 import com.inova27.app.dto.authentication.AuthenticationDTO;
 import com.inova27.app.dto.authentication.LoginResponseDTO;
 import com.inova27.app.dto.authentication.RegisterDTO;
 import com.inova27.app.dto.usuarios.UsuarioResponseDTO;
+import com.inova27.app.exception.PermissaoNegadaException;
 import com.inova27.app.exception.TokenExpiradoException;
 import com.inova27.app.exception.TokenInvalidoException;
 import com.inova27.app.model.AcaoAuditoria;
@@ -50,13 +52,12 @@ public class AuthenticationService {
         var auth = this.authenticationManager.authenticate(usernamePassword);
         var usuario = (Usuario) auth.getPrincipal();
 
-        assert usuario != null;
         if (!usuario.isValidado()) {
-            throw new IllegalStateException("Usuário ainda não foi validado por um administrador.");
+            throw new PermissaoNegadaException("Usuário ainda não foi validado por um administrador.");
         }
 
         var token = tokenService.gerarToken(usuario);
-        return new LoginResponseDTO(token, auth.getName());
+        return new LoginResponseDTO(token, usuario.getNome());
     }
 
     @Transactional
@@ -169,7 +170,7 @@ public class AuthenticationService {
                 + "<h2 style=\"color: #1e3a8a; font-size: 24px; margin-bottom: 10px;\">Bem-vindo ao Inova27! \uD83D\uDE80</h2>"
 
                 + "<p style=\"font-size: 16px; color: #555; line-height: 1.6; margin-bottom: 25px;\">"
-                + "Olá, <strong>" + usuario.getNome() + "</strong>! Sua conta foi criada com sucesso. "
+                + "Olá, <strong>" + HtmlUtils.htmlEscape(usuario.getNome(), "UTF-8") + "</strong>! Sua conta foi criada com sucesso. "
                 + "Clique no botão abaixo para definir sua senha e ativar seu acesso."
                 + "</p>"
 

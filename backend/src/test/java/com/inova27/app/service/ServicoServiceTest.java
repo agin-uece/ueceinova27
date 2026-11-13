@@ -1,5 +1,6 @@
 package com.inova27.app.service;
 
+import com.inova27.app.exception.ResourceNotFoundException;
 import com.inova27.app.dto.servico.ServicoCreateDTO;
 import com.inova27.app.dto.servico.ServicoResponseDTO;
 import com.inova27.app.dto.servico.ServicoUpdateDTO;
@@ -144,7 +145,7 @@ class ServicoServiceTest {
             when(repository.findById(99L)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> servicoService.buscarPorId(99L))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessage("Serviço não encontrado");
         }
     }
@@ -165,7 +166,6 @@ class ServicoServiceTest {
             ServicoResponseDTO resultado = servicoService.atualizar(1L, dto, 1L);
 
             assertThat(resultado).isNotNull();
-            verify(indexador).removerIndex("servicos", 1L);
             verify(indexador).indexar(any());
             verify(auditoriaService).registrarLog(eq("Servico"), eq(1L), eq(AcaoAuditoria.EDICAO), eq(1L), eq(dto));
         }
@@ -192,7 +192,7 @@ class ServicoServiceTest {
             when(repository.findById(99L)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> servicoService.atualizar(99L, dtoUpdate(null), 1L))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessage("Serviço não encontrado");
         }
     }
@@ -219,7 +219,7 @@ class ServicoServiceTest {
             when(repository.findById(99L)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> servicoService.deletar(99L, 1L))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessage("Serviço não encontrado");
 
             verify(repository, never()).delete((Servico) any());

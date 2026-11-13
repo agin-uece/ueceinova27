@@ -1,5 +1,6 @@
 package com.inova27.app.service;
 
+import com.inova27.app.exception.OllamaIntegrationException;
 import com.inova27.app.dto.buscasemantica.DocumentoSemantico;
 import com.inova27.app.repository.BuscaSemanticaRepository;
 import com.inova27.app.utils.EmbeddingUtils;
@@ -28,15 +29,21 @@ public class IndexadorSemanticoService {
 
     }
 
+    /**
+     * Cria ou substitui a entrada do documento no índice (no máximo uma por entidade + id).
+     * O embedding é gerado antes de apagar a entrada antiga: se o Ollama falhar, o índice anterior é mantido.
+     */
     public void indexar(DocumentoSemantico doc) {
 
         List<Double> embedding = embeddingService.gerarEmbeddingParaSalvar(doc.textoCompleto());
 
         if (embedding.size() != 1024) { // 🔥 Estava 768 ->> 1024
-            throw new IllegalStateException("Embedding inválido: " + embedding.size());
+            throw new OllamaIntegrationException("Embedding inválido: " + embedding.size() + " dimensões (esperado 1024)");
         }
 
         String vetorFormatado = EmbeddingUtils.toPgVector(embedding);
+
+        repository.removerPorEntidadeEIdOrigem(doc.entidade(), doc.idOrigem());
 
         repository.salvar(
                 doc.entidade(),

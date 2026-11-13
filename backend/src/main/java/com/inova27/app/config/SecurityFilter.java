@@ -1,6 +1,6 @@
 package com.inova27.app.config;
 
-import com.inova27.app.model.Usuario;
+import com.inova27.app.exception.BusinessException;
 import com.inova27.app.repository.UsuarioRepository;
 import com.inova27.app.service.TokenService;
 import jakarta.servlet.FilterChain;
@@ -15,9 +15,16 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
+/**
+ * Autentica a requisição a partir do header "Authorization: Bearer <jwt>".
+ * Token ausente, inválido, expirado ou de usuário inexistente/inativo => a requisição segue como anônima:
+ * rotas públicas funcionam normalmente e as protegidas recebem 401 do SecurityErrorHandler.
+ */
 @Component
 @RequiredArgsConstructor
 public class SecurityFilter extends OncePerRequestFilter {
+
+    private static final String PREFIXO_BEARER = "Bearer ";
 
     private final TokenService tokenService;
 
@@ -25,36 +32,26 @@ public class SecurityFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        try{
-            var token = this.recuperarToken(request);
+        String token = recuperarToken(request);
 
-            if (token != null) {
-                var login = tokenService.validarToken(token);
-                Usuario usuario = usuarioRepository.findByEmail(login)
-                        .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
-
-                // Se o token for válido e achamos o usuário, forçamos a autenticação no Spring
-                if (usuario != null) {
-                    var authentication = new UsernamePasswordAuthenticationToken(usuario, null, usuario.getAuthorities());
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
-                }
+        if (token != null) {
+            try {
+                String login = tokenService.validarToken(token);
+                usuarioRepository.findByEmail(login).ifPresent(usuario -> SecurityContextHolder.getContext().setAuthentication(
+                        new UsernamePasswordAuthenticationToken(usuario, null, usuario.getAuthorities())));
+            } catch (BusinessException tokenInvalido) {
+                // segue como anônimo
             }
-
-            // Continua o fluxo da requisição (passa para o próximo filtro ou pro controller)
-            filterChain.doFilter(request, response);
-        }catch (RuntimeException  e){
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json");
-            response.getWriter().write("{\"erro\": \"Token inválido ou expirado\"}");
         }
 
+        filterChain.doFilter(request, response);
     }
 
     private String recuperarToken(HttpServletRequest request) {
-        var authHeader = request.getHeader("Authorization");
-        if (authHeader == null) return null;
-
-        // Tira a palavra "Bearer " e devolve só o código gigante
-        return authHeader.replace("Bearer ", "");
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader == null || !authHeader.startsWith(PREFIXO_BEARER)) {
+            return null;
+        }
+        return authHeader.substring(PREFIXO_BEARER.length());
     }
 }

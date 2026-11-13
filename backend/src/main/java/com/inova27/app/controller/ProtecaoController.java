@@ -35,21 +35,14 @@ public class ProtecaoController {
             @RequestBody @Valid ProtecaoCreateDTO dto,
             Authentication authentication,
             @RequestHeader(value = "X-MFA-PIN", required = false) String pin) {
-        try {
-            if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuario)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
-            }
-            mfaGuard.check((Usuario) authentication.getPrincipal(), pin);
-            ProtecaoResponseDTO response = service.criar(dto, usuario.getId());
-            return ResponseEntity
-                    .created(URI.create("/api/protecoes/" + response.id()))
-                    .body(response);
-        } catch (com.inova27.app.exception.MfaRequiredException e) {
-            throw e;
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(KEY_ERRO, "Erro ao criar proteção."));
+        if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuario)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
         }
+        mfaGuard.check((Usuario) authentication.getPrincipal(), pin);
+        ProtecaoResponseDTO response = service.criar(dto, usuario.getId());
+        return ResponseEntity
+                .created(URI.create("/protecoes/" + response.id()))
+                .body(response);
     }
 
     @PutMapping("/{id}")
@@ -58,43 +51,24 @@ public class ProtecaoController {
             @RequestBody @Valid ProtecaoUpdateDTO dto,
             Authentication authentication,
             @RequestHeader(value = "X-MFA-PIN", required = false) String pin) {
-        try {
-            if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuario)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
-            }
-            mfaGuard.check((Usuario) authentication.getPrincipal(), pin);
-            ProtecaoResponseDTO response = service.atualizar(id, dto, usuario.getId());
-            return ResponseEntity.ok(response);
-        } catch (com.inova27.app.exception.MfaRequiredException e) {
-            throw e;
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(KEY_ERRO, "Erro ao atualizar proteção."));
+        if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuario)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
         }
+        mfaGuard.check((Usuario) authentication.getPrincipal(), pin);
+        ProtecaoResponseDTO response = service.atualizar(id, dto, usuario.getId());
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping
     public ResponseEntity<Object> listarTodas() {
-        try {
-            List<ProtecaoResponseDTO> protecoes = service.listarTodas();
-            return ResponseEntity.ok(protecoes);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(KEY_ERRO, "Erro ao buscar a lista de proteções."));
-        }
+        List<ProtecaoResponseDTO> protecoes = service.listarTodas();
+        return ResponseEntity.ok(protecoes);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<Object> buscarPorId(@PathVariable Long id) {
-        try {
-            ProtecaoResponseDTO protecao = service.buscarPorId(id);
-            return ResponseEntity.ok(protecao);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(KEY_ERRO, e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(KEY_ERRO, "Erro interno ao buscar proteção."));
-        }
+        ProtecaoResponseDTO protecao = service.buscarPorId(id);
+        return ResponseEntity.ok(protecao);
     }
 
     @DeleteMapping("/{id}")
@@ -102,21 +76,12 @@ public class ProtecaoController {
             @PathVariable Long id,
             Authentication authentication,
             @RequestHeader(value = "X-MFA-PIN", required = false) String pin) {
-        try {
-            if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuario)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
-            }
-            mfaGuard.check((Usuario) authentication.getPrincipal(), pin);
-            service.deletar(id, usuario.getId());
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
-        } catch (com.inova27.app.exception.MfaRequiredException e) {
-            throw e;
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(KEY_ERRO, e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(KEY_ERRO, "Erro ao excluir a proteção."));
+        if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuario)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
         }
+        mfaGuard.check((Usuario) authentication.getPrincipal(), pin);
+        service.deletar(id, usuario.getId());
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 
     // ========================================================================
@@ -129,17 +94,11 @@ public class ProtecaoController {
             @PathVariable Long protecaoId,
             @PathVariable Long jogoId,
             Authentication authentication) {
-        try {
-            if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuario)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
-            }
-            service.vincularJogo(protecaoId, jogoId, usuario.getId());
-            return ResponseEntity.ok(Map.of(KEY_MENSAGEM, "Jogo vinculado com sucesso à proteção."));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(KEY_ERRO, e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(KEY_ERRO, e.getMessage()));
+        if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuario)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
         }
+        service.vincularJogo(protecaoId, jogoId, usuario.getId());
+        return ResponseEntity.ok(Map.of(KEY_MENSAGEM, "Jogo vinculado com sucesso à proteção."));
     }
 
     @DeleteMapping("/{protecaoId}/jogo/{jogoId}")
@@ -147,16 +106,10 @@ public class ProtecaoController {
             @PathVariable Long protecaoId,
             @PathVariable Long jogoId,
             Authentication authentication) {
-        try {
-            if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuario)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
-            }
-            service.desvincularJogo(protecaoId, jogoId, usuario.getId());
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(KEY_ERRO, e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(KEY_ERRO, e.getMessage()));
+        if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuario)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
         }
+        service.desvincularJogo(protecaoId, jogoId, usuario.getId());
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 }

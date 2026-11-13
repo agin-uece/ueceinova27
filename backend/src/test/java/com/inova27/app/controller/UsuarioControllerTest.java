@@ -1,6 +1,8 @@
 package com.inova27.app.controller;
 
+import com.inova27.app.dto.usuarios.ConcluirRecuperacaoEmailDTO;
 import com.inova27.app.dto.usuarios.ConfirmarRecuperacaoEmailDTO;
+import com.inova27.app.exception.BusinessException;
 import com.inova27.app.dto.usuarios.SolicitarRecuperacaoEmailDTO;
 import com.inova27.app.dto.usuarios.UsuarioResponseDTO;
 import com.inova27.app.dto.usuarios.UsuarioUpdateDTO;
@@ -84,8 +86,7 @@ class UsuarioControllerTest {
     @DisplayName("Deve retornar NOT_FOUND ao buscar por ID inexistente")
     void testBuscarPorId_NotFound() {
         when(service.buscarPorId(2L)).thenThrow(new RuntimeException("Não achou"));
-        ResponseEntity<Object> response = controller.buscarPorId(2L);
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThatThrownBy(() -> controller.buscarPorId(2L)).isInstanceOf(RuntimeException.class);
     }
 
 
@@ -95,7 +96,7 @@ class UsuarioControllerTest {
     @Test
     @DisplayName("Deve retornar UNAUTHORIZED ao atualizar outro sem login")
     void testAtualizar_NaoAutenticado() {
-        ResponseEntity<Object> response = controller.atualizar(1L, mock(UsuarioUpdateDTO.class), null);
+        ResponseEntity<Object> response = controller.atualizar(1L, mock(UsuarioUpdateDTO.class), null, null);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
@@ -114,7 +115,7 @@ class UsuarioControllerTest {
     @Test
     @DisplayName("Deve retornar UNAUTHORIZED ao deletar sem autenticação")
     void testDeletar_NaoAutenticado() {
-        ResponseEntity<Object> response = controller.deletar(1L, null);
+        ResponseEntity<Object> response = controller.deletar(1L, null, null);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
@@ -134,17 +135,6 @@ class UsuarioControllerTest {
         verify(service, times(1)).solicitarRecuperacaoEmail("teste@uece.br");
     }
 
-    @Test
-    @DisplayName("Deve retornar BAD_REQUEST em erro de regra na solicitacao")
-    void testSolicitarRecuperacaoEmail_BadRequest() {
-        SolicitarRecuperacaoEmailDTO dto = mock(SolicitarRecuperacaoEmailDTO.class);
-        doThrow(new RuntimeException("E-mail não existe")).when(service).solicitarRecuperacaoEmail(any());
-
-        ResponseEntity<Object> response = controller.solicitarRecuperacaoEmail(dto);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-    }
-
 
     // ==========================================
     // POST /usuarios/recuperar-email/confirmar
@@ -160,20 +150,62 @@ class UsuarioControllerTest {
 
         ResponseEntity<Object> response = controller.confirmarRecuperacaoEmail(dto);
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        // A troca só é aplicada no passo "concluir"
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
         verify(service, times(1)).confirmarRecuperacaoEmail("teste@uece.br", "123456", "novo@uece.br", "sec@uece.br");
     }
 
     @Test
-    @DisplayName("Deve retornar BAD_REQUEST em erro de regra na confirmacao")
-    void testConfirmarRecuperacaoEmail_BadRequest() {
+    @DisplayName("Erro de regra na confirmação é propagado para o handler global")
+    void testConfirmarRecuperacaoEmail_PropagaErro() {
         ConfirmarRecuperacaoEmailDTO dto = mock(ConfirmarRecuperacaoEmailDTO.class);
-        doThrow(new RuntimeException("PIN inválido")).when(service).confirmarRecuperacaoEmail(any(), any(), any(), any());
+        doThrow(new BusinessException("PIN inválido")).when(service).confirmarRecuperacaoEmail(any(), any(), any(), any());
 
-        ResponseEntity<Object> response = controller.confirmarRecuperacaoEmail(dto);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThatThrownBy(() -> controller.confirmarRecuperacaoEmail(dto)).isInstanceOf(BusinessException.class);
     }
 
+    // ==========================================
+    // POST /usuarios/recuperar-email/concluir
+    // ==========================================
+    @Test
+    @DisplayName("Deve concluir a troca de e-mail")
+    void testConcluirRecuperacaoEmail_Sucesso() {
+        ConcluirRecuperacaoEmailDTO dto = new ConcluirRecuperacaoEmailDTO("teste@uece.br", "999888", "novo@uece.br", "sec@uece.br");
 
+        ResponseEntity<Object> response = controller.concluirRecuperacaoEmail(dto);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        verify(service).concluirRecuperacaoEmail("teste@uece.br", "999888", "novo@uece.br", "sec@uece.br");
+    }
+
+    // ==========================================
+    // MFA em ações sensíveis de admin
+    // ==========================================
+    @Test
+    @DisplayName("Excluir usuário exige MFA: sem PIN não exclui")
+    void testDeletar_ExigeMfa() {
+        Usuario adminUsuario = new Usuario();
+        adminUsuario.setId(1L);
+        adminUsuario.setRole(com.inova27.app.model.UserRole.ADMIN);
+        when(authentication.getPrincipal()).thenReturn(adminUsuario);
+        doThrow(new com.inova27.app.exception.MfaRequiredException(adminUsuario.getId(), "admin@uece.br")).when(mfaGuard).check(adminUsuario, null);
+
+        assertThatThrownBy(() -> controller.deletar(5L, null, authentication))
+                .isInstanceOf(com.inova27.app.exception.MfaRequiredException.class);
+        verify(service, never()).deletar(any(), any());
+    }
+
+    @Test
+    @DisplayName("Atualizar usuário (ex.: trocar perfil) exige MFA: sem PIN não altera")
+    void testAtualizar_ExigeMfa() {
+        Usuario adminUsuario = new Usuario();
+        adminUsuario.setId(1L);
+        adminUsuario.setRole(com.inova27.app.model.UserRole.ADMIN);
+        when(authentication.getPrincipal()).thenReturn(adminUsuario);
+        doThrow(new com.inova27.app.exception.MfaRequiredException(adminUsuario.getId(), "admin@uece.br")).when(mfaGuard).check(adminUsuario, null);
+
+        assertThatThrownBy(() -> controller.atualizar(5L, mock(UsuarioUpdateDTO.class), null, authentication))
+                .isInstanceOf(com.inova27.app.exception.MfaRequiredException.class);
+        verify(service, never()).atualizar(any(), any(), any());
+    }
 }

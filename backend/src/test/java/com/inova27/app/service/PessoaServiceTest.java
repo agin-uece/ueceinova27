@@ -182,8 +182,8 @@ class PessoaServiceTest {
             when(repository.findById(10L)).thenReturn(Optional.of(pessoaPadrao));
 
             assertThatThrownBy(() -> pessoaService.buscarPorId(10L, bisbilhoteiro))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessage("Pessoa ainda não validada.");
+                    .isInstanceOf(ResourceNotFoundException.class)
+                    .hasMessage("Pessoa não encontrada.");
         }
     }
 
@@ -217,7 +217,6 @@ class PessoaServiceTest {
             PessoaResponseDTO resultado = pessoaService.atualizar(10L, dto, admin);
 
             assertThat(resultado.nome()).isEqualTo("Nome Editado");
-            verify(indexador).removerIndex("pessoas", 10L);
             verify(indexador).indexar(any());
         }
 

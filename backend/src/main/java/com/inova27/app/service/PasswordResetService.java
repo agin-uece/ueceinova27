@@ -35,9 +35,8 @@ public class PasswordResetService {
 
     public void forgotPassword(String email) {
 
-        Usuario usuario = usuarioRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
-
+        // Resposta idêntica para e-mail cadastrado ou não: não revela quais contas existem
+        Usuario usuario = usuarioRepository.findByEmail(email).orElse(null);
         if (usuario == null) return;
 
         String token = UUID.randomUUID().toString();

@@ -4,7 +4,6 @@ import com.inova27.app.dto.laboratorio.LaboratorioCreateDTO;
 import com.inova27.app.dto.laboratorio.LaboratorioFiltroDTO;
 import com.inova27.app.dto.laboratorio.LaboratorioResponseDTO;
 import com.inova27.app.dto.laboratorio.LaboratorioUpdateDTO;
-import com.inova27.app.exception.BusinessException;
 import com.inova27.app.exception.ResourceNotFoundException;
 import com.inova27.app.exception.UnauthorizedActionException;
 import com.inova27.app.mapper.DocumentoSemanticoMapper;
@@ -41,7 +40,7 @@ public class LaboratorioService {
     @Transactional
     public void validarLaboratorio(Long id, boolean aprovado, Usuario adminLogado) {
         Laboratorio lab = repository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException(MSG_LABORATORIO_NAO_ENCONTRADO));
+                .orElseThrow(() -> new ResourceNotFoundException(MSG_LABORATORIO_NAO_ENCONTRADO));
 
         if (aprovado) {
             lab.setStatus(StatusValidacao.APROVADO);
@@ -51,6 +50,8 @@ public class LaboratorioService {
         } else {
             lab.setStatus(StatusValidacao.REJEITADO);
             repository.save(lab);
+            // Item rejeitado (inclusive se já estava aprovado) sai da busca pública
+            indexador.removerIndex("laboratorios", lab.getId());
         }
 
         String statusAlterado = aprovado ? "APROVADO" : "REJEITADO";
@@ -85,132 +86,113 @@ public class LaboratorioService {
 
     @Transactional
     public LaboratorioResponseDTO criar(LaboratorioCreateDTO dto, Usuario usuario) {
-        try {
-            if (dto.nome() == null || dto.nome().isBlank()) throw new IllegalArgumentException("Nome é obrigatório");
-            if (repository.existsByNome(dto.nome())) throw new IllegalArgumentException("Já existe um laboratório com esse nome");
+        if (dto.nome() == null || dto.nome().isBlank()) throw new IllegalArgumentException("Nome é obrigatório");
+        if (repository.existsByNome(dto.nome())) throw new IllegalArgumentException("Já existe um laboratório com esse nome");
 
-            Laboratorio lab = new Laboratorio();
-            lab.setNome(dto.nome());
-            lab.setDescricao(dto.descricao());
-            lab.setCoordenacao(dto.coordenacao());
-            lab.setArea(dto.area());
-            lab.setEmail(dto.email());
-            lab.setSite(dto.site());
-            lab.setTelefone(dto.telefone());
-            if (dto.naturezas() != null) lab.setNaturezas(new HashSet<>(dto.naturezas()));
-            lab.setVinculado(dto.vinculado());
-            lab.setHorarioAbertura(dto.horarioAbertura());
-            lab.setHorarioFechamento(dto.horarioFechamento());
-            lab.setUrlFoto(dto.urlFoto());
-            lab.setLocalizacao(dto.localizacao());
-            lab.setParcerias(dto.parcerias());
-            lab.setInfraestrutura(dto.infraestrutura());
-            lab.setUserInclusaoId(usuario != null ? usuario.getId() : null);
-            lab.setResolucao(dto.resolucao());
-            lab.setQtdPessoas(dto.qtdPessoas());
-            lab.setQtdMestrando(dto.qtdMestrando());
-            lab.setQtdDoutorandos(dto.qtdDoutorandos());
-            lab.setQtdPosDoc(dto.qtdPosDoc());
+        Laboratorio lab = new Laboratorio();
+        lab.setNome(dto.nome());
+        lab.setDescricao(dto.descricao());
+        lab.setCoordenacao(dto.coordenacao());
+        lab.setArea(dto.area());
+        lab.setEmail(dto.email());
+        lab.setSite(dto.site());
+        lab.setTelefone(dto.telefone());
+        if (dto.naturezas() != null) lab.setNaturezas(new HashSet<>(dto.naturezas()));
+        lab.setVinculado(dto.vinculado());
+        lab.setHorarioAbertura(dto.horarioAbertura());
+        lab.setHorarioFechamento(dto.horarioFechamento());
+        lab.setUrlFoto(dto.urlFoto());
+        lab.setLocalizacao(dto.localizacao());
+        lab.setParcerias(dto.parcerias());
+        lab.setInfraestrutura(dto.infraestrutura());
+        lab.setUserInclusaoId(usuario != null ? usuario.getId() : null);
+        lab.setResolucao(dto.resolucao());
+        lab.setQtdPessoas(dto.qtdPessoas());
+        lab.setQtdMestrando(dto.qtdMestrando());
+        lab.setQtdDoutorandos(dto.qtdDoutorandos());
+        lab.setQtdPosDoc(dto.qtdPosDoc());
 
-            if (dto.tags() != null) lab.setTags(new HashSet<>(dto.tags()));
+        if (dto.tags() != null) lab.setTags(new HashSet<>(dto.tags()));
 
-            lab.setInstagram(dto.instagram());
+        lab.setInstagram(dto.instagram());
 
-            if (usuario != null && usuario.getRole() == UserRole.ADMIN) {
-                lab.setStatus(StatusValidacao.APROVADO);
-            } else {
-                lab.setStatus(StatusValidacao.PENDENTE);
-            }
-
-            Laboratorio salvo = repository.save(lab);
-
-            if (salvo.getStatus() == StatusValidacao.PENDENTE) {
-                solicitacaoService.enviarEmailNotificacaoCriacao(TipoEntidade.LABORATORIO, salvo.getNome());
-            }
-
-            if (salvo.getStatus() == StatusValidacao.APROVADO) {
-                var doc = mapper.fromLaboratorio(salvo);
-                indexador.indexar(doc);
-            }
-
-            LaboratorioResponseDTO responseDTO = toResponse(salvo);
-            Long auditUserId = usuario != null ? usuario.getId() : null;
-            auditoriaService.registrarLog(ENTIDADE_LABORATORIO, salvo.getId(), AcaoAuditoria.CRIACAO, auditUserId, responseDTO);
-            return responseDTO;
-
-        } catch (IllegalArgumentException | SecurityException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new BusinessException("Erro ao criar laboratório.");
+        if (usuario != null && usuario.getRole() == UserRole.ADMIN) {
+            lab.setStatus(StatusValidacao.APROVADO);
+        } else {
+            lab.setStatus(StatusValidacao.PENDENTE);
         }
+
+        Laboratorio salvo = repository.save(lab);
+
+        if (salvo.getStatus() == StatusValidacao.PENDENTE) {
+            solicitacaoService.enviarEmailNotificacaoCriacao(TipoEntidade.LABORATORIO, salvo.getNome());
+        }
+
+        if (salvo.getStatus() == StatusValidacao.APROVADO) {
+            var doc = mapper.fromLaboratorio(salvo);
+            indexador.indexar(doc);
+        }
+
+        LaboratorioResponseDTO responseDTO = toResponse(salvo);
+        Long auditUserId = usuario != null ? usuario.getId() : null;
+        auditoriaService.registrarLog(ENTIDADE_LABORATORIO, salvo.getId(), AcaoAuditoria.CRIACAO, auditUserId, responseDTO);
+        return responseDTO;
     }
 
     @Transactional(readOnly = true)
     public List<LaboratorioResponseDTO> listarTodos() {
-        try {
-            return repository.findByStatus(StatusValidacao.APROVADO).stream().map(this::toResponse).toList();
-        } catch (Exception e) {
-            throw new BusinessException("Erro ao listar laboratórios");
-        }
+        return repository.findByStatus(StatusValidacao.APROVADO).stream().map(this::toResponse).toList();
     }
 
+    // Laboratório não aprovado só é visível para o admin e para quem o cadastrou (404 para os demais)
     @Transactional(readOnly = true)
-    public LaboratorioResponseDTO buscarPorId(Long id) {
-        try {
-            Laboratorio lab = repository.findById(id).orElseThrow(() -> new ResourceNotFoundException(MSG_LABORATORIO_NAO_ENCONTRADO));
-            return toResponse(lab);
-        } catch (IllegalArgumentException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new BusinessException("Erro ao buscar laboratório.");
+    public LaboratorioResponseDTO buscarPorId(Long id, Usuario usuario) {
+        Laboratorio lab = repository.findById(id).orElseThrow(() -> new ResourceNotFoundException(MSG_LABORATORIO_NAO_ENCONTRADO));
+        boolean isAdmin = usuario != null && usuario.getRole() == UserRole.ADMIN;
+        boolean isOwner = usuario != null && usuario.getId().equals(lab.getUserInclusaoId());
+        if (lab.getStatus() != StatusValidacao.APROVADO && !isAdmin && !isOwner) {
+            throw new ResourceNotFoundException(MSG_LABORATORIO_NAO_ENCONTRADO);
         }
+        return toResponse(lab);
     }
 
     @Transactional
     public LaboratorioResponseDTO atualizar(Long id, LaboratorioUpdateDTO dto, Usuario usuario) {
-        try {
-            Laboratorio lab = repository.findById(id)
-                    .orElseThrow(() -> new ResourceNotFoundException(MSG_LABORATORIO_NAO_ENCONTRADO));
+        Laboratorio lab = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(MSG_LABORATORIO_NAO_ENCONTRADO));
 
-            boolean isAdmin = usuario != null && usuario.getRole() == UserRole.ADMIN;
-            boolean isOwner = usuario != null && lab.getUserInclusaoId() != null
-                    && lab.getUserInclusaoId().equals(usuario.getId());
+        boolean isAdmin = usuario != null && usuario.getRole() == UserRole.ADMIN;
+        boolean isOwner = usuario != null && lab.getUserInclusaoId() != null
+                && lab.getUserInclusaoId().equals(usuario.getId());
 
-            if (!isAdmin && !isOwner) {
-                throw new UnauthorizedActionException("Você não tem permissão para atualizar este laboratório.");
-            }
-
-            if (!isAdmin) {
-                solicitacaoService.registrarSolicitacao(
-                        TipoEntidade.LABORATORIO,
-                        id,
-                        TipoAcao.EDICAO,
-                        dto,
-                        usuario.getId()
-                );
-                return null;
-            }
-
-            // 🔥 COMPONENTIZAÇÃO PARA REDUZIR COMPLEXIDADE COGNITIVA
-            mapearCamposAtualizacao(lab, dto);
-
-            Laboratorio atualizado = repository.save(lab);
-
-            if (atualizado.getStatus() == StatusValidacao.APROVADO) {
-                indexador.removerIndex("laboratorios", id);
-                var doc = mapper.fromLaboratorio(atualizado);
-                indexador.indexar(doc);
-            }
-
-            auditoriaService.registrarLog(ENTIDADE_LABORATORIO, atualizado.getId(), AcaoAuditoria.EDICAO, usuario.getId(), dto);
-
-            return toResponse(atualizado);
-
-        } catch (IllegalArgumentException | SecurityException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new BusinessException("Erro ao atualizar laboratório.");
+        if (!isAdmin && !isOwner) {
+            throw new UnauthorizedActionException("Você não tem permissão para atualizar este laboratório.");
         }
+
+        if (!isAdmin) {
+            solicitacaoService.registrarSolicitacao(
+                    TipoEntidade.LABORATORIO,
+                    id,
+                    TipoAcao.EDICAO,
+                    dto,
+                    usuario.getId()
+            );
+            return null;
+        }
+
+        // 🔥 COMPONENTIZAÇÃO PARA REDUZIR COMPLEXIDADE COGNITIVA
+        mapearCamposAtualizacao(lab, dto);
+
+        Laboratorio atualizado = repository.save(lab);
+
+        if (atualizado.getStatus() == StatusValidacao.APROVADO) {
+            var doc = mapper.fromLaboratorio(atualizado);
+            indexador.indexar(doc);
+        }
+
+        auditoriaService.registrarLog(ENTIDADE_LABORATORIO, atualizado.getId(), AcaoAuditoria.EDICAO, usuario.getId(), dto);
+
+        return toResponse(atualizado);
     }
 
     // 🔹 MÉTODOS PRIVADOS CRIADOS PARA DIMINUIR A COMPLEXIDADE COGNITIVA
@@ -267,43 +249,38 @@ public class LaboratorioService {
 
     @Transactional
     public boolean deletar(Long id, Usuario usuario) {
-        try {
-            Laboratorio lab = repository.findById(id)
-                    .orElseThrow(() -> new IllegalArgumentException(MSG_LABORATORIO_NAO_ENCONTRADO));
+        Laboratorio lab = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(MSG_LABORATORIO_NAO_ENCONTRADO));
 
-            boolean isAdmin = usuario != null && usuario.getRole() == UserRole.ADMIN;
-            boolean isOwner = usuario != null && lab.getUserInclusaoId() != null
-                    && lab.getUserInclusaoId().equals(usuario.getId());
+        boolean isAdmin = usuario != null && usuario.getRole() == UserRole.ADMIN;
+        boolean isOwner = usuario != null && lab.getUserInclusaoId() != null
+                && lab.getUserInclusaoId().equals(usuario.getId());
 
-            if (!isAdmin && !isOwner) {
-                throw new UnauthorizedActionException("Você não tem permissão para excluir este laboratório.");
-            }
-
-            if (!isAdmin) {
-                solicitacaoService.registrarSolicitacao(
-                        TipoEntidade.LABORATORIO,
-                        id,
-                        TipoAcao.EXCLUSAO,
-                        null,
-                        usuario.getId()
-                );
-                return false;
-            }
-
-            LaboratorioResponseDTO retratoAntesDeApagar = toResponse(lab);
-
-            auditoriaService.registrarLog(ENTIDADE_LABORATORIO, id, AcaoAuditoria.DELECAO, usuario.getId(), retratoAntesDeApagar);
-
-            repository.delete(lab);
-            indexador.removerIndex("laboratorios", id);
-
-            return true;
-
-        }catch (IllegalArgumentException | UnauthorizedActionException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new BusinessException("Erro ao deletar laboratório.");
+        if (!isAdmin && !isOwner) {
+            throw new UnauthorizedActionException("Você não tem permissão para excluir este laboratório.");
         }
+
+        if (!isAdmin) {
+            solicitacaoService.registrarSolicitacao(
+                    TipoEntidade.LABORATORIO,
+                    id,
+                    TipoAcao.EXCLUSAO,
+                    null,
+                    usuario.getId()
+            );
+            return false;
+        }
+
+        LaboratorioResponseDTO retratoAntesDeApagar = toResponse(lab);
+
+        auditoriaService.registrarLog(ENTIDADE_LABORATORIO, id, AcaoAuditoria.DELECAO, usuario.getId(), retratoAntesDeApagar);
+
+        // As pessoas continuam existindo; apenas deixam de apontar para o laboratório excluído
+        lab.getPessoas().forEach(p -> p.setLaboratorio(null));
+        repository.delete(lab);
+        indexador.removerIndex("laboratorios", id);
+
+        return true;
     }
 
     private LaboratorioResponseDTO toResponse(Laboratorio lab) {

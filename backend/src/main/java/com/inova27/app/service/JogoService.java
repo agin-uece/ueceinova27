@@ -50,73 +50,68 @@ public class JogoService {
 
     @Transactional
     public JogoResponseDTO criar(JogoCreateDTO dto, Usuario user) {
-        try {
-            if (dto.nome() == null || dto.nome().isBlank()) {
-                throw new IllegalArgumentException("O nome do jogo é obrigatório.");
-            }
-            if (repository.existsByNome(dto.nome())) {
-                throw new JogoJaExisteException(dto.nome());
-            }
-
-            Jogo jogo = new Jogo();
-            jogo.setNome(dto.nome());
-            jogo.setDescricao(dto.descricao());
-            jogo.setGenero(dto.genero());
-            jogo.setPlataforma(dto.plataforma());
-            jogo.setDataLancamento(dto.dataLancamento());
-            jogo.setLinkDownload(dto.linkDownload());
-            jogo.setSite(dto.site());
-
-            if (user != null) {
-                jogo.setUserInclusaoId(user.getId());
-            }
-
-            jogo.setTipoJogo(dto.tipoJogo());
-            jogo.setAnoDesenvolvimento(dto.anoDesenvolvimento());
-            jogo.setEstagioDesenvolvimento(dto.estagioDesenvolvimento());
-            jogo.setUrlFoto(dto.urlFoto());
-
-            if (dto.engineId() != null) {
-                var engine = engineRepository.findById(dto.engineId())
-                        .orElseThrow(() -> new IllegalArgumentException("Engine não encontrada"));
-                jogo.setEngine(engine);
-            }
-
-            if (dto.linguagensIds() != null && !dto.linguagensIds().isEmpty()) {
-                var linguagens = new HashSet<>(linguagemRepository.findAllById(dto.linguagensIds()));
-                jogo.setLinguagens(linguagens);
-            }
-
-            jogo.setFaixaEtaria(dto.faixaEtaria());
-            jogo.setCriadores(dto.criadores());
-
-            if (user != null && user.getRole() == UserRole.ADMIN) {
-                jogo.setStatus(StatusValidacao.APROVADO);
-            } else {
-                jogo.setStatus(StatusValidacao.PENDENTE);
-            }
-
-            Jogo salvo = repository.save(jogo);
-
-            if (salvo.getStatus() == StatusValidacao.PENDENTE) {
-                solicitacaoService.enviarEmailNotificacaoCriacao(TipoEntidade.JOGO, salvo.getNome());
-            }
-
-            if (salvo.getStatus() == StatusValidacao.APROVADO) {
-                var doc = mapper.fromJogo(salvo);
-                indexador.indexar(doc);
-            }
-
-            JogoResponseDTO responseDTO = toResponseDTO(salvo);
-
-            Long auditUserId = (user != null) ? user.getId() : null;
-            auditoriaService.registrarLog(ENTIDADE_JOGO, salvo.getId(), AcaoAuditoria.CRIACAO, auditUserId, responseDTO);
-
-            return responseDTO;
-
-        } catch (Exception e) {
-            throw new JogoServiceException("Erro interno ao criar jogo", e);
+        if (dto.nome() == null || dto.nome().isBlank()) {
+            throw new IllegalArgumentException("O nome do jogo é obrigatório.");
         }
+        if (repository.existsByNome(dto.nome())) {
+            throw new JogoJaExisteException(dto.nome());
+        }
+
+        Jogo jogo = new Jogo();
+        jogo.setNome(dto.nome());
+        jogo.setDescricao(dto.descricao());
+        jogo.setGenero(dto.genero());
+        jogo.setPlataforma(dto.plataforma());
+        jogo.setDataLancamento(dto.dataLancamento());
+        jogo.setLinkDownload(dto.linkDownload());
+        jogo.setSite(dto.site());
+
+        if (user != null) {
+            jogo.setUserInclusaoId(user.getId());
+        }
+
+        jogo.setTipoJogo(dto.tipoJogo());
+        jogo.setAnoDesenvolvimento(dto.anoDesenvolvimento());
+        jogo.setEstagioDesenvolvimento(dto.estagioDesenvolvimento());
+        jogo.setUrlFoto(dto.urlFoto());
+
+        if (dto.engineId() != null) {
+            var engine = engineRepository.findById(dto.engineId())
+                    .orElseThrow(() -> new IllegalArgumentException("Engine não encontrada"));
+            jogo.setEngine(engine);
+        }
+
+        if (dto.linguagensIds() != null && !dto.linguagensIds().isEmpty()) {
+            var linguagens = new HashSet<>(linguagemRepository.findAllById(dto.linguagensIds()));
+            jogo.setLinguagens(linguagens);
+        }
+
+        jogo.setFaixaEtaria(dto.faixaEtaria());
+        jogo.setCriadores(dto.criadores());
+
+        if (user != null && user.getRole() == UserRole.ADMIN) {
+            jogo.setStatus(StatusValidacao.APROVADO);
+        } else {
+            jogo.setStatus(StatusValidacao.PENDENTE);
+        }
+
+        Jogo salvo = repository.save(jogo);
+
+        if (salvo.getStatus() == StatusValidacao.PENDENTE) {
+            solicitacaoService.enviarEmailNotificacaoCriacao(TipoEntidade.JOGO, salvo.getNome());
+        }
+
+        if (salvo.getStatus() == StatusValidacao.APROVADO) {
+            var doc = mapper.fromJogo(salvo);
+            indexador.indexar(doc);
+        }
+
+        JogoResponseDTO responseDTO = toResponseDTO(salvo);
+
+        Long auditUserId = (user != null) ? user.getId() : null;
+        auditoriaService.registrarLog(ENTIDADE_JOGO, salvo.getId(), AcaoAuditoria.CRIACAO, auditUserId, responseDTO);
+
+        return responseDTO;
     }
 
     @Transactional
@@ -132,6 +127,8 @@ public class JogoService {
         } else {
             jogo.setStatus(StatusValidacao.REJEITADO);
             repository.save(jogo);
+            // Item rejeitado (inclusive se já estava aprovado) sai da busca pública
+            indexador.removerIndex("jogos", jogo.getId());
         }
 
         String statusAlterado = aprovado ? "APROVADO" : "REJEITADO";
@@ -166,96 +163,81 @@ public class JogoService {
 
     @Transactional(readOnly = true)
     public List<JogoResponseDTO> listarTodos() {
-        try {
-            return repository.findByStatus(StatusValidacao.APROVADO)
-                    .stream()
-                    .map(this::toResponseDTO)
-                    .toList();
-        } catch (Exception e) {
-            throw new JogoServiceException("Erro ao buscar a lista de jogos", e);
-        }
+        return repository.findByStatus(StatusValidacao.APROVADO)
+                .stream()
+                .map(this::toResponseDTO)
+                .toList();
     }
 
+    // Jogo não aprovado só é visível para o admin e para quem o cadastrou (404 para os demais)
     @Transactional(readOnly = true)
-    public JogoResponseDTO buscarPorId(Long id) {
-        try {
-            Jogo jogo = repository.findById(id)
-                    .orElseThrow(() -> new JogoNaoEncontradoException(id));
-            return toResponseDTO(jogo);
-        } catch (Exception e) {
-            throw new JogoServiceException("Erro interno ao buscar jogo", e);
+    public JogoResponseDTO buscarPorId(Long id, Usuario usuario) {
+        Jogo jogo = repository.findById(id)
+                .orElseThrow(() -> new JogoNaoEncontradoException(id));
+        if (jogo.getStatus() != StatusValidacao.APROVADO && !isAdmin(usuario) && !isOwner(jogo, usuario)) {
+            throw new JogoNaoEncontradoException(id);
         }
+        return toResponseDTO(jogo);
     }
 
     // 🔹 UPDATE (HÍBRIDO)
     @Transactional
     public JogoResponseDTO atualizar(Long id, JogoUpdateDTO dto, Usuario usuario) {
-        try {
-            Jogo jogo = repository.findById(id)
-                    .orElseThrow(JogoNaoEncontradoException::new);
+        Jogo jogo = repository.findById(id)
+                .orElseThrow(JogoNaoEncontradoException::new);
 
-            verificarPermissaoEdicao(jogo, usuario);
+        verificarPermissaoEdicao(jogo, usuario);
 
-            if (!isAdmin(usuario)) {
-                solicitacaoService.registrarSolicitacao(
-                        TipoEntidade.JOGO, id, TipoAcao.EDICAO, dto, usuario.getId());
-                return null;
-            }
-
-            // 🔥 A COMPLEXIDADE COGNITIVA FOI DIVIDIDA ENTRE ESSES DOIS MÉTODOS
-            aplicarAtributosBasicos(jogo, dto);
-            aplicarRelacionamentos(jogo, dto);
-
-            Jogo atualizado = repository.save(jogo);
-
-            if (atualizado.getStatus() == StatusValidacao.APROVADO) {
-                indexador.removerIndex("jogos", id);
-                var doc = mapper.fromJogo(atualizado);
-                indexador.indexar(doc);
-            }
-
-            auditoriaService.registrarLog(ENTIDADE_JOGO, atualizado.getId(), AcaoAuditoria.EDICAO, usuario.getId(), dto);
-
-            return toResponseDTO(atualizado);
-
-        } catch (Exception e) {
-            throw new JogoServiceException("Erro interno ao atualizar jogo", e);
+        if (!isAdmin(usuario)) {
+            solicitacaoService.registrarSolicitacao(
+                    TipoEntidade.JOGO, id, TipoAcao.EDICAO, dto, usuario.getId());
+            return null;
         }
+
+        // 🔥 A COMPLEXIDADE COGNITIVA FOI DIVIDIDA ENTRE ESSES DOIS MÉTODOS
+        aplicarAtributosBasicos(jogo, dto);
+        aplicarRelacionamentos(jogo, dto);
+
+        Jogo atualizado = repository.save(jogo);
+
+        if (atualizado.getStatus() == StatusValidacao.APROVADO) {
+            var doc = mapper.fromJogo(atualizado);
+            indexador.indexar(doc);
+        }
+
+        auditoriaService.registrarLog(ENTIDADE_JOGO, atualizado.getId(), AcaoAuditoria.EDICAO, usuario.getId(), dto);
+
+        return toResponseDTO(atualizado);
     }
 
     // 🔹 DELETE (HÍBRIDO)
     @Transactional
     public boolean deletar(Long id, Usuario usuario) {
-        try {
-            Jogo jogo = repository.findById(id)
-                    .orElseThrow(JogoNaoEncontradoException::new);
+        Jogo jogo = repository.findById(id)
+                .orElseThrow(JogoNaoEncontradoException::new);
 
-            boolean isAdmin = isAdmin(usuario);
-            boolean isOwner = isOwner(jogo, usuario);
+        boolean isAdmin = isAdmin(usuario);
+        boolean isOwner = isOwner(jogo, usuario);
 
-            if (!isAdmin && !isOwner) {
-                throw new PermissaoNegadaException("Você não tem permissão para excluir este jogo.");
-            }
-
-            if (!isAdmin) {
-                solicitacaoService.registrarSolicitacao(
-                        TipoEntidade.JOGO, id, TipoAcao.EXCLUSAO, null, usuario.getId());
-                return false;
-            }
-
-            JogoResponseDTO retrato = toResponseDTO(jogo);
-            repository.delete(jogo);
-            indexador.removerIndex("jogos", id);
-
-            auditoriaService.registrarLog(ENTIDADE_JOGO, id, AcaoAuditoria.DELECAO, usuario.getId(), retrato);
-
-            return true;
-
-        } catch (IllegalArgumentException | SecurityException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new JogoServiceException("Erro interno ao deletar jogo", e);
+        if (!isAdmin && !isOwner) {
+            throw new PermissaoNegadaException("Você não tem permissão para excluir este jogo.");
         }
+
+        if (!isAdmin) {
+            solicitacaoService.registrarSolicitacao(
+                    TipoEntidade.JOGO, id, TipoAcao.EXCLUSAO, null, usuario.getId());
+            return false;
+        }
+
+        JogoResponseDTO retrato = toResponseDTO(jogo);
+        // As proteções (PI) continuam existindo; apenas deixam de apontar para o jogo excluído
+        jogo.getProtecoes().forEach(p -> p.setJogo(null));
+        repository.delete(jogo);
+        indexador.removerIndex("jogos", id);
+
+        auditoriaService.registrarLog(ENTIDADE_JOGO, id, AcaoAuditoria.DELECAO, usuario.getId(), retrato);
+
+        return true;
     }
 
     // ========================================================================

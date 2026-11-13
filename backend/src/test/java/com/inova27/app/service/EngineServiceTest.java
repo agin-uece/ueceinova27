@@ -5,7 +5,6 @@ import com.inova27.app.dto.engine.EngineResponseDTO;
 import com.inova27.app.dto.engine.EngineUpdateDTO;
 import com.inova27.app.exception.EngineJaExisteException;
 import com.inova27.app.exception.EngineNaoEncontradaException;
-import com.inova27.app.exception.EngineServiceException;
 import com.inova27.app.model.Engine;
 import com.inova27.app.repository.EngineRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -62,17 +61,14 @@ class EngineServiceTest {
     }
 
     @Test
-    @DisplayName("Deve lançar EngineServiceException com causa EngineJaExisteException ao criar nome duplicado")
+    @DisplayName("Deve lançar EngineJaExisteException ao criar nome duplicado")
     void testCriar_NomeJaExiste() {
         EngineCreateDTO dto = new EngineCreateDTO("Unreal Engine 5");
 
         when(repository.existsByNome(dto.nome())).thenReturn(true);
 
-        // O catch() do seu serviço envelopa a EngineJaExisteException dentro de uma EngineServiceException
-        assertThatThrownBy(() -> engineService.criar(dto))
-                .isInstanceOf(EngineServiceException.class)
-                .hasMessageContaining("Erro interno ao criar engine")
-                .hasCauseInstanceOf(EngineJaExisteException.class);
+                assertThatThrownBy(() -> engineService.criar(dto))
+                .isInstanceOf(EngineJaExisteException.class);
 
         verify(repository, never()).save(any());
     }
@@ -93,14 +89,14 @@ class EngineServiceTest {
     }
 
     @Test
-    @DisplayName("Deve lançar EngineServiceException ao ocorrer erro no listarTodos")
+    @DisplayName("Erro do banco no listarTodos é propagado (vira 500 no handler global)")
     void testListarTodos_ErroInterno() {
         // Simulando um erro catastrófico no banco para cair no bloco catch
         when(repository.findAll()).thenThrow(new RuntimeException("Falha no banco"));
 
         assertThatThrownBy(() -> engineService.listarTodos())
-                .isInstanceOf(EngineServiceException.class)
-                .hasMessageContaining("Erro ao buscar a lista de engines");
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Falha no banco");
     }
 
     @Test
@@ -114,14 +110,12 @@ class EngineServiceTest {
     }
 
     @Test
-    @DisplayName("Deve lançar EngineServiceException com causa EngineNaoEncontradaException ao buscar ID inexistente")
+    @DisplayName("Deve lançar EngineNaoEncontradaException ao buscar ID inexistente")
     void testBuscarPorId_NaoEncontrado() {
         when(repository.findById(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> engineService.buscarPorId(99L))
-                .isInstanceOf(EngineServiceException.class)
-                .hasMessageContaining("Erro interno ao buscar engine")
-                .hasCauseInstanceOf(EngineNaoEncontradaException.class);
+                .isInstanceOf(EngineNaoEncontradaException.class);
     }
 
     // ==========================================
@@ -148,7 +142,7 @@ class EngineServiceTest {
 
 
     @Test
-    @DisplayName("Deve lançar EngineServiceException com causa EngineJaExisteException na atualização")
+    @DisplayName("Deve lançar EngineJaExisteException na atualização")
     void testAtualizar_NomeJaExiste() {
         EngineUpdateDTO dto = new EngineUpdateDTO("Godot");
 
@@ -156,9 +150,7 @@ class EngineServiceTest {
         when(repository.existsByNome("Godot")).thenReturn(true);
 
         assertThatThrownBy(() -> engineService.atualizar(1L, dto))
-                .isInstanceOf(EngineServiceException.class)
-                .hasMessageContaining("Erro interno ao atualizar engine")
-                .hasCauseInstanceOf(EngineJaExisteException.class);
+                .isInstanceOf(EngineJaExisteException.class);
 
         verify(repository, never()).save(any());
     }
@@ -179,14 +171,12 @@ class EngineServiceTest {
     }
 
     @Test
-    @DisplayName("Deve lançar EngineServiceException com causa EngineNaoEncontradaException ao deletar ID inexistente")
+    @DisplayName("Deve lançar EngineNaoEncontradaException ao deletar ID inexistente")
     void testDeletar_NaoEncontrado() {
         when(repository.findById(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> engineService.deletar(99L))
-                .isInstanceOf(EngineServiceException.class)
-                .hasMessageContaining("Erro interno ao deletar engine")
-                .hasCauseInstanceOf(EngineNaoEncontradaException.class);
+                .isInstanceOf(EngineNaoEncontradaException.class);
 
         verify(repository, never()).delete(any());
     }

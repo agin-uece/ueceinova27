@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -49,7 +50,7 @@ class LinguagemControllerTest {
         ResponseEntity<Object> response = controller.criar(dto);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        assertThat(response.getHeaders().getLocation()).hasPath("/api/linguagens/1");
+        assertThat(response.getHeaders().getLocation()).hasPath("/linguagens/1");
         assertThat(response.getBody()).isEqualTo(mockResponseDTO);
     }
 
@@ -86,9 +87,7 @@ class LinguagemControllerTest {
     void testBuscarPorId_Exception() {
         when(service.buscarPorId(1L)).thenThrow(new RuntimeException("Erro catastrófico"));
 
-        ResponseEntity<Object> response = controller.buscarPorId(1L);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThatThrownBy(() -> controller.buscarPorId(1L)).isInstanceOf(RuntimeException.class);
     }
 
     // ==========================================
@@ -111,9 +110,7 @@ class LinguagemControllerTest {
         LinguagemUpdateDTO dto = new LinguagemUpdateDTO("Python");
         when(service.atualizar(1L, dto)).thenThrow(new IllegalArgumentException("Linguagem não encontrada no sistema."));
 
-        ResponseEntity<Object> response = controller.atualizar(1L, dto);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThatThrownBy(() -> controller.atualizar(1L, dto)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -122,9 +119,7 @@ class LinguagemControllerTest {
         LinguagemUpdateDTO dto = new LinguagemUpdateDTO("Python");
         when(service.atualizar(1L, dto)).thenThrow(new IllegalArgumentException("Nome inválido ou já existente"));
 
-        ResponseEntity<Object> response = controller.atualizar(1L, dto);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThatThrownBy(() -> controller.atualizar(1L, dto)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -133,9 +128,7 @@ class LinguagemControllerTest {
         LinguagemUpdateDTO dto = new LinguagemUpdateDTO("Python");
         when(service.atualizar(1L, dto)).thenThrow(new RuntimeException("Erro db"));
 
-        ResponseEntity<Object> response = controller.atualizar(1L, dto);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThatThrownBy(() -> controller.atualizar(1L, dto)).isInstanceOf(RuntimeException.class);
     }
 
     // ==========================================
@@ -156,9 +149,7 @@ class LinguagemControllerTest {
     void testDeletar_IllegalArgument() {
         doThrow(new IllegalArgumentException("Linguagem não encontrada")).when(service).deletar(1L);
 
-        ResponseEntity<Object> response = controller.deletar(1L);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThatThrownBy(() -> controller.deletar(1L)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -166,8 +157,6 @@ class LinguagemControllerTest {
     void testDeletar_Exception() {
         doThrow(new RuntimeException("Lock do BD")).when(service).deletar(1L);
 
-        ResponseEntity<Object> response = controller.deletar(1L);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThatThrownBy(() -> controller.deletar(1L)).isInstanceOf(RuntimeException.class);
     }
 }

@@ -22,6 +22,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 
+// Erros são traduzidos em respostas HTTP pelo GlobalExceptionHandler
 @RestController
 @RequestMapping("/laboratorios")
 @RequiredArgsConstructor
@@ -39,27 +40,20 @@ public class LaboratorioController {
     public ResponseEntity<Object> validar(
             @PathVariable Long id,
             @RequestParam boolean aprovado,
-            Authentication authentication) {
-        try {
-            if (authentication == null || !(authentication.getPrincipal() instanceof Usuario)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
-            }
-            Usuario usuario = (Usuario) authentication.getPrincipal();
-            service.validarLaboratorio(id, aprovado, usuario);
-            return ResponseEntity.ok(Map.of(KEY_MENSAGEM, "Validação realizada."));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(KEY_ERRO, e.getMessage()));
+            Authentication authentication,
+            @RequestHeader(value = "X-MFA-PIN", required = false) String pin) {
+        if (!(usuarioLogado(authentication) instanceof Usuario usuario)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
         }
+        mfaGuard.check(usuario, pin); // igual a jogos e usuários
+        service.validarLaboratorio(id, aprovado, usuario);
+        return ResponseEntity.ok(Map.of(KEY_MENSAGEM, "Validação realizada."));
     }
 
     @GetMapping("/status/{status}")
     public ResponseEntity<Object> listarPorStatus(@PathVariable StatusValidacao status) {
-        try {
-            List<LaboratorioResponseDTO> labs = service.listarPorStatus(status);
-            return ResponseEntity.ok(labs);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(KEY_ERRO, "Erro ao buscar laboratórios."));
-        }
+        List<LaboratorioResponseDTO> labs = service.listarPorStatus(status);
+        return ResponseEntity.ok(labs);
     }
 
     @PostMapping
@@ -67,26 +61,14 @@ public class LaboratorioController {
             @RequestBody @Valid LaboratorioCreateDTO dto,
             Authentication authentication,
             @RequestHeader(value = "X-MFA-PIN", required = false) String pin) {
-        try {
-            Usuario usuario = (authentication != null && authentication.getPrincipal() instanceof Usuario u) ? u : null;
-
-            if (usuario != null) {
-                mfaGuard.check(usuario, pin);
-            }
-
-            LaboratorioResponseDTO response = service.criar(dto, usuario);
-            return ResponseEntity
-                    .created(URI.create("/api/laboratorios/" + response.id()))
-                    .body(response);
-        } catch (com.inova27.app.exception.MfaRequiredException e) {
-            throw e;
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(KEY_ERRO, e.getMessage()));
-        } catch (SecurityException e) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(KEY_ERRO, e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(KEY_ERRO, "Erro ao criar laboratório."));
+        Usuario usuario = usuarioLogado(authentication);
+        if (usuario != null) {
+            mfaGuard.check(usuario, pin);
         }
+        LaboratorioResponseDTO response = service.criar(dto, usuario);
+        return ResponseEntity
+                .created(URI.create("/laboratorios/" + response.id()))
+                .body(response);
     }
 
     @PutMapping("/{id}")
@@ -95,76 +77,48 @@ public class LaboratorioController {
             @RequestBody @Valid LaboratorioUpdateDTO dto,
             Authentication authentication,
             @RequestHeader(value = "X-MFA-PIN", required = false) String pin) {
-        try {
-            if (authentication == null || !(authentication.getPrincipal() instanceof Usuario)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
-            }
-            Usuario usuario = (Usuario) authentication.getPrincipal();
-            mfaGuard.check((Usuario) authentication.getPrincipal(), pin);
-            LaboratorioResponseDTO response = service.atualizar(id, dto, usuario);
-            return ResponseEntity.ok(response);
-        } catch (com.inova27.app.exception.MfaRequiredException e) {
-            throw e;
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(KEY_ERRO, e.getMessage()));
-        } catch (SecurityException e) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(KEY_ERRO, e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(KEY_ERRO, "Erro ao atualizar laboratório."));
+        if (!(usuarioLogado(authentication) instanceof Usuario usuario)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
         }
+        mfaGuard.check(usuario, pin);
+        LaboratorioResponseDTO response = service.atualizar(id, dto, usuario);
+        if (response == null) {
+            return ResponseEntity.accepted().body(Map.of(KEY_MENSAGEM, "Solicitação de edição enviada com sucesso. Aguardando aprovação do administrador."));
+        }
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping
     public ResponseEntity<Object> listarTodos() {
-        try {
-            List<LaboratorioResponseDTO> lista = service.listarTodos();
-            return ResponseEntity.ok(lista);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(KEY_ERRO, "Erro ao buscar a lista de laboratórios."));
-        }
+        List<LaboratorioResponseDTO> lista = service.listarTodos();
+        return ResponseEntity.ok(lista);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Object> buscarPorId(@PathVariable Long id) {
-        try {
-            LaboratorioResponseDTO response = service.buscarPorId(id);
-            return ResponseEntity.ok(response);
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(KEY_ERRO, e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(KEY_ERRO, "Erro interno ao buscar laboratório."));
-        }
+    public ResponseEntity<Object> buscarPorId(@PathVariable Long id, Authentication authentication) {
+        LaboratorioResponseDTO response = service.buscarPorId(id, usuarioLogado(authentication));
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/buscar")
     public ResponseEntity<Object> buscarComFiltros(
             LaboratorioFiltroDTO filtro,
             @PageableDefault(size = 10, sort = "nome") Pageable pageable) {
-        try {
-            Page<LaboratorioResponseDTO> resultados = service.buscarComFiltrosPaginado(filtro, pageable);
-            return ResponseEntity.ok(resultados);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of(KEY_ERRO, "Erro nos parâmetros de busca: " + e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(Map.of(KEY_ERRO, "Ocorreu um erro interno ao tentar buscar os laboratórios."));
-        }
+        Page<LaboratorioResponseDTO> resultados = service.buscarComFiltrosPaginado(filtro, pageable);
+        return ResponseEntity.ok(resultados);
     }
 
     @GetMapping("/meus")
     public ResponseEntity<Object> listarMinhas(
             Authentication authentication,
             @RequestParam(required = false) StatusValidacao status) {
-        try {
-            if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuario)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
-            }
-            List<LaboratorioResponseDTO> labs = (status != null)
-                    ? service.listarPorUsuarioEStatus(usuario.getId(), status)
-                    : service.listarPorUsuario(usuario.getId());
-            return ResponseEntity.ok(labs);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(KEY_ERRO, "Erro ao buscar laboratórios do usuário."));
+        if (!(usuarioLogado(authentication) instanceof Usuario usuario)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
         }
+        List<LaboratorioResponseDTO> labs = (status != null)
+                ? service.listarPorUsuarioEStatus(usuario.getId(), status)
+                : service.listarPorUsuario(usuario.getId());
+        return ResponseEntity.ok(labs);
     }
 
     @DeleteMapping("/{id}")
@@ -172,21 +126,18 @@ public class LaboratorioController {
             @PathVariable Long id,
             Authentication authentication,
             @RequestHeader(value = "X-MFA-PIN", required = false) String pin) {
-        try {
-            if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuario)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
-            }
-            mfaGuard.check((Usuario) authentication.getPrincipal(), pin);
-            service.deletar(id, usuario);
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
-        } catch (com.inova27.app.exception.MfaRequiredException e) {
-            throw e;
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(KEY_ERRO, e.getMessage()));
-        } catch (SecurityException e) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(KEY_ERRO, e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(KEY_ERRO, "Erro ao excluir o laboratório."));
+        if (!(usuarioLogado(authentication) instanceof Usuario usuario)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
         }
+        mfaGuard.check(usuario, pin);
+        boolean deletadoImediatamente = service.deletar(id, usuario);
+        if (!deletadoImediatamente) {
+            return ResponseEntity.accepted().body(Map.of(KEY_MENSAGEM, "Solicitação de exclusão enviada com sucesso. Aguardando aprovação do administrador."));
+        }
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    private static Usuario usuarioLogado(Authentication authentication) {
+        return authentication != null && authentication.getPrincipal() instanceof Usuario u ? u : null;
     }
 }
