@@ -29,6 +29,7 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -67,16 +68,28 @@ class LaboratorioControllerTest {
     void testValidar_Sucesso() {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
 
-        ResponseEntity<Object> response = controller.validar(1L, true, authentication);
+        ResponseEntity<Object> response = controller.validar(1L, true, authentication, "123456");
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        verify(mfaGuard).check(mockUsuario, "123456");
         verify(service, times(1)).validarLaboratorio(1L, true, mockUsuario);
+    }
+
+    @Test
+    @DisplayName("Validar laboratório exige MFA: sem PIN não valida")
+    void testValidar_ExigeMfa() {
+        when(authentication.getPrincipal()).thenReturn(mockUsuario);
+        doThrow(new com.inova27.app.exception.MfaRequiredException(1L, "admin@uece.br")).when(mfaGuard).check(mockUsuario, null);
+
+        assertThatThrownBy(() -> controller.validar(1L, true, authentication, null))
+                .isInstanceOf(com.inova27.app.exception.MfaRequiredException.class);
+        verify(service, never()).validarLaboratorio(any(), anyBoolean(), any());
     }
 
     @Test
     @DisplayName("Deve retornar UNAUTHORIZED ao validar sem login")
     void testValidar_NaoAutenticado() {
-        ResponseEntity<Object> response = controller.validar(1L, true, null);
+        ResponseEntity<Object> response = controller.validar(1L, true, null, null);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
@@ -86,7 +99,7 @@ class LaboratorioControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         doThrow(new IllegalArgumentException("Lab não encontrado")).when(service).validarLaboratorio(1L, true, mockUsuario);
 
-        assertThatThrownBy(() -> controller.validar(1L, true, authentication)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> controller.validar(1L, true, authentication, null)).isInstanceOf(IllegalArgumentException.class);
     }
 
     // ==========================================

@@ -149,7 +149,7 @@ class JogoServiceTest {
         }
 
         @Test
-        @DisplayName("Deve rejeitar jogo sem indexar")
+        @DisplayName("Deve rejeitar jogo sem indexar e removê-lo da busca")
         void deveRejeitarJogo() {
             when(repository.findById(10L)).thenReturn(Optional.of(jogoPadrao));
 
@@ -158,6 +158,7 @@ class JogoServiceTest {
             assertThat(jogoPadrao.getStatus()).isEqualTo(StatusValidacao.REJEITADO);
             verify(repository).save(jogoPadrao);
             verify(indexador, never()).indexar(any());
+            verify(indexador).removerIndex("jogos", 10L); // se já estava na busca, sai
             verify(auditoriaService).registrarLog(eq("Jogo"), eq(10L), eq(AcaoAuditoria.VALIDACAO), eq(1L), contains("REJEITADO"));
         }
     }
@@ -195,7 +196,6 @@ class JogoServiceTest {
 
             assertThat(resultado.nome()).isEqualTo("Nome Editado Admin");
             verify(repository).save(jogoPadrao);
-            verify(indexador).removerIndex("jogos", 10L);
             verify(indexador).indexar(any());
             verify(auditoriaService).registrarLog(eq("Jogo"), eq(10L), eq(AcaoAuditoria.EDICAO), eq(1L), eq(dto));
         }

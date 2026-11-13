@@ -173,7 +173,6 @@ class StartupServiceTest {
             StartupResponseDTO resultado = startupService.atualizar(1L, dto, 1L);
 
             assertThat(resultado).isNotNull();
-            verify(indexador).removerIndex("startups", 1L);
             verify(indexador).indexar(any());
             verify(auditoriaService).registrarLog(eq("Startup"), eq(1L), eq(AcaoAuditoria.EDICAO), eq(1L), eq(dto));
         }

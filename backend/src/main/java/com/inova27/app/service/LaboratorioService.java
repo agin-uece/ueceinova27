@@ -50,6 +50,8 @@ public class LaboratorioService {
         } else {
             lab.setStatus(StatusValidacao.REJEITADO);
             repository.save(lab);
+            // Item rejeitado (inclusive se já estava aprovado) sai da busca pública
+            indexador.removerIndex("laboratorios", lab.getId());
         }
 
         String statusAlterado = aprovado ? "APROVADO" : "REJEITADO";
@@ -184,7 +186,6 @@ public class LaboratorioService {
         Laboratorio atualizado = repository.save(lab);
 
         if (atualizado.getStatus() == StatusValidacao.APROVADO) {
-            indexador.removerIndex("laboratorios", id);
             var doc = mapper.fromLaboratorio(atualizado);
             indexador.indexar(doc);
         }

@@ -114,7 +114,6 @@ public class ProtecaoService {
 
         Protecao atualizada = repository.save(protecao);
 
-        indexador.removerIndex("protecoes", id);
         var doc = mapper.fromProtecao(atualizada);
         indexador.indexar(doc);
 

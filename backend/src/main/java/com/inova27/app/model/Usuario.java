@@ -17,7 +17,9 @@ import java.util.List;
 @Table(name = "usuarios")
 @Getter
 @Setter
-@SQLDelete(sql = "UPDATE usuarios SET ativo = false WHERE id = ?")
+// Exclusão lógica libera o e-mail (coluna unique): "x@uece.br" vira "x@uece.br#excluido#<id>".
+// left(...) mantém o valor dentro do email varchar(255). O e-mail original fica no log de auditoria.
+@SQLDelete(sql = "UPDATE usuarios SET ativo = false, email = left(email, 200) || '#excluido#' || id WHERE id = ?")
 @SQLRestriction("ativo = true")
 public class Usuario implements UserDetails {
 

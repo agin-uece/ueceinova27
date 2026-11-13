@@ -217,7 +217,6 @@ class PessoaServiceTest {
             PessoaResponseDTO resultado = pessoaService.atualizar(10L, dto, admin);
 
             assertThat(resultado.nome()).isEqualTo("Nome Editado");
-            verify(indexador).removerIndex("pessoas", 10L);
             verify(indexador).indexar(any());
         }
 

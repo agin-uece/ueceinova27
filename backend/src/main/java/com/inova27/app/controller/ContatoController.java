@@ -1,6 +1,7 @@
 package com.inova27.app.controller;
 
 
+import org.springframework.web.util.HtmlUtils;
 import com.inova27.app.dto.email.ContatoRequestDTO;
 import com.inova27.app.model.EmailType;
 import com.inova27.app.service.EmailService;
@@ -24,7 +25,8 @@ public class ContatoController {
 
     @PostMapping
     public ResponseEntity<Object> enviarMensagem(@RequestBody @Valid ContatoRequestDTO dto) {
-        String assuntoFormatado = "[Inova27 - Contato Site] " + dto.assunto();
+        // Assunto vai num header do e-mail: quebras de linha removidas
+        String assuntoFormatado = "[Inova27 - Contato Site] " + dto.assunto().replaceAll("[\\r\\n]+", " ");
 
         String corpoHtml = String.format("""
             <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
@@ -44,10 +46,11 @@ public class ContatoController {
                 </div>
             </div>
             """,
-                dto.nome(),
-                dto.email(), dto.email(),
-                dto.assunto(),
-                dto.mensagem()
+                // Campos vindos de um formulário público: escapados para não injetar HTML/links no e-mail
+                HtmlUtils.htmlEscape(dto.nome(), "UTF-8"),
+                HtmlUtils.htmlEscape(dto.email(), "UTF-8"), HtmlUtils.htmlEscape(dto.email(), "UTF-8"),
+                HtmlUtils.htmlEscape(dto.assunto(), "UTF-8"),
+                HtmlUtils.htmlEscape(dto.mensagem(), "UTF-8")
         );
 
         emailService.sendEmail(destinatarioAgin, assuntoFormatado, corpoHtml, EmailType.CONTACT);

@@ -29,6 +29,10 @@ public class IndexadorSemanticoService {
 
     }
 
+    /**
+     * Cria ou substitui a entrada do documento no índice (no máximo uma por entidade + id).
+     * O embedding é gerado antes de apagar a entrada antiga: se o Ollama falhar, o índice anterior é mantido.
+     */
     public void indexar(DocumentoSemantico doc) {
 
         List<Double> embedding = embeddingService.gerarEmbeddingParaSalvar(doc.textoCompleto());
@@ -38,6 +42,8 @@ public class IndexadorSemanticoService {
         }
 
         String vetorFormatado = EmbeddingUtils.toPgVector(embedding);
+
+        repository.removerPorEntidadeEIdOrigem(doc.entidade(), doc.idOrigem());
 
         repository.salvar(
                 doc.entidade(),
