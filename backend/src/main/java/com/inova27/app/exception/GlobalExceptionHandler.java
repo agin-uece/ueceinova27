@@ -60,7 +60,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return erro(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
-    @ExceptionHandler({JogoJaExisteException.class, EngineJaExisteException.class})
+    @ExceptionHandler({JogoJaExisteException.class, EngineJaExisteException.class, ConflitoException.class})
     public ResponseEntity<Object> handleConflito(RuntimeException ex) {
         return erro(HttpStatus.CONFLICT, ex.getMessage());
     }

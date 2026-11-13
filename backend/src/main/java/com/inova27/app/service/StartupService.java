@@ -1,5 +1,6 @@
 package com.inova27.app.service;
 
+import com.inova27.app.exception.ConflitoException;
 import com.inova27.app.exception.ResourceNotFoundException;
 import com.inova27.app.dto.startup.StartupCreateDTO;
 import com.inova27.app.dto.startup.StartupFiltroDTO;
@@ -31,6 +32,7 @@ public class StartupService {
     // 🔥 CONSTANTES CRIADAS PARA RESOLVER OS AVISOS DO SONARQUBE
     private static final String ENTIDADE_STARTUP = "Startup";
     private static final String MSG_STARTUP_NAO_ENCONTRADA = "Startup não encontrada";
+    private static final String MSG_CNPJ_EM_USO = "Já existe uma startup cadastrada com este CNPJ.";
 
     private final StartupRepository repository;
     private final PessoaRepository pessoaRepository;
@@ -52,6 +54,9 @@ public class StartupService {
         }
         if (repository.existsByNome(dto.nome())) {
             throw new IllegalArgumentException("Já existe uma startup cadastrada com este nome.");
+        }
+        if (dto.cnpj() != null && repository.existsByCnpj(dto.cnpj())) {
+            throw new ConflitoException(MSG_CNPJ_EM_USO);
         }
 
         Startup startup = new Startup();
@@ -116,7 +121,12 @@ public class StartupService {
         if (dto.telefone() != null) startup.setTelefone(dto.telefone());
         if (dto.logo() != null) startup.setLogo(dto.logo());
         if (dto.status() != null) startup.setStatus(dto.status());
-        if (dto.cnpj() != null) startup.setCnpj(dto.cnpj());
+        if (dto.cnpj() != null) {
+            if (repository.existsByCnpjAndIdNot(dto.cnpj(), id)) {
+                throw new ConflitoException(MSG_CNPJ_EM_USO);
+            }
+            startup.setCnpj(dto.cnpj());
+        }
         if (dto.instagram() != null) startup.setInstagram(dto.instagram());
 
         if (dto.fotos() != null) {
