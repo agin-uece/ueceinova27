@@ -67,6 +67,7 @@ public class UsuarioController {
     public ResponseEntity<Object> atualizar(
             @PathVariable Long id,
             @RequestBody UsuarioUpdateDTO dados,
+            @RequestHeader(value = "X-MFA-PIN", required = false) String pin,
             Authentication authentication) {
         if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuarioLogado)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
@@ -75,6 +76,7 @@ public class UsuarioController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body("Apenas administradores podem atualizar usuários.");
         }
+        mfaGuard.check(usuarioLogado, pin); // pode alterar o perfil (ex.: promover a ADMIN)
         UsuarioResponseDTO atualizado = service.atualizar(id, dados, usuarioLogado.getId());
         return ResponseEntity.ok(atualizado);
     }
@@ -104,6 +106,7 @@ public class UsuarioController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Object> deletar(
             @PathVariable Long id,
+            @RequestHeader(value = "X-MFA-PIN", required = false) String pin,
             Authentication authentication) {
         if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuarioLogado)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
@@ -112,6 +115,7 @@ public class UsuarioController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body("Apenas administradores podem deletar usuários.");
         }
+        mfaGuard.check(usuarioLogado, pin);
         service.deletar(id, usuarioLogado.getId());
         return ResponseEntity.noContent().build();
     }

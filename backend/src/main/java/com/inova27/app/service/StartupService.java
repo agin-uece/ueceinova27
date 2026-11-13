@@ -125,8 +125,6 @@ public class StartupService {
         }
 
         Startup atualizada = repository.save(startup);
-        // 🔥 ATUALIZAÇÃO SEMÂNTICA (Remove o antigo e cria o novo com os dados atualizados)
-        indexador.removerIndex("startups", id);
         var doc = mapper.fromStartup(atualizada);
         indexador.indexar(doc);
         // 🛡️ AUDITORIA: Registro de Edição utilizando a constante

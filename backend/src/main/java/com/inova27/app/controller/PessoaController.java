@@ -65,10 +65,12 @@ public class PessoaController {
     public ResponseEntity<Object> validar(
             @PathVariable Long id,
             @RequestParam boolean aprovado,
-            Authentication authentication) {
+            Authentication authentication,
+            @RequestHeader(value = "X-MFA-PIN", required = false) String pin) {
         if (!(usuarioLogado(authentication) instanceof Usuario usuario)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
         }
+        mfaGuard.check(usuario, pin); // igual a jogos e usuários
         service.validarPessoa(id, aprovado, usuario);
         return ResponseEntity.ok(Map.of(KEY_MENSAGEM, "Validação realizada."));
     }

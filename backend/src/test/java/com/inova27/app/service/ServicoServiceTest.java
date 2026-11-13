@@ -166,7 +166,6 @@ class ServicoServiceTest {
             ServicoResponseDTO resultado = servicoService.atualizar(1L, dto, 1L);
 
             assertThat(resultado).isNotNull();
-            verify(indexador).removerIndex("servicos", 1L);
             verify(indexador).indexar(any());
             verify(auditoriaService).registrarLog(eq("Servico"), eq(1L), eq(AcaoAuditoria.EDICAO), eq(1L), eq(dto));
         }

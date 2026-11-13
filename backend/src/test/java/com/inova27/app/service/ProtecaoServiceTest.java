@@ -193,7 +193,6 @@ class ProtecaoServiceTest {
             ProtecaoResponseDTO resultado = protecaoService.atualizar(10L, dto, 2L);
 
             assertThat(resultado.nome()).isEqualTo("Nome Atualizado");
-            verify(indexador).removerIndex("protecoes", 10L);
             verify(indexador).indexar(any());
             verify(auditoriaService).registrarLog(eq("Protecao"), eq(10L), eq(AcaoAuditoria.EDICAO), eq(2L), eq(dto));
         }

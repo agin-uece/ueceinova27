@@ -188,6 +188,8 @@ public class PessoaService {
         } else {
             pessoa.setStatus(StatusValidacao.REJEITADO);
             repository.save(pessoa);
+            // Item rejeitado (inclusive se já estava aprovado) sai da busca pública
+            indexador.removerIndex("pessoas", pessoa.getId());
         }
 
         String statusAlterado = aprovado ? "APROVADO" : "REJEITADO";
@@ -256,7 +258,6 @@ public class PessoaService {
         // 🚀 Salva a pessoa E todas as relações de uma vez só!
         Pessoa updated = repository.save(pessoa);
 
-        indexador.removerIndex("pessoas", id);
         var doc = mapper.fromPessoa(updated);
         indexador.indexar(doc);
 

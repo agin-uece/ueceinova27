@@ -127,6 +127,8 @@ public class JogoService {
         } else {
             jogo.setStatus(StatusValidacao.REJEITADO);
             repository.save(jogo);
+            // Item rejeitado (inclusive se já estava aprovado) sai da busca pública
+            indexador.removerIndex("jogos", jogo.getId());
         }
 
         String statusAlterado = aprovado ? "APROVADO" : "REJEITADO";
@@ -199,7 +201,6 @@ public class JogoService {
         Jogo atualizado = repository.save(jogo);
 
         if (atualizado.getStatus() == StatusValidacao.APROVADO) {
-            indexador.removerIndex("jogos", id);
             var doc = mapper.fromJogo(atualizado);
             indexador.indexar(doc);
         }

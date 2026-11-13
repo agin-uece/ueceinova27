@@ -101,8 +101,6 @@ public class ServicoService {
 
         Servico atualizado = repository.save(servico);
 
-        // 🔥 Re-indexação Semântica após atualização (Corrigido typo de "servicoes" para "servicos")
-        indexador.removerIndex("servicos", id);
         var doc = mapper.fromServico(atualizado);
         indexador.indexar(doc);
 

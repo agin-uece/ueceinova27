@@ -96,7 +96,7 @@ class UsuarioControllerTest {
     @Test
     @DisplayName("Deve retornar UNAUTHORIZED ao atualizar outro sem login")
     void testAtualizar_NaoAutenticado() {
-        ResponseEntity<Object> response = controller.atualizar(1L, mock(UsuarioUpdateDTO.class), null);
+        ResponseEntity<Object> response = controller.atualizar(1L, mock(UsuarioUpdateDTO.class), null, null);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
@@ -115,7 +115,7 @@ class UsuarioControllerTest {
     @Test
     @DisplayName("Deve retornar UNAUTHORIZED ao deletar sem autenticação")
     void testDeletar_NaoAutenticado() {
-        ResponseEntity<Object> response = controller.deletar(1L, null);
+        ResponseEntity<Object> response = controller.deletar(1L, null, null);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
@@ -176,5 +176,36 @@ class UsuarioControllerTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         verify(service).concluirRecuperacaoEmail("teste@uece.br", "999888", "novo@uece.br", "sec@uece.br");
+    }
+
+    // ==========================================
+    // MFA em ações sensíveis de admin
+    // ==========================================
+    @Test
+    @DisplayName("Excluir usuário exige MFA: sem PIN não exclui")
+    void testDeletar_ExigeMfa() {
+        Usuario adminUsuario = new Usuario();
+        adminUsuario.setId(1L);
+        adminUsuario.setRole(com.inova27.app.model.UserRole.ADMIN);
+        when(authentication.getPrincipal()).thenReturn(adminUsuario);
+        doThrow(new com.inova27.app.exception.MfaRequiredException(adminUsuario.getId(), "admin@uece.br")).when(mfaGuard).check(adminUsuario, null);
+
+        assertThatThrownBy(() -> controller.deletar(5L, null, authentication))
+                .isInstanceOf(com.inova27.app.exception.MfaRequiredException.class);
+        verify(service, never()).deletar(any(), any());
+    }
+
+    @Test
+    @DisplayName("Atualizar usuário (ex.: trocar perfil) exige MFA: sem PIN não altera")
+    void testAtualizar_ExigeMfa() {
+        Usuario adminUsuario = new Usuario();
+        adminUsuario.setId(1L);
+        adminUsuario.setRole(com.inova27.app.model.UserRole.ADMIN);
+        when(authentication.getPrincipal()).thenReturn(adminUsuario);
+        doThrow(new com.inova27.app.exception.MfaRequiredException(adminUsuario.getId(), "admin@uece.br")).when(mfaGuard).check(adminUsuario, null);
+
+        assertThatThrownBy(() -> controller.atualizar(5L, mock(UsuarioUpdateDTO.class), null, authentication))
+                .isInstanceOf(com.inova27.app.exception.MfaRequiredException.class);
+        verify(service, never()).atualizar(any(), any(), any());
     }
 }

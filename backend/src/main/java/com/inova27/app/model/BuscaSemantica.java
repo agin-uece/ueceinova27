@@ -6,7 +6,8 @@ import lombok.Getter;
 import lombok.Setter;
 
 @Entity
-@Table(name = "busca_semantica")
+@Table(name = "busca_semantica",
+        uniqueConstraints = @UniqueConstraint(name = "uk_busca_semantica_entidade_origem", columnNames = {"entidade", "id_origem"}))
 @Getter
 @Setter
 public class BuscaSemantica {
@@ -20,6 +21,8 @@ public class BuscaSemantica {
     @Column(name = "id_origem")
     private Long idOrigem;
 
+    // Mesmo tamanho máximo de Protecao.nome (o maior título indexado)
+    @Column(length = 500)
     private String titulo;
 
     @Column(columnDefinition = "TEXT")

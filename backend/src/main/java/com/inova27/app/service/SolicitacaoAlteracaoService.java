@@ -1,5 +1,6 @@
 package com.inova27.app.service;
 
+import org.springframework.web.util.HtmlUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inova27.app.dto.jogo.JogoUpdateDTO;
@@ -79,7 +80,7 @@ public class SolicitacaoAlteracaoService {
             String htmlMessage =
                     "<div style='font-family: Arial; padding:20px'>" +
                             "<h2>Olá, Administrador! 🛡️</h2>" +
-                            "<p>Novo cadastro de <b>" + entidadeFormatada + "</b> (" + nomeItem + ") aguardando aprovação.</p>" +
+                            "<p>Novo cadastro de <b>" + entidadeFormatada + "</b> (" + HtmlUtils.htmlEscape(nomeItem, "UTF-8") + ") aguardando aprovação.</p>" +
                             "<a href='" + frontendUrl + "/gestao/administracao/aprovacoes'>Acessar Aprovações</a>" +
                             "</div>";
 
