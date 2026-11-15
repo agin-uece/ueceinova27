@@ -42,7 +42,7 @@ export default function GerenciarConteudoPage() {
     },
     {
       titulo: "Proteções (PI)", icone: Shield, cor: "text-yellow-500", corBg: "bg-yellow-50",
-      linkPesquisar: "/protecoes/pesquisar", linkCadastrar: "/admin//protecoes/cadastrar",
+      linkPesquisar: "/protecoes/pesquisar", linkCadastrar: "/admin/protecoes/cadastrar",
       permitidoProfessor: false
     },
     {

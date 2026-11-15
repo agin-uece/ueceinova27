@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Rocket, XCircle } from "lucide-react";
+import { ArrowLeft, Rocket, XCircle, CheckCircle2, AlertCircle } from "lucide-react";
 import { StartupForm } from "@/components/features/startups/StartupForm";
 import { useSecureAction } from "@/hooks/useSecureAction";
 
@@ -11,7 +11,12 @@ export default function CadastrarStartupPage() {
     // 🔐 Hook MFA – gerencia a requisição segura com possível PIN
     const { execute, isProcessing: isLoading } = useSecureAction();
 
+    // Estado para exibir o banner de feedback visual na tela (sucesso ou erro)
+    const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
     const handleCreate = async (payload: any) => {
+        setFeedback(null); // Limpa feedbacks anteriores
+
         // 1. Função fetch que será executada pelo hook (com possível PIN)
         const fetchCriar = async (pin?: string) => {
             const token = localStorage.getItem("userToken");
@@ -20,29 +25,46 @@ export default function CadastrarStartupPage() {
             if (token) headers.append("Authorization", `Bearer ${token}`);
             if (pin) headers.append("X-MFA-PIN", pin);
 
-            return fetch(`${process.env.NEXT_PUBLIC_API_URL}/startups`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/startups`, {
                 method: "POST",
                 headers: headers,
                 body: JSON.stringify(payload)
             });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.erro || errorData.message || "Erro ao cadastrar a startup.");
+            }
+
+            return response.json();
         };
 
         // 2. Callback de sucesso
         const onSucesso = () => {
-            
+            setFeedback({
+                type: "success",
+                message: "Startup cadastrada com sucesso! Redirecionando..."
+            });
+            setTimeout(() => {
+                router.push("/gestao"); // Ajuste a rota de redirecionamento se preferir outra tela
+            }, 1500);
         };
 
         // 3. Executa via useSecureAction (gerencia MFA se necessário)
         const result = await execute(fetchCriar, onSucesso);
 
-        // 4. Tratamento de erro (sucesso já disparou onSucesso)
+        // 4. Tratamento de erro (caso não tenha disparado o sucesso)
         if (!result.success && result.error) {
-            // Tenta extrair mensagem do backend, ou exibe mensagem genérica
             let mensagem = result.error;
             try {
                 const erroJson = JSON.parse(result.error);
                 mensagem = erroJson.erro || erroJson.message || result.error;
             } catch (e) {}
+
+            setFeedback({
+                type: "error",
+                message: typeof mensagem === "string" ? mensagem : "Ocorreu um erro ao tentar cadastrar a startup. Verifique os dados e tente novamente."
+            });
         }
     };
 
@@ -63,6 +85,22 @@ export default function CadastrarStartupPage() {
             </header>
 
             <div className="max-w-7xl mx-auto px-6 mt-10">
+                {/* Banner de Feedback (Sucesso ou Erro) */}
+                {feedback && (
+                    <div className={`mb-6 p-4 rounded-xl flex items-center gap-3 border ${
+                        feedback.type === "success" 
+                            ? "bg-emerald-50 border-emerald-200 text-emerald-800" 
+                            : "bg-red-50 border-red-200 text-red-800"
+                    }`}>
+                        {feedback.type === "success" ? (
+                            <CheckCircle2 size={22} className="text-emerald-600 shrink-0" />
+                        ) : (
+                            <AlertCircle size={22} className="text-red-600 shrink-0" />
+                        )}
+                        <span className="text-sm font-medium">{feedback.message}</span>
+                    </div>
+                )}
+
                 <StartupForm onSubmit={handleCreate} isLoading={isLoading} />
                 
                 <div className="mt-8 flex justify-center">
