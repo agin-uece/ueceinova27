@@ -62,7 +62,7 @@ export default function CadastroJogoPage() {
                         <ArrowLeft size={20} />
                     </button>
                     <div className="flex items-center gap-3">
-                        <div className="p-2 bg-orange-100 text-orange-600 rounded-xl">
+                        <div className="p-2 bg-modulo-jogos-bg text-modulo-jogos rounded-xl">
                             <Gamepad2 size={24} />
                         </div>
                         <h1 className="text-xl font-black text-gray-900 tracking-tight italic uppercase">

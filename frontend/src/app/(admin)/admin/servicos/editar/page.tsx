@@ -98,7 +98,7 @@ function EditarServicoContent() {
                         <ArrowLeft size={20} />
                     </button>
                     <div className="flex items-center gap-3">
-                        <div className="p-2 bg-teal-100 text-teal-600 rounded-xl border border-teal-200">
+                        <div className="p-2 bg-modulo-servicos-bg text-modulo-servicos rounded-xl border border-teal-200">
                             <Wrench size={24} />
                         </div>
                         <h1 className="text-xl font-black italic uppercase tracking-tighter text-gray-900">Editar Serviço</h1>

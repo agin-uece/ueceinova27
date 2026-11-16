@@ -207,7 +207,7 @@ export default function PesquisarLaboratoriosPage() {
                             <ArrowLeft size={20} />
                         </Link>
                         <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-lg transition-colors ${adminStatusFilter ? "bg-red-100 text-red-600" : isViewingMyLabs ? "bg-purple-100 text-purple-600" : "bg-blue-100 text-blue-600"}`}>
+                            <div className={`p-2 rounded-lg transition-colors ${adminStatusFilter ? "bg-red-100 text-red-600" : isViewingMyLabs ? "bg-purple-100 text-purple-600" : "bg-modulo-laboratorios-bg text-modulo-laboratorios"}`}>
                                 {adminStatusFilter ? <ShieldCheck size={24} /> : <Beaker size={24} />}
                             </div>
                             <h1 className="text-xl font-black text-gray-900 tracking-tight italic uppercase transition-all hidden sm:block">
@@ -257,7 +257,7 @@ export default function PesquisarLaboratoriosPage() {
 
             {/* CONTEÚDO PRINCIPAL */}
             <div className="max-w-7xl mx-auto px-6 py-10">
-                <ResultsHeader icon={Target} iconClassName="text-blue-600" total={meta.total} label="Total de resultados" />
+                <ResultsHeader icon={Target} iconClassName="text-modulo-laboratorios" total={meta.total} label="Total de resultados" />
 
                 {isLoading ? (
                     <SkeletonGrid count={4} />

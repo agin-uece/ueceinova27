@@ -7,7 +7,7 @@ import Link from "next/link";
 
 // O que a busca semântica principal retorna
 interface ResultadoBusca {
-    entidade: "jogos" | "laboratorios" | "pessoas" | string;
+    entidade: "jogos" | "laboratorios" | "pessoas" | "protecoes" | "startups" | "servicos" | string;
     idOrigem: number;
     titulo: string;
     descricao: string;
@@ -86,6 +86,16 @@ interface ResultadoCompleto extends ResultadoBusca {
     detalhes: DetalhesEntidade | null;
 }
 
+// Cores das etiquetas por entidade (mesmas da página de detalhe)
+const CORES_TAG: Record<string, string> = {
+    jogos: "bg-orange-500",
+    laboratorios: "bg-blue-500",
+    pessoas: "bg-green-500",
+    protecoes: "bg-purple-500",
+    startups: "bg-red-500",
+    servicos: "bg-teal-500",
+};
+
 // ==========================================
 // 2. Funções de Chamada (Fetch)
 // ==========================================
@@ -122,8 +132,8 @@ async function fetchDetalhes(entidade: string, id: number): Promise<DetalhesEnti
 // 3. Componente da Página Principal (Async)
 // ==========================================
 export default async function buscaSemanticaPage({
-    searchParams,
-}: {
+                                                     searchParams,
+                                                 }: {
     searchParams: Promise<{ q?: string }>;
 }) {
     const resolvedParams = await searchParams;
@@ -154,7 +164,7 @@ export default async function buscaSemanticaPage({
                         Esses são os resultados da sua busca.
                     </h1>
                     <p className="text-gray-600">
-                        Mostrando resultados para: <span className="font-semibold italic">"{query}"</span>
+                        Mostrando resultados para: <span className="font-semibold italic">&ldquo;{query}&rdquo;</span>
                     </p>
                 </div>
 
@@ -166,11 +176,8 @@ export default async function buscaSemanticaPage({
                             const foto = resultado.detalhes?.urlFoto || "/imagens/purple.jpg";
                             const linkDestino = `/entidades?tipo=${resultado.entidade}&id=${resultado.idOrigem}`;
 
-                            // Mapeando cores/tags por entidade para ficar visualmente bonito
-                            const corTag =
-                                resultado.entidade === "jogos" ? "bg-purple-500" :
-                                    resultado.entidade === "laboratorios" ? "bg-blue-500" :
-                                        "bg-green-500"; // pessoas
+                            // Cor da etiqueta por entidade (mesmas cores da página de detalhe)
+                            const corTag = CORES_TAG[resultado.entidade] ?? "bg-green-500";
 
                             return (
                                 <div
@@ -212,7 +219,7 @@ export default async function buscaSemanticaPage({
                     </div>
                 ) : (
                     <div className="text-center py-20 bg-white rounded-xl shadow-sm border border-gray-100">
-                        <p className="text-gray-500 text-lg">Nenhum resultado encontrado para "{query}".</p>
+                        <p className="text-gray-500 text-lg">Nenhum resultado encontrado para &ldquo;{query}&rdquo;.</p>
                     </div>
                 )}
             </div>

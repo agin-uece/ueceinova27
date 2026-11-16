@@ -179,7 +179,7 @@ export default function PesquisarStartupsPage() {
             </header>
 
             <div className="max-w-7xl mx-auto px-6 py-10">
-                <ResultsHeader icon={Target} iconClassName="text-red-600" total={meta.total} label="Total de Startups encontradas" />
+                <ResultsHeader icon={Target} iconClassName="text-modulo-startups" total={meta.total} label="Total de Startups encontradas" />
 
                 {isLoading ? (
                     <SkeletonGrid count={4} />
