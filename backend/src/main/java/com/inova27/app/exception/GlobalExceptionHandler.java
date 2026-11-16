@@ -43,7 +43,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(MfaRequiredException.class)
     public ResponseEntity<Object> handleMfaRequired(MfaRequiredException ex) {
         String pin = mfaService.gerarCodigoMfa(ex.getUsuarioId());
-        emailService.sendEmail(ex.getEmail(), "Código de Segurança", htmlCodigoMfa(pin), EmailType.CONTACT);
+        try {
+            emailService.sendEmail(ex.getEmail(), "Código de Segurança", htmlCodigoMfa(pin), EmailType.CONTACT);
+        } catch (EmailEnvioException e) {
+            // Sem isso a falha de envio escapava do handler e virava um 500 genérico
+            log.error("Falha ao enviar o código de segurança", e);
+            return erro(HttpStatus.SERVICE_UNAVAILABLE, "Não foi possível enviar o código de segurança por e-mail. Tente novamente mais tarde.");
+        }
         return erro(HttpStatus.FORBIDDEN, "MFA_REQUIRED");
     }
 

@@ -5,7 +5,6 @@ import com.inova27.app.dto.protecao.ProtecaoResponseDTO;
 import com.inova27.app.dto.protecao.ProtecaoUpdateDTO;
 import com.inova27.app.exception.MfaRequiredException;
 import com.inova27.app.model.Usuario;
-import com.inova27.app.security.MfaGuard;
 import com.inova27.app.service.ProtecaoService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -32,9 +31,6 @@ class ProtecaoControllerTest {
 
     @Mock
     private ProtecaoService service;
-
-    @Mock
-    private MfaGuard mfaGuard;
 
     @Mock
     private Authentication authentication;
@@ -64,18 +60,17 @@ class ProtecaoControllerTest {
         when(mockResponseDTO.id()).thenReturn(10L); // Para montar a URI do Created
         when(service.criar(dto, mockUsuario.getId())).thenReturn(mockResponseDTO);
 
-        ResponseEntity<Object> response = controller.criar(dto, authentication, "1234");
+        ResponseEntity<Object> response = controller.criar(dto, authentication);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getHeaders().getLocation()).hasPath("/protecoes/10");
-        verify(mfaGuard, times(1)).check(mockUsuario, "1234");
     }
 
     @Test
     @DisplayName("Deve retornar UNAUTHORIZED ao criar sem autenticação")
     void testCriar_NaoAutenticado() {
         ProtecaoCreateDTO dto = mock(ProtecaoCreateDTO.class);
-        ResponseEntity<Object> response = controller.criar(dto, null, "1234");
+        ResponseEntity<Object> response = controller.criar(dto, null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
@@ -87,7 +82,7 @@ class ProtecaoControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         when(service.criar(dto, mockUsuario.getId())).thenThrow(new RuntimeException("Erro"));
 
-        assertThatThrownBy(() -> controller.criar(dto, authentication, "123")).isInstanceOf(RuntimeException.class);
+        assertThatThrownBy(() -> controller.criar(dto, authentication)).isInstanceOf(RuntimeException.class);
     }
 
     // ==========================================
@@ -100,17 +95,16 @@ class ProtecaoControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         when(service.atualizar(1L, dto, mockUsuario.getId())).thenReturn(mockResponseDTO);
 
-        ResponseEntity<Object> response = controller.atualizar(1L, dto, authentication, "1234");
+        ResponseEntity<Object> response = controller.atualizar(1L, dto, authentication);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        verify(mfaGuard, times(1)).check(mockUsuario, "1234");
     }
 
     @Test
     @DisplayName("Deve retornar UNAUTHORIZED ao atualizar sem autenticação")
     void testAtualizar_NaoAutenticado() {
         ProtecaoUpdateDTO dto = mock(ProtecaoUpdateDTO.class);
-        ResponseEntity<Object> response = controller.atualizar(1L, dto, null, "1234");
+        ResponseEntity<Object> response = controller.atualizar(1L, dto, null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
@@ -122,7 +116,7 @@ class ProtecaoControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         when(service.atualizar(1L, dto, mockUsuario.getId())).thenThrow(new RuntimeException("Erro"));
 
-        assertThatThrownBy(() -> controller.atualizar(1L, dto, authentication, "123")).isInstanceOf(RuntimeException.class);
+        assertThatThrownBy(() -> controller.atualizar(1L, dto, authentication)).isInstanceOf(RuntimeException.class);
     }
 
     // ==========================================
@@ -185,17 +179,16 @@ class ProtecaoControllerTest {
     void testDeletar_Sucesso() {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
 
-        ResponseEntity<Object> response = controller.deletar(1L, authentication, "123");
+        ResponseEntity<Object> response = controller.deletar(1L, authentication);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
         verify(service, times(1)).deletar(1L, mockUsuario.getId());
-        verify(mfaGuard, times(1)).check(mockUsuario, "123");
     }
 
     @Test
     @DisplayName("Deve retornar UNAUTHORIZED ao deletar sem autenticação")
     void testDeletar_NaoAutenticado() {
-        ResponseEntity<Object> response = controller.deletar(1L, null, "123");
+        ResponseEntity<Object> response = controller.deletar(1L, null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
@@ -206,7 +199,7 @@ class ProtecaoControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         doThrow(new IllegalArgumentException("Não achou")).when(service).deletar(1L, mockUsuario.getId());
 
-        assertThatThrownBy(() -> controller.deletar(1L, authentication, "123")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> controller.deletar(1L, authentication)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -215,7 +208,7 @@ class ProtecaoControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         doThrow(new RuntimeException("Erro")).when(service).deletar(1L, mockUsuario.getId());
 
-        assertThatThrownBy(() -> controller.deletar(1L, authentication, "123")).isInstanceOf(RuntimeException.class);
+        assertThatThrownBy(() -> controller.deletar(1L, authentication)).isInstanceOf(RuntimeException.class);
     }
 
     // ==========================================

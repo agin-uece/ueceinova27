@@ -132,7 +132,7 @@ class AuthenticationControllerTest {
     @Test
     @DisplayName("Deve retornar FORBIDDEN em login com IllegalStateException")
     void testLogin_IllegalState() {
-        AuthenticationDTO dto = new AuthenticationDTO("admin", "senha");
+        AuthenticationDTO dto = new AuthenticationDTO("admin", "senha", null);
         when(authenticationService.login(dto)).thenThrow(new IllegalStateException("Conta inativa"));
 
         assertThatThrownBy(() -> controller.login(dto)).isInstanceOf(IllegalStateException.class);
@@ -141,7 +141,7 @@ class AuthenticationControllerTest {
     @Test
     @DisplayName("Deve retornar UNAUTHORIZED em login com BadCredentialsException")
     void testLogin_BadCredentials() {
-        AuthenticationDTO dto = new AuthenticationDTO("admin", "senha_errada");
+        AuthenticationDTO dto = new AuthenticationDTO("admin", "senha_errada", null);
         when(authenticationService.login(dto)).thenThrow(new BadCredentialsException("Bad creds"));
 
         assertThatThrownBy(() -> controller.login(dto)).isInstanceOf(BadCredentialsException.class);
@@ -150,7 +150,7 @@ class AuthenticationControllerTest {
     @Test
     @DisplayName("Deve retornar UNAUTHORIZED em login com falha genérica de autenticação")
     void testLogin_AuthenticationException() {
-        AuthenticationDTO dto = new AuthenticationDTO("admin", "senha");
+        AuthenticationDTO dto = new AuthenticationDTO("admin", "senha", null);
         // AccountExpiredException estende AuthenticationException
         when(authenticationService.login(dto)).thenThrow(new AccountExpiredException("Expirado"));
 

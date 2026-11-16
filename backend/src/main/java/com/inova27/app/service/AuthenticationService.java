@@ -56,6 +56,9 @@ public class AuthenticationService {
             throw new PermissaoNegadaException("Usuário ainda não foi validado por um administrador.");
         }
 
+        // Administradores confirmam o login com um código enviado por e-mail
+        verificarMfaAdmin(usuario, data.codigo());
+
         var token = tokenService.gerarToken(usuario);
         return new LoginResponseDTO(token, usuario.getNome());
     }

@@ -7,7 +7,6 @@ import com.inova27.app.dto.jogo.JogoUpdateDTO;
 import com.inova27.app.exception.MfaRequiredException;
 import com.inova27.app.model.StatusValidacao;
 import com.inova27.app.model.Usuario;
-import com.inova27.app.security.MfaGuard;
 import com.inova27.app.service.JogoService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -37,9 +36,6 @@ class JogoControllerTest {
 
     @Mock
     private JogoService service;
-
-    @Mock
-    private MfaGuard mfaGuard;
 
     @Mock
     private Authentication authentication;
@@ -102,7 +98,7 @@ class JogoControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         when(service.criar(dto, mockUsuario)).thenThrow(new RuntimeException("Falha"));
 
-        assertThatThrownBy(() -> controller.criar(dto, authentication, "123")).isInstanceOf(RuntimeException.class);
+        assertThatThrownBy(() -> controller.criar(dto, authentication)).isInstanceOf(RuntimeException.class);
     }
 
     // ==========================================
@@ -113,7 +109,7 @@ class JogoControllerTest {
     void testValidar_Sucesso() {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
 
-        ResponseEntity<Object> response = controller.validar(1L, true, authentication, "123456");
+        ResponseEntity<Object> response = controller.validar(1L, true, authentication);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         verify(service, times(1)).validarJogo(1L, true, mockUsuario);
@@ -122,7 +118,7 @@ class JogoControllerTest {
     @Test
     @DisplayName("Deve retornar UNAUTHORIZED ao tentar validar sem estar logado")
     void testValidar_Unauthenticated() {
-        ResponseEntity<Object> response = controller.validar(1L, true, null, null);
+        ResponseEntity<Object> response = controller.validar(1L, true, null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
@@ -133,7 +129,7 @@ class JogoControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         doThrow(new IllegalArgumentException("Jogo não encontrado")).when(service).validarJogo(1L, true, mockUsuario);
 
-        assertThatThrownBy(() -> controller.validar(1L, true, authentication, "123")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> controller.validar(1L, true, authentication)).isInstanceOf(IllegalArgumentException.class);
     }
 
     // ==========================================
@@ -188,11 +184,10 @@ class JogoControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         when(service.atualizar(1L, dto, mockUsuario)).thenReturn(mockJogoResponse);
 
-        ResponseEntity<Object> response = controller.atualizar(1L, dto, authentication, "123");
+        ResponseEntity<Object> response = controller.atualizar(1L, dto, authentication);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo(mockJogoResponse);
-        verify(mfaGuard, times(1)).check(mockUsuario, "123");
     }
 
 
@@ -204,7 +199,7 @@ class JogoControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         when(service.atualizar(1L, dto, mockUsuario)).thenThrow(new SecurityException("Sem permissão"));
 
-        assertThatThrownBy(() -> controller.atualizar(1L, dto, authentication, "123")).isInstanceOf(SecurityException.class);
+        assertThatThrownBy(() -> controller.atualizar(1L, dto, authentication)).isInstanceOf(SecurityException.class);
     }
 
     @Test
@@ -214,7 +209,7 @@ class JogoControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         when(service.atualizar(1L, dto, mockUsuario)).thenThrow(new IllegalArgumentException("Não achou"));
 
-        assertThatThrownBy(() -> controller.atualizar(1L, dto, authentication, "123")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> controller.atualizar(1L, dto, authentication)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -224,13 +219,13 @@ class JogoControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         when(service.atualizar(1L, dto, mockUsuario)).thenThrow(new RuntimeException("Erro BD"));
 
-        assertThatThrownBy(() -> controller.atualizar(1L, dto, authentication, "123")).isInstanceOf(RuntimeException.class);
+        assertThatThrownBy(() -> controller.atualizar(1L, dto, authentication)).isInstanceOf(RuntimeException.class);
     }
 
     @Test
     @DisplayName("Deve retornar UNAUTHORIZED ao atualizar sem login")
     void testAtualizar_Unauthenticated() {
-        ResponseEntity<Object> response = controller.atualizar(1L, mock(JogoUpdateDTO.class), null, "123");
+        ResponseEntity<Object> response = controller.atualizar(1L, mock(JogoUpdateDTO.class), null);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
@@ -243,10 +238,9 @@ class JogoControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         when(service.deletar(1L, mockUsuario)).thenReturn(true);
 
-        ResponseEntity<Object> response = controller.deletar(1L, authentication, "123");
+        ResponseEntity<Object> response = controller.deletar(1L, authentication);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
-        verify(mfaGuard, times(1)).check(mockUsuario, "123");
     }
 
     @Test
@@ -255,7 +249,7 @@ class JogoControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         when(service.deletar(1L, mockUsuario)).thenReturn(false);
 
-        ResponseEntity<Object> response = controller.deletar(1L, authentication, "123");
+        ResponseEntity<Object> response = controller.deletar(1L, authentication);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
     }
@@ -266,7 +260,7 @@ class JogoControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         when(service.deletar(1L, mockUsuario)).thenThrow(new SecurityException("Sem permissão"));
 
-        assertThatThrownBy(() -> controller.deletar(1L, authentication, "123")).isInstanceOf(SecurityException.class);
+        assertThatThrownBy(() -> controller.deletar(1L, authentication)).isInstanceOf(SecurityException.class);
     }
 
     @Test
@@ -275,7 +269,7 @@ class JogoControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         when(service.deletar(1L, mockUsuario)).thenThrow(new IllegalArgumentException("Não achou"));
 
-        assertThatThrownBy(() -> controller.deletar(1L, authentication, "123")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> controller.deletar(1L, authentication)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -284,13 +278,13 @@ class JogoControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         when(service.deletar(1L, mockUsuario)).thenThrow(new RuntimeException("Erro BD"));
 
-        assertThatThrownBy(() -> controller.deletar(1L, authentication, "123")).isInstanceOf(RuntimeException.class);
+        assertThatThrownBy(() -> controller.deletar(1L, authentication)).isInstanceOf(RuntimeException.class);
     }
 
     @Test
     @DisplayName("Deve retornar UNAUTHORIZED ao deletar sem login")
     void testDeletar_Unauthenticated() {
-        ResponseEntity<Object> response = controller.deletar(1L, null, "123");
+        ResponseEntity<Object> response = controller.deletar(1L, null);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 

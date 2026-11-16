@@ -88,7 +88,7 @@ class AuthenticationServiceTest {
         @Test
         @DisplayName("Deve realizar login com sucesso e retornar token")
         void deveRealizarLoginComSucesso() {
-            AuthenticationDTO authDTO = new AuthenticationDTO("professor@uece.br", "senha123");
+            AuthenticationDTO authDTO = new AuthenticationDTO("professor@uece.br", "senha123", null);
             Authentication authMock = mock(Authentication.class);
 
             when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authMock);
@@ -108,7 +108,7 @@ class AuthenticationServiceTest {
         @DisplayName("Deve lançar PermissaoNegadaException (403) quando usuário não está validado")
         void deveLancarExcecaoQuandoNaoValidado() {
             usuarioPadrao.setValidado(false);
-            AuthenticationDTO authDTO = new AuthenticationDTO("professor@uece.br", "senha123");
+            AuthenticationDTO authDTO = new AuthenticationDTO("professor@uece.br", "senha123", null);
             Authentication authMock = mock(Authentication.class);
 
             when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authMock);

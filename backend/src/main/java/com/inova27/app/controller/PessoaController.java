@@ -6,7 +6,6 @@ import com.inova27.app.dto.pessoa.PessoaResponseDTO;
 import com.inova27.app.dto.pessoa.PessoaUpdateDTO;
 import com.inova27.app.model.StatusValidacao;
 import com.inova27.app.model.Usuario;
-import com.inova27.app.security.MfaGuard;
 import com.inova27.app.service.PessoaService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -33,17 +32,11 @@ public class PessoaController {
 
     private final PessoaService service;
 
-    private final MfaGuard mfaGuard;
-
     @PostMapping
     public ResponseEntity<Object> criar(
             @RequestBody @Valid PessoaCreateDTO dto,
-            Authentication authentication,
-            @RequestHeader(value = "X-MFA-PIN", required = false) String pin) {
+            Authentication authentication) {
         Usuario usuario = usuarioLogado(authentication);
-        if (usuario != null) {
-            mfaGuard.check(usuario, pin);
-        }
         PessoaResponseDTO novaPessoa = service.criar(dto, usuario);
         return ResponseEntity.status(HttpStatus.CREATED).body(novaPessoa);
     }
@@ -65,12 +58,10 @@ public class PessoaController {
     public ResponseEntity<Object> validar(
             @PathVariable Long id,
             @RequestParam boolean aprovado,
-            Authentication authentication,
-            @RequestHeader(value = "X-MFA-PIN", required = false) String pin) {
+            Authentication authentication) {
         if (!(usuarioLogado(authentication) instanceof Usuario usuario)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
         }
-        mfaGuard.check(usuario, pin); // igual a jogos e usuários
         service.validarPessoa(id, aprovado, usuario);
         return ResponseEntity.ok(Map.of(KEY_MENSAGEM, "Validação realizada."));
     }
@@ -97,12 +88,10 @@ public class PessoaController {
     public ResponseEntity<Object> atualizar(
             @PathVariable Long id,
             @RequestBody @Valid PessoaUpdateDTO dto,
-            Authentication authentication,
-            @RequestHeader(value = "X-MFA-PIN", required = false) String pin) {
+            Authentication authentication) {
         if (!(usuarioLogado(authentication) instanceof Usuario usuario)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
         }
-        mfaGuard.check(usuario, pin);
         PessoaResponseDTO pessoaAtualizada = service.atualizar(id, dto, usuario);
         if (pessoaAtualizada == null) {
             return ResponseEntity.accepted().body(Map.of(KEY_MENSAGEM, "Solicitação de edição enviada com sucesso. Aguardando aprovação do administrador."));
@@ -129,12 +118,10 @@ public class PessoaController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Object> deletar(
             @PathVariable Long id,
-            Authentication authentication,
-            @RequestHeader(value = "X-MFA-PIN", required = false) String pin) {
+            Authentication authentication) {
         if (!(usuarioLogado(authentication) instanceof Usuario usuario)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
         }
-        mfaGuard.check(usuario, pin);
         boolean deletadoImediatamente = service.deletar(id, usuario);
         if (!deletadoImediatamente) {
             return ResponseEntity.accepted().body(Map.of(KEY_MENSAGEM, "Solicitação de exclusão enviada com sucesso. Aguardando aprovação do administrador."));

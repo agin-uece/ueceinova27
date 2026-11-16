@@ -5,7 +5,6 @@ import com.inova27.app.dto.startup.StartupFiltroDTO;
 import com.inova27.app.dto.startup.StartupResponseDTO;
 import com.inova27.app.dto.startup.StartupUpdateDTO;
 import com.inova27.app.model.Usuario;
-import com.inova27.app.security.MfaGuard;
 import com.inova27.app.service.StartupService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -32,17 +31,13 @@ public class StartupController {
 
     private final StartupService service;
 
-    private final MfaGuard mfaGuard;
-
     @PostMapping
     public ResponseEntity<Object> criar(
             @RequestBody @Valid StartupCreateDTO dto,
-            Authentication authentication,
-            @RequestHeader(value = "X-MFA-PIN", required = false) String pin) {
+            Authentication authentication) {
         if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuario)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
         }
-        mfaGuard.check((Usuario) authentication.getPrincipal(), pin);
         StartupResponseDTO response = service.criar(dto, usuario.getId());
         return ResponseEntity
                 .created(URI.create("/startups/" + response.id()))
@@ -61,12 +56,10 @@ public class StartupController {
     public ResponseEntity<Object> atualizar(
             @PathVariable Long id,
             @RequestBody @Valid StartupUpdateDTO dto,
-            Authentication authentication,
-            @RequestHeader(value = "X-MFA-PIN", required = false) String pin) {
+            Authentication authentication) {
         if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuario)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
         }
-        mfaGuard.check((Usuario) authentication.getPrincipal(), pin);
         StartupResponseDTO response = service.atualizar(id, dto, usuario.getId());
         return ResponseEntity.ok(response);
     }
@@ -86,12 +79,10 @@ public class StartupController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Object> deletar(
             @PathVariable Long id,
-            Authentication authentication,
-            @RequestHeader(value = "X-MFA-PIN", required = false) String pin) {
+            Authentication authentication) {
         if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuario)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
         }
-        mfaGuard.check((Usuario) authentication.getPrincipal(), pin);
         service.deletar(id, usuario.getId());
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
