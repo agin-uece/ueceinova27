@@ -39,6 +39,7 @@ export default function LoginPage() {
     const [error, setError] = useState("");
     const [success, setSuccess] = useState(""); // 🔥 NOVO: Estado para mensagens de sucesso
     const [isLoading, setIsLoading] = useState(false);
+    const [mfaPendente, setMfaPendente] = useState(false); // login de ADMIN aguardando o código por e-mail
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -113,7 +114,7 @@ export default function LoginPage() {
             }
             // === FLUXO DE LOGIN ===
             else if (mode === "login") {
-                const payload = { email: formData.email, senha: formData.senha };
+                const payload = { email: formData.email, senha: formData.senha, ...(mfaPendente && formData.pin ? { codigo: formData.pin } : {}) };
                 const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -139,6 +140,17 @@ export default function LoginPage() {
                     }));
 
                     router.push("/gestao");
+                } else if (res.status !== 401) {
+                    const body = await res.json().catch(() => ({}));
+                    if (body.erro === "MFA_REQUIRED") {
+                        setMfaPendente(true);
+                        setFormData({ ...formData, pin: "" });
+                        setSuccess("Enviamos um código de segurança para o seu e-mail. Informe-o para concluir o login.");
+                    } else if (body.erro === "MFA_INVALID") {
+                        setError("Código inválido ou expirado.");
+                    } else {
+                        setError(body.erro || body.mensagem || "Acesso negado.");
+                    }
                 } else {
                     setError("E-mail ou senha incorretos.");
                 }
@@ -338,6 +350,22 @@ export default function LoginPage() {
                                 </div>
                             )}
 
+                            {mode === "login" && mfaPendente && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Código de segurança</label>
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                                            <Lock size={20} />
+                                        </div>
+                                        <input
+                                            type="text" name="pin" required maxLength={6} inputMode="numeric"
+                                            value={formData.pin} onChange={handleChange}
+                                            className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl text-gray-900 focus:ring-2 focus:ring-orange-500 outline-none transition-all tracking-[0.3em]"
+                                            placeholder="000000"
+                                        />
+                                    </div>
+                                </div>
+                            )}
                             {mode === "register" && (
                                 <>
                                     <div>

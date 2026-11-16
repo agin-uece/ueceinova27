@@ -7,7 +7,6 @@ import com.inova27.app.dto.laboratorio.LaboratorioUpdateDTO;
 import com.inova27.app.exception.MfaRequiredException;
 import com.inova27.app.model.StatusValidacao;
 import com.inova27.app.model.Usuario;
-import com.inova27.app.security.MfaGuard;
 import com.inova27.app.service.LaboratorioService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -40,9 +39,6 @@ class LaboratorioControllerTest {
     private LaboratorioService service;
 
     @Mock
-    private MfaGuard mfaGuard;
-
-    @Mock
     private Authentication authentication;
 
     @InjectMocks
@@ -68,28 +64,16 @@ class LaboratorioControllerTest {
     void testValidar_Sucesso() {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
 
-        ResponseEntity<Object> response = controller.validar(1L, true, authentication, "123456");
+        ResponseEntity<Object> response = controller.validar(1L, true, authentication);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        verify(mfaGuard).check(mockUsuario, "123456");
         verify(service, times(1)).validarLaboratorio(1L, true, mockUsuario);
-    }
-
-    @Test
-    @DisplayName("Validar laboratório exige MFA: sem PIN não valida")
-    void testValidar_ExigeMfa() {
-        when(authentication.getPrincipal()).thenReturn(mockUsuario);
-        doThrow(new com.inova27.app.exception.MfaRequiredException(1L, "admin@uece.br")).when(mfaGuard).check(mockUsuario, null);
-
-        assertThatThrownBy(() -> controller.validar(1L, true, authentication, null))
-                .isInstanceOf(com.inova27.app.exception.MfaRequiredException.class);
-        verify(service, never()).validarLaboratorio(any(), anyBoolean(), any());
     }
 
     @Test
     @DisplayName("Deve retornar UNAUTHORIZED ao validar sem login")
     void testValidar_NaoAutenticado() {
-        ResponseEntity<Object> response = controller.validar(1L, true, null, null);
+        ResponseEntity<Object> response = controller.validar(1L, true, null);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
@@ -99,7 +83,7 @@ class LaboratorioControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         doThrow(new IllegalArgumentException("Lab não encontrado")).when(service).validarLaboratorio(1L, true, mockUsuario);
 
-        assertThatThrownBy(() -> controller.validar(1L, true, authentication, null)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> controller.validar(1L, true, authentication)).isInstanceOf(IllegalArgumentException.class);
     }
 
     // ==========================================
@@ -134,10 +118,9 @@ class LaboratorioControllerTest {
         when(mockResponseDTO.id()).thenReturn(1L); // Precisamos simular o ID para montar a URI do Created
         when(service.criar(dto, mockUsuario)).thenReturn(mockResponseDTO);
 
-        ResponseEntity<Object> response = controller.criar(dto, authentication, "1234");
+        ResponseEntity<Object> response = controller.criar(dto, authentication);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        verify(mfaGuard, times(1)).check(mockUsuario, "1234");
     }
 
     @Test
@@ -147,11 +130,10 @@ class LaboratorioControllerTest {
         when(mockResponseDTO.id()).thenReturn(1L);
         when(service.criar(dto, null)).thenReturn(mockResponseDTO);
 
-        ResponseEntity<Object> response = controller.criar(dto, null, null);
+        ResponseEntity<Object> response = controller.criar(dto, null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         // Garante que o MFA NÃO foi chamado, pois o usuário é nulo
-        verify(mfaGuard, never()).check(any(), any());
     }
 
     @Test
@@ -161,7 +143,7 @@ class LaboratorioControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         when(service.criar(dto, mockUsuario)).thenThrow(new IllegalArgumentException("Dados inválidos"));
 
-        assertThatThrownBy(() -> controller.criar(dto, authentication, "123")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> controller.criar(dto, authentication)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -171,7 +153,7 @@ class LaboratorioControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         when(service.criar(dto, mockUsuario)).thenThrow(new SecurityException("Sem acesso"));
 
-        assertThatThrownBy(() -> controller.criar(dto, authentication, "123")).isInstanceOf(SecurityException.class);
+        assertThatThrownBy(() -> controller.criar(dto, authentication)).isInstanceOf(SecurityException.class);
     }
 
     @Test
@@ -181,7 +163,7 @@ class LaboratorioControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         when(service.criar(dto, mockUsuario)).thenThrow(new RuntimeException("Falha"));
 
-        assertThatThrownBy(() -> controller.criar(dto, authentication, "123")).isInstanceOf(RuntimeException.class);
+        assertThatThrownBy(() -> controller.criar(dto, authentication)).isInstanceOf(RuntimeException.class);
     }
 
     // ==========================================
@@ -194,16 +176,15 @@ class LaboratorioControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         when(service.atualizar(1L, dto, mockUsuario)).thenReturn(mockResponseDTO);
 
-        ResponseEntity<Object> response = controller.atualizar(1L, dto, authentication, "123");
+        ResponseEntity<Object> response = controller.atualizar(1L, dto, authentication);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        verify(mfaGuard, times(1)).check(mockUsuario, "123");
     }
 
     @Test
     @DisplayName("Deve retornar UNAUTHORIZED ao atualizar sem estar logado")
     void testAtualizar_NaoAutenticado() {
-        ResponseEntity<Object> response = controller.atualizar(1L, null, null, null);
+        ResponseEntity<Object> response = controller.atualizar(1L, null, null);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
@@ -216,7 +197,7 @@ class LaboratorioControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         when(service.atualizar(1L, dto, mockUsuario)).thenThrow(new IllegalArgumentException("Não achou"));
 
-        assertThatThrownBy(() -> controller.atualizar(1L, dto, authentication, "123")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> controller.atualizar(1L, dto, authentication)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -226,7 +207,7 @@ class LaboratorioControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         when(service.atualizar(1L, dto, mockUsuario)).thenThrow(new SecurityException("Sem acesso"));
 
-        assertThatThrownBy(() -> controller.atualizar(1L, dto, authentication, "123")).isInstanceOf(SecurityException.class);
+        assertThatThrownBy(() -> controller.atualizar(1L, dto, authentication)).isInstanceOf(SecurityException.class);
     }
 
     @Test
@@ -236,7 +217,7 @@ class LaboratorioControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         when(service.atualizar(1L, dto, mockUsuario)).thenThrow(new RuntimeException("Falhou"));
 
-        assertThatThrownBy(() -> controller.atualizar(1L, dto, authentication, "123")).isInstanceOf(RuntimeException.class);
+        assertThatThrownBy(() -> controller.atualizar(1L, dto, authentication)).isInstanceOf(RuntimeException.class);
     }
 
     // ==========================================
@@ -351,11 +332,10 @@ class LaboratorioControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         when(service.deletar(1L, mockUsuario)).thenReturn(true); // admin: exclusão imediata
 
-        ResponseEntity<Object> response = controller.deletar(1L, authentication, "123");
+        ResponseEntity<Object> response = controller.deletar(1L, authentication);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
         verify(service, times(1)).deletar(1L, mockUsuario);
-        verify(mfaGuard, times(1)).check(mockUsuario, "123");
     }
 
     @Test
@@ -364,7 +344,7 @@ class LaboratorioControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         when(service.deletar(1L, mockUsuario)).thenReturn(false);
 
-        ResponseEntity<Object> response = controller.deletar(1L, authentication, null);
+        ResponseEntity<Object> response = controller.deletar(1L, authentication);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
     }
@@ -372,7 +352,7 @@ class LaboratorioControllerTest {
     @Test
     @DisplayName("Deve retornar UNAUTHORIZED ao deletar sem estar logado")
     void testDeletar_NaoAutenticado() {
-        ResponseEntity<Object> response = controller.deletar(1L, null, null);
+        ResponseEntity<Object> response = controller.deletar(1L, null);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
@@ -383,7 +363,7 @@ class LaboratorioControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         doThrow(new IllegalArgumentException("Não achou")).when(service).deletar(1L, mockUsuario);
 
-        assertThatThrownBy(() -> controller.deletar(1L, authentication, "123")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> controller.deletar(1L, authentication)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -392,7 +372,7 @@ class LaboratorioControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         doThrow(new SecurityException("Sem acesso")).when(service).deletar(1L, mockUsuario);
 
-        assertThatThrownBy(() -> controller.deletar(1L, authentication, "123")).isInstanceOf(SecurityException.class);
+        assertThatThrownBy(() -> controller.deletar(1L, authentication)).isInstanceOf(SecurityException.class);
     }
 
     @Test
@@ -401,6 +381,6 @@ class LaboratorioControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         doThrow(new RuntimeException("Banco falhou")).when(service).deletar(1L, mockUsuario);
 
-        assertThatThrownBy(() -> controller.deletar(1L, authentication, "123")).isInstanceOf(RuntimeException.class);
+        assertThatThrownBy(() -> controller.deletar(1L, authentication)).isInstanceOf(RuntimeException.class);
     }
 }

@@ -6,7 +6,6 @@ import com.inova27.app.dto.laboratorio.LaboratorioResponseDTO;
 import com.inova27.app.dto.laboratorio.LaboratorioUpdateDTO;
 import com.inova27.app.model.StatusValidacao;
 import com.inova27.app.model.Usuario;
-import com.inova27.app.security.MfaGuard;
 import com.inova27.app.service.LaboratorioService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -34,18 +33,14 @@ public class LaboratorioController {
 
     private final LaboratorioService service;
 
-    private final MfaGuard mfaGuard;
-
     @PutMapping("/{id}/validar")
     public ResponseEntity<Object> validar(
             @PathVariable Long id,
             @RequestParam boolean aprovado,
-            Authentication authentication,
-            @RequestHeader(value = "X-MFA-PIN", required = false) String pin) {
+            Authentication authentication) {
         if (!(usuarioLogado(authentication) instanceof Usuario usuario)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
         }
-        mfaGuard.check(usuario, pin); // igual a jogos e usuários
         service.validarLaboratorio(id, aprovado, usuario);
         return ResponseEntity.ok(Map.of(KEY_MENSAGEM, "Validação realizada."));
     }
@@ -59,12 +54,8 @@ public class LaboratorioController {
     @PostMapping
     public ResponseEntity<Object> criar(
             @RequestBody @Valid LaboratorioCreateDTO dto,
-            Authentication authentication,
-            @RequestHeader(value = "X-MFA-PIN", required = false) String pin) {
+            Authentication authentication) {
         Usuario usuario = usuarioLogado(authentication);
-        if (usuario != null) {
-            mfaGuard.check(usuario, pin);
-        }
         LaboratorioResponseDTO response = service.criar(dto, usuario);
         return ResponseEntity
                 .created(URI.create("/laboratorios/" + response.id()))
@@ -75,12 +66,10 @@ public class LaboratorioController {
     public ResponseEntity<Object> atualizar(
             @PathVariable Long id,
             @RequestBody @Valid LaboratorioUpdateDTO dto,
-            Authentication authentication,
-            @RequestHeader(value = "X-MFA-PIN", required = false) String pin) {
+            Authentication authentication) {
         if (!(usuarioLogado(authentication) instanceof Usuario usuario)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
         }
-        mfaGuard.check(usuario, pin);
         LaboratorioResponseDTO response = service.atualizar(id, dto, usuario);
         if (response == null) {
             return ResponseEntity.accepted().body(Map.of(KEY_MENSAGEM, "Solicitação de edição enviada com sucesso. Aguardando aprovação do administrador."));
@@ -124,12 +113,10 @@ public class LaboratorioController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Object> deletar(
             @PathVariable Long id,
-            Authentication authentication,
-            @RequestHeader(value = "X-MFA-PIN", required = false) String pin) {
+            Authentication authentication) {
         if (!(usuarioLogado(authentication) instanceof Usuario usuario)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
         }
-        mfaGuard.check(usuario, pin);
         boolean deletadoImediatamente = service.deletar(id, usuario);
         if (!deletadoImediatamente) {
             return ResponseEntity.accepted().body(Map.of(KEY_MENSAGEM, "Solicitação de exclusão enviada com sucesso. Aguardando aprovação do administrador."));

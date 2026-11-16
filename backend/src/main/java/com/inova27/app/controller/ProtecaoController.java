@@ -4,7 +4,6 @@ import com.inova27.app.dto.protecao.ProtecaoCreateDTO;
 import com.inova27.app.dto.protecao.ProtecaoResponseDTO;
 import com.inova27.app.dto.protecao.ProtecaoUpdateDTO;
 import com.inova27.app.model.Usuario;
-import com.inova27.app.security.MfaGuard;
 import com.inova27.app.service.ProtecaoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,17 +27,13 @@ public class ProtecaoController {
 
     private final ProtecaoService service;
 
-    private final MfaGuard mfaGuard;
-
     @PostMapping
     public ResponseEntity<Object> criar(
             @RequestBody @Valid ProtecaoCreateDTO dto,
-            Authentication authentication,
-            @RequestHeader(value = "X-MFA-PIN", required = false) String pin) {
+            Authentication authentication) {
         if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuario)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
         }
-        mfaGuard.check((Usuario) authentication.getPrincipal(), pin);
         ProtecaoResponseDTO response = service.criar(dto, usuario.getId());
         return ResponseEntity
                 .created(URI.create("/protecoes/" + response.id()))
@@ -49,12 +44,10 @@ public class ProtecaoController {
     public ResponseEntity<Object> atualizar(
             @PathVariable Long id,
             @RequestBody @Valid ProtecaoUpdateDTO dto,
-            Authentication authentication,
-            @RequestHeader(value = "X-MFA-PIN", required = false) String pin) {
+            Authentication authentication) {
         if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuario)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
         }
-        mfaGuard.check((Usuario) authentication.getPrincipal(), pin);
         ProtecaoResponseDTO response = service.atualizar(id, dto, usuario.getId());
         return ResponseEntity.ok(response);
     }
@@ -74,12 +67,10 @@ public class ProtecaoController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Object> deletar(
             @PathVariable Long id,
-            Authentication authentication,
-            @RequestHeader(value = "X-MFA-PIN", required = false) String pin) {
+            Authentication authentication) {
         if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuario)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, MSG_NAO_AUTENTICADO));
         }
-        mfaGuard.check((Usuario) authentication.getPrincipal(), pin);
         service.deletar(id, usuario.getId());
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
