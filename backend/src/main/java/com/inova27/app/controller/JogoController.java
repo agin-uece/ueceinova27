@@ -6,7 +6,6 @@ import com.inova27.app.dto.jogo.JogoResponseDTO;
 import com.inova27.app.dto.jogo.JogoUpdateDTO;
 import com.inova27.app.model.StatusValidacao;
 import com.inova27.app.model.Usuario;
-import com.inova27.app.security.MfaGuard;
 import com.inova27.app.service.JogoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -34,8 +33,6 @@ public class JogoController {
 
     private final JogoService service;
 
-    private final MfaGuard mfaGuard;
-
     @GetMapping("/buscar")
     public ResponseEntity<Object> buscarComFiltros(
             JogoFiltroDTO filtro,
@@ -47,12 +44,8 @@ public class JogoController {
     @PostMapping
     public ResponseEntity<Object> criar(
             @RequestBody @Valid JogoCreateDTO dto,
-            Authentication authentication,
-            @RequestHeader(value = "X-MFA-PIN", required = false) String pin) {
+            Authentication authentication) {
         Usuario usuario = usuarioLogado(authentication);
-        if (usuario != null) {
-            mfaGuard.check(usuario, pin);
-        }
         JogoResponseDTO novoJogo = service.criar(dto, usuario);
         return ResponseEntity.status(HttpStatus.CREATED).body(novoJogo);
     }
@@ -61,12 +54,10 @@ public class JogoController {
     public ResponseEntity<Object> validar(
             @PathVariable Long id,
             @RequestParam boolean aprovado,
-            Authentication authentication,
-            @RequestHeader(value = "X-MFA-PIN", required = false) String pin) {
+            Authentication authentication) {
         if (!(usuarioLogado(authentication) instanceof Usuario usuario)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, USER_AUTH_MESSAGE));
         }
-        mfaGuard.check(usuario, pin);
         service.validarJogo(id, aprovado, usuario);
         return ResponseEntity.ok(Map.of(KEY_MENSAGEM, "Validação realizada."));
     }
@@ -109,13 +100,10 @@ public class JogoController {
     public ResponseEntity<Object> atualizar(
             @PathVariable Long id,
             @RequestBody @Valid JogoUpdateDTO dto,
-            Authentication authentication,
-            @RequestHeader(value = "X-MFA-PIN", required = false) String pin) {
+            Authentication authentication) {
         if (!(usuarioLogado(authentication) instanceof Usuario usuario)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, USER_AUTH_MESSAGE));
         }
-        // MFA ANTES de alterar qualquer dado (antes a checagem vinha depois da gravação)
-        mfaGuard.check(usuario, pin);
         JogoResponseDTO jogoAtualizado = service.atualizar(id, dto, usuario);
         if (jogoAtualizado == null) {
             return ResponseEntity.accepted().body(Map.of(KEY_MENSAGEM, "Solicitação de edição enviada com sucesso. Aguardando aprovação do administrador."));
@@ -126,12 +114,10 @@ public class JogoController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Object> deletar(
             @PathVariable Long id,
-            Authentication authentication,
-            @RequestHeader(value = "X-MFA-PIN", required = false) String pin) {
+            Authentication authentication) {
         if (!(usuarioLogado(authentication) instanceof Usuario usuario)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(KEY_ERRO, USER_AUTH_MESSAGE));
         }
-        mfaGuard.check(usuario, pin);
         boolean deletadoImediatamente = service.deletar(id, usuario);
         if (!deletadoImediatamente) {
             return ResponseEntity.accepted().body(Map.of(KEY_MENSAGEM, "Solicitação de exclusão enviada com sucesso. Aguardando aprovação do administrador."));

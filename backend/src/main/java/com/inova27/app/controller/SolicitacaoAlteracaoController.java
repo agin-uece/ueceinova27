@@ -2,7 +2,6 @@ package com.inova27.app.controller;
 
 import com.inova27.app.dto.solicitaravaliacao.AvaliarSolicitacaoDTO;
 import com.inova27.app.model.*;
-import com.inova27.app.security.MfaGuard;
 import com.inova27.app.service.SolicitacaoAlteracaoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -25,8 +24,6 @@ public class SolicitacaoAlteracaoController {
 
     private final SolicitacaoAlteracaoService service;
 
-    private final MfaGuard mfaGuard;
-
     @GetMapping
     public ResponseEntity<Object> listar(
             @RequestParam(required = false) TipoEntidade entidade,
@@ -45,12 +42,10 @@ public class SolicitacaoAlteracaoController {
     public ResponseEntity<Object> avaliar(
             @PathVariable Long id,
             @RequestBody AvaliarSolicitacaoDTO dto,
-            Authentication authentication,
-            @RequestHeader(value = "X-MFA-PIN", required = false) String pin) {
+            Authentication authentication) {
         if (authentication == null || !(authentication.getPrincipal() instanceof Usuario usuario) || usuario.getRole() != UserRole.ADMIN) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(KEY_ERRO, "Acesso negado. Apenas administradores podem aprovar alterações."));
         }
-        mfaGuard.check((Usuario) authentication.getPrincipal(), pin);
         service.avaliarSolicitacao(id, dto.aprovado(), dto.justificativa(), usuario);
         String statusFinal = dto.aprovado() ? "aprovada e aplicada" : "rejeitada";
         return ResponseEntity.ok(Map.of(KEY_MENSAGEM, "Solicitação " + statusFinal + " com sucesso."));

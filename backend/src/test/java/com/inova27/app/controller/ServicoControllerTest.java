@@ -6,7 +6,6 @@ import com.inova27.app.dto.servico.ServicoResponseDTO;
 import com.inova27.app.dto.servico.ServicoUpdateDTO;
 import com.inova27.app.exception.MfaRequiredException;
 import com.inova27.app.model.Usuario;
-import com.inova27.app.security.MfaGuard;
 import com.inova27.app.service.ServicoService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -38,9 +37,6 @@ class ServicoControllerTest {
     private ServicoService service;
 
     @Mock
-    private MfaGuard mfaGuard;
-
-    @Mock
     private Authentication authentication;
 
     @InjectMocks
@@ -68,18 +64,17 @@ class ServicoControllerTest {
         when(mockResponseDTO.id()).thenReturn(50L);
         when(service.criar(dto, mockUsuario.getId())).thenReturn(mockResponseDTO);
 
-        ResponseEntity<Object> response = controller.criar(dto, authentication, "1234");
+        ResponseEntity<Object> response = controller.criar(dto, authentication);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getHeaders().getLocation()).hasPath("/servicos/50");
-        verify(mfaGuard, times(1)).check(mockUsuario, "1234");
     }
 
     @Test
     @DisplayName("Deve retornar UNAUTHORIZED ao criar serviço sem autenticação")
     void testCriar_NaoAutenticado() {
         ServicoCreateDTO dto = mock(ServicoCreateDTO.class);
-        ResponseEntity<Object> response = controller.criar(dto, null, "1234");
+        ResponseEntity<Object> response = controller.criar(dto, null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
@@ -134,16 +129,15 @@ class ServicoControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         when(service.atualizar(1L, dto, mockUsuario.getId())).thenReturn(mockResponseDTO);
 
-        ResponseEntity<Object> response = controller.atualizar(1L, dto, authentication, "1234");
+        ResponseEntity<Object> response = controller.atualizar(1L, dto, authentication);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        verify(mfaGuard, times(1)).check(mockUsuario, "1234");
     }
 
     @Test
     @DisplayName("Deve retornar UNAUTHORIZED ao atualizar serviço sem estar logado")
     void testAtualizar_NaoAutenticado() {
-        ResponseEntity<Object> response = controller.atualizar(1L, mock(ServicoUpdateDTO.class), null, "1234");
+        ResponseEntity<Object> response = controller.atualizar(1L, mock(ServicoUpdateDTO.class), null);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
@@ -156,7 +150,7 @@ class ServicoControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         when(service.atualizar(1L, dto, mockUsuario.getId())).thenThrow(new IllegalArgumentException("Não achou"));
 
-        assertThatThrownBy(() -> controller.atualizar(1L, dto, authentication, "1234")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> controller.atualizar(1L, dto, authentication)).isInstanceOf(IllegalArgumentException.class);
     }
 
     // ==========================================
@@ -167,7 +161,7 @@ class ServicoControllerTest {
     void testDeletar_Sucesso() {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
 
-        ResponseEntity<Object> response = controller.deletar(1L, authentication, "1234");
+        ResponseEntity<Object> response = controller.deletar(1L, authentication);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
         verify(service, times(1)).deletar(1L, mockUsuario.getId());
@@ -176,7 +170,7 @@ class ServicoControllerTest {
     @Test
     @DisplayName("Deve retornar UNAUTHORIZED ao deletar sem estar logado")
     void testDeletar_NaoAutenticado() {
-        ResponseEntity<Object> response = controller.deletar(1L, null, "1234");
+        ResponseEntity<Object> response = controller.deletar(1L, null);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
@@ -188,7 +182,7 @@ class ServicoControllerTest {
         when(authentication.getPrincipal()).thenReturn(mockUsuario);
         doThrow(new IllegalArgumentException("Não achou")).when(service).deletar(1L, mockUsuario.getId());
 
-        assertThatThrownBy(() -> controller.deletar(1L, authentication, "1234")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> controller.deletar(1L, authentication)).isInstanceOf(IllegalArgumentException.class);
     }
 
     // ==========================================
