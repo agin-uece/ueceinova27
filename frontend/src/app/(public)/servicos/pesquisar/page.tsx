@@ -163,7 +163,7 @@ export default function PesquisarServicosPage() {
                             <ArrowLeft size={20} />
                         </Link>
                         <div className="flex items-center gap-3">
-                            <div className="p-2 bg-teal-100 text-teal-600 rounded-lg">
+                            <div className="p-2 bg-modulo-servicos-bg text-modulo-servicos rounded-lg">
                                 <Wrench size={24} />
                             </div>
                             <h1 className="text-xl font-black text-gray-900 tracking-tight italic uppercase hidden sm:block">
@@ -188,7 +188,7 @@ export default function PesquisarServicosPage() {
             </header>
 
             <div className="max-w-7xl mx-auto px-6 py-10">
-                <ResultsHeader icon={Target} iconClassName="text-teal-600" total={meta.total} label="Total de Serviços encontrados" />
+                <ResultsHeader icon={Target} iconClassName="text-modulo-servicos" total={meta.total} label="Total de Serviços encontrados" />
 
                 {isLoading ? (
                     <SkeletonGrid count={4} />

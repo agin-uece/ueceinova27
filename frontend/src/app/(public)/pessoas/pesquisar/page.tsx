@@ -244,7 +244,7 @@ export default function PesquisarPessoasPage() {
                             <ArrowLeft size={20} />
                         </Link>
                         <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-lg transition-colors ${adminStatusFilter ? "bg-red-100 text-red-600" : isViewingMyPessoas ? "bg-purple-100 text-purple-600" : "bg-indigo-100 text-indigo-600"}`}>
+                            <div className={`p-2 rounded-lg transition-colors ${adminStatusFilter ? "bg-red-100 text-red-600" : isViewingMyPessoas ? "bg-purple-100 text-purple-600" : "bg-modulo-pessoas-bg text-modulo-pessoas"}`}>
                                 {adminStatusFilter ? <ShieldCheck size={24} /> : <Users size={24} />}
                             </div>
                             <h1 className="text-xl font-black text-gray-900 tracking-tight italic uppercase transition-all hidden sm:block">
@@ -297,7 +297,7 @@ export default function PesquisarPessoasPage() {
             </header>
 
             <div className="max-w-7xl mx-auto px-6 py-10">
-                <ResultsHeader icon={Target} iconClassName="text-indigo-600" total={meta.total} label="Total de resultados" />
+                <ResultsHeader icon={Target} iconClassName="text-modulo-pessoas" total={meta.total} label="Total de resultados" />
 
                 {isLoading ? (
                     <SkeletonGrid count={4} />
