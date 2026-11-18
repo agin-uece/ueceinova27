@@ -97,10 +97,11 @@ export function StartupForm({ initialData, onSubmit, isLoading }: StartupFormPro
 
                         <FormGroup label="Descrição / Pitch">
                             <textarea
-                                name="descricao" rows={4} value={formData.descricao} onChange={handleChange}
+                                name="descricao" rows={4} maxLength={255} value={formData.descricao} onChange={handleChange}
                                 className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-red-500 outline-none transition-all resize-none text-sm"
                                 placeholder="Breve descrição do modelo de negócio..."
                             />
+                            <p className="text-right text-[10px] font-bold text-gray-400 mt-1">{formData.descricao.length}/255</p>
                         </FormGroup>
                     </div>
                 </section>

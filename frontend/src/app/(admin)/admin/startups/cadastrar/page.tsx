@@ -79,7 +79,7 @@ export default function CadastrarStartupPage() {
                         <div className="p-2 bg-red-100 text-red-600 rounded-xl border border-red-200">
                             <Rocket size={24} />
                         </div>
-                        <h1 className="text-xl font-black italic uppercase tracking-tighter text-gray-900">Nova Startup/Empresa</h1>
+                        <h1 className="text-xl font-black italic uppercase tracking-tighter text-gray-900">Cadastrar Startup/Empresa</h1>
                     </div>
                 </div>
             </header>

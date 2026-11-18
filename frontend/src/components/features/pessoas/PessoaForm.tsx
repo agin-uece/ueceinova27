@@ -122,7 +122,8 @@ export function PessoaForm({ initialData, onSubmit, isLoading }: PessoaFormProps
                         </FormGroup>
                     </div>
                     <FormGroup label="Biografia Profissional">
-                        <textarea name="descricao" rows={4} className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none" value={formData.descricao} onChange={handleChange} />
+                        <textarea name="descricao" rows={4} maxLength={255} className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none" value={formData.descricao} onChange={handleChange} />
+                        <p className="text-right text-[10px] font-bold text-gray-400 mt-1">{formData.descricao.length}/255</p>
                     </FormGroup>
                 </section>
 
