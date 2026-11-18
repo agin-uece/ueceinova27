@@ -93,7 +93,7 @@ export default function CadastrarProtecaoPage() {
                     </Link>
                     <div>
                         <h1 className="text-3xl font-black text-gray-900 flex items-center gap-2 italic uppercase">
-                            <Shield className="text-purple-600" size={32} /> Nova Proteção
+                            <Shield className="text-purple-600" size={32} /> Cadastrar Proteção
                         </h1>
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Painel Administrativo</p>
                     </div>

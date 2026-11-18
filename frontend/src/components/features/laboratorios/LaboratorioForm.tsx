@@ -151,6 +151,7 @@ export function LaboratorioForm({ initialData, onSubmit, isLoading }: Laboratori
 
                         <FormGroup label="Descrição / Sobre">
                             <textarea name="descricao" rows={4} maxLength={1000} value={formData.descricao} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none" placeholder="Descreva o propósito, estudos e atividades do laboratório..." />
+                            <p className="text-right text-[10px] font-bold text-gray-400 mt-1">{formData.descricao.length}/1000</p>
                         </FormGroup>
                     </div>
                 </section>

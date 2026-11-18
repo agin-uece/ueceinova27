@@ -209,10 +209,12 @@ export function ProtecaoForm({ initialData, onSubmit, isLoading }: ProtecaoFormP
                                 <textarea
                                     name="resumo"
                                     rows={3}
+                                    maxLength={255}
                                     value={formData.resumo}
                                     onChange={handleChange}
                                     className={`${inputClass} resize-none`}
                                 />
+                                <p className="text-right text-[10px] font-bold text-gray-400 mt-1">{formData.resumo.length}/255</p>
                             </FormGroup>
                         </div>
                     )}

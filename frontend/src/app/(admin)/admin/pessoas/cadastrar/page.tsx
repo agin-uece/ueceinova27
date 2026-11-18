@@ -74,7 +74,7 @@ export default function CadastrarPessoaPage() {
                     <button onClick={() => router.back()} className="p-2 hover:bg-slate-100 rounded-xl text-slate-500 transition-all">
                         <ArrowLeft size={20} />
                     </button>
-                    <h1 className="text-xl font-black italic uppercase tracking-tighter text-gray-900">Novo Talento</h1>
+                    <h1 className="text-xl font-black italic uppercase tracking-tighter text-gray-900">Cadastrar pessoa</h1>
                 </div>
             </header>
 
