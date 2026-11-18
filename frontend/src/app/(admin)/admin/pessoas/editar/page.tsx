@@ -63,8 +63,14 @@ function EditarPessoaForm() {
         const carregarTudo = async () => {
             try {
                 const token = localStorage.getItem("userToken");
+
+                const headers = new Headers();
+                if (token) {
+                    headers.append("Authorization", `Bearer ${token}`);
+                }
+
                 const [resPessoa, resS, resP, resL] = await Promise.all([
-                    fetch(`${process.env.NEXT_PUBLIC_API_URL}/pessoas/${id}`),
+                    fetch(`${process.env.NEXT_PUBLIC_API_URL}/pessoas/${id}`, { headers }),
                     fetch(`${process.env.NEXT_PUBLIC_API_URL}/startups`),
                     fetch(`${process.env.NEXT_PUBLIC_API_URL}/protecoes`),
                     fetch(`${process.env.NEXT_PUBLIC_API_URL}/laboratorios`)
@@ -96,6 +102,9 @@ function EditarPessoaForm() {
                         protecaoIds: data.protecaoIds || [],
                         laboratorioId: data.laboratorioId || ""
                     });
+                } else {
+                    alert("Não foi possível carregar este cadastro.");
+                    router.back();
                 }
             } catch (e) {
                 console.error("Erro ao carregar dados", e);
