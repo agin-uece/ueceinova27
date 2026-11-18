@@ -12,16 +12,16 @@ interface ProtecaoFiltersProps {
 }
 
 export function ProtecaoFilters({
-    isVisible, onToggleVisibility, filtros, onInputChange, onClear, onClose
-}: ProtecaoFiltersProps) {
+                                    isVisible, onToggleVisibility, filtros, onInputChange, onClear, onClose
+                                }: ProtecaoFiltersProps) {
     return (
         <>
             <button
                 onClick={onToggleVisibility}
                 className={`flex items-center gap-2 px-6 py-2.5 rounded-full font-black text-xs uppercase tracking-widest transition-all border ${
                     isVisible
-                    ? "bg-purple-600 border-purple-600 text-white shadow-lg shadow-purple-100"
-                    : "bg-white border-gray-200 text-gray-600 hover:border-purple-500 hover:text-purple-500"
+                        ? "bg-modulo-protecoes border-modulo-protecoes text-white shadow-lg shadow-modulo-protecoes-bg"
+                        : "bg-white border-gray-200 text-gray-600 hover:border-modulo-protecoes hover:text-modulo-protecoes"
                 }`}
             >
                 <Filter size={14} />
@@ -37,7 +37,7 @@ export function ProtecaoFilters({
                                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-tighter mb-2 block">Nome ou Código</label>
                                 <input
                                     type="text" name="buscaGeral" value={filtros.buscaGeral} onChange={onInputChange}
-                                    className="w-full px-4 py-3 rounded-xl bg-gray-50 border-none text-sm outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+                                    className="w-full px-4 py-3 rounded-xl bg-gray-50 border-none text-sm outline-none focus:ring-2 focus:ring-modulo-protecoes transition-all"
                                     placeholder="Ex: Patente X..."
                                 />
                             </div>
@@ -52,20 +52,20 @@ export function ProtecaoFilters({
                                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-tighter mb-2 block">Status</label>
                                 <input
                                     type="text" name="status" value={filtros.status} onChange={onInputChange}
-                                    className="w-full px-4 py-3 rounded-xl bg-gray-50 border-none text-sm outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+                                    className="w-full px-4 py-3 rounded-xl bg-gray-50 border-none text-sm outline-none focus:ring-2 focus:ring-modulo-protecoes transition-all"
                                     placeholder="Ex: Concedida..."
                                 />
                             </div>
                             <div>
                                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-tighter mb-2 block">Depositada após</label>
-                                <input type="date" name="dataApos" value={filtros.dataApos} onChange={onInputChange} className="w-full px-4 py-3 rounded-xl bg-gray-50 border-none text-sm outline-none focus:ring-2 focus:ring-purple-500" />
+                                <input type="date" name="dataApos" value={filtros.dataApos} onChange={onInputChange} className="w-full px-4 py-3 rounded-xl bg-gray-50 border-none text-sm outline-none focus:ring-2 focus:ring-modulo-protecoes" />
                             </div>
                         </div>
                         <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-gray-50">
-                            <button onClick={onClear} className="text-[10px] font-black text-gray-300 uppercase hover:text-purple-500 flex items-center gap-2">
+                            <button onClick={onClear} className="text-[10px] font-black text-gray-300 uppercase hover:text-modulo-protecoes flex items-center gap-2">
                                 <RotateCcw size={14} /> Resetar
                             </button>
-                            <button onClick={onClose} className="px-10 py-4 bg-purple-600 text-white font-black rounded-2xl shadow-xl shadow-purple-100 text-xs uppercase tracking-widest hover:bg-purple-700 transition-all flex items-center gap-2">
+                            <button onClick={onClose} className="px-10 py-4 bg-modulo-protecoes text-white font-black rounded-2xl shadow-xl shadow-modulo-protecoes-bg text-xs uppercase tracking-widest hover:brightness-90 transition-all flex items-center gap-2">
                                 <Search size={16} /> Fechar e Aplicar
                             </button>
                         </div>

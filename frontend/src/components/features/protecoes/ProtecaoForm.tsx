@@ -125,7 +125,7 @@ export function ProtecaoForm({ initialData, onSubmit, isLoading }: ProtecaoFormP
         onSubmit(payload);
     };
 
-    const inputClass = "w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition-all";
+    const inputClass = "w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-modulo-protecoes outline-none transition-all";
 
     return (
         <form onSubmit={handleSubmit} className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100 space-y-8">
@@ -133,7 +133,7 @@ export function ProtecaoForm({ initialData, onSubmit, isLoading }: ProtecaoFormP
             {/* NATUREZA */}
             <div className="space-y-4">
                 <h3 className="text-lg font-bold text-gray-800 border-b pb-2 flex items-center gap-2">
-                    <Shield size={20} className="text-purple-600" /> Natureza da Proteção
+                    <Shield size={20} className="text-modulo-protecoes" /> Natureza da Proteção
                 </h3>
                 <div className="flex flex-wrap gap-3">
                     {NATUREZAS.map(nat => (
@@ -142,9 +142,9 @@ export function ProtecaoForm({ initialData, onSubmit, isLoading }: ProtecaoFormP
                             type="button"
                             onClick={() => handleNaturezaChange(nat)}
                             className={`px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all border-2 ${formData.natureza === nat
-                                ? "bg-purple-600 border-purple-600 text-white shadow-lg shadow-purple-100"
-                                : "bg-gray-50 border-gray-200 text-gray-500 hover:border-purple-300 hover:text-purple-600"
-                                }`}
+                                ? "bg-modulo-protecoes border-modulo-protecoes text-white shadow-lg shadow-modulo-protecoes-bg"
+                                : "bg-gray-50 border-gray-200 text-gray-500 hover:border-modulo-protecoes/40 hover:text-modulo-protecoes"
+                            }`}
                         >
                             {nat.replace(/_/g, " ")}
                         </button>
@@ -155,7 +155,7 @@ export function ProtecaoForm({ initialData, onSubmit, isLoading }: ProtecaoFormP
             {/* CAMPOS PRINCIPAIS */}
             <div className="space-y-6">
                 <h3 className="text-lg font-bold text-gray-800 border-b pb-2 flex items-center gap-2">
-                    <FileText size={20} className="text-purple-600" /> Informações Principais
+                    <FileText size={20} className="text-modulo-protecoes" /> Informações Principais
                 </h3>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -184,9 +184,9 @@ export function ProtecaoForm({ initialData, onSubmit, isLoading }: ProtecaoFormP
                                 <label
                                     key={tipo}
                                     className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all cursor-pointer ${formData.tipos.includes(tipo)
-                                        ? "bg-purple-600 border-purple-600 text-white shadow-md shadow-purple-100"
+                                        ? "bg-modulo-protecoes border-modulo-protecoes text-white shadow-md shadow-modulo-protecoes-bg"
                                         : "bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100"
-                                        }`}
+                                    }`}
                                 >
                                     <input
                                         type="checkbox"
@@ -353,7 +353,7 @@ export function ProtecaoForm({ initialData, onSubmit, isLoading }: ProtecaoFormP
             {/* INFORMAÇÕES EXTRAS */}
             <div className="space-y-6">
                 <h3 className="text-lg font-bold text-gray-800 border-b pb-2 flex items-center gap-2">
-                    <Info size={20} className="text-purple-600" /> Informações Adicionais
+                    <Info size={20} className="text-modulo-protecoes" /> Informações Adicionais
                 </h3>
                 <FormGroup label="Informação Extra">
                     <textarea
@@ -370,7 +370,7 @@ export function ProtecaoForm({ initialData, onSubmit, isLoading }: ProtecaoFormP
                 <button
                     type="submit"
                     disabled={isLoading}
-                    className="flex items-center gap-3 bg-purple-700 hover:bg-purple-800 text-white px-10 py-4 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-purple-100 transition-all disabled:opacity-50"
+                    className="flex items-center gap-3 bg-modulo-protecoes hover:brightness-90 text-white px-10 py-4 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-modulo-protecoes-bg transition-all disabled:opacity-50"
                 >
                     {isLoading
                         ? <Loader2 className="animate-spin" size={20} />

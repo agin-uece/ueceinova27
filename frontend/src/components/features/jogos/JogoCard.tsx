@@ -30,7 +30,7 @@ export function JogoCard({ jogo, userRole, isViewingMyGames, adminStatusFilter, 
                     <div className="flex-1">
                         <div className="flex flex-wrap gap-2 mb-2">
                             {jogo.tipoJogo && (
-                                <span className="inline-block bg-orange-50 text-orange-600 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter">
+                                <span className="inline-block bg-modulo-jogos-bg text-modulo-jogos px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter">
                                     {jogo.tipoJogo.replace(/_/g, ' ')}
                                 </span>
                             )}
@@ -42,14 +42,14 @@ export function JogoCard({ jogo, userRole, isViewingMyGames, adminStatusFilter, 
                             {(isViewingMyGames || adminStatusFilter) && jogo.status && (
                                 <span className={`inline-block px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter
                                     ${jogo.status === "APROVADO" ? "bg-green-100 text-green-600" :
-                                        jogo.status === "REJEITADO" ? "bg-red-100 text-red-600" :
-                                            "bg-yellow-100 text-yellow-600"}`}
+                                    jogo.status === "REJEITADO" ? "bg-red-100 text-red-600" :
+                                        "bg-yellow-100 text-yellow-600"}`}
                                 >
                                     {jogo.status}
                                 </span>
                             )}
                         </div>
-                        <h3 className="text-lg font-black text-gray-900 group-hover:text-orange-500 transition-colors line-clamp-2 leading-tight">
+                        <h3 className="text-lg font-black text-gray-900 group-hover:text-modulo-jogos transition-colors line-clamp-2 leading-tight">
                             {jogo.nome}
                         </h3>
                     </div>
@@ -61,11 +61,11 @@ export function JogoCard({ jogo, userRole, isViewingMyGames, adminStatusFilter, 
                     </p>
                     <div className="mt-auto flex flex-wrap gap-2">
                         <div className="flex items-center gap-1.5 text-gray-500 bg-gray-50 px-3 py-2 rounded-xl border border-gray-100">
-                            <Cpu size={14} className="text-orange-500" />
+                            <Cpu size={14} className="text-modulo-jogos" />
                             <span className="text-[10px] font-black uppercase line-clamp-1">{jogo.engine || "Custom"}</span>
                         </div>
                         <div className="flex items-center gap-1.5 text-gray-500 bg-gray-50 px-3 py-2 rounded-xl border border-gray-100">
-                            <Layers size={14} className="text-orange-500" />
+                            <Layers size={14} className="text-modulo-jogos" />
                             <span className="text-[10px] font-black uppercase line-clamp-1">{jogo.plataforma}</span>
                         </div>
                     </div>

@@ -194,7 +194,7 @@ export default function PesquisarJogosPage() {
                             <ArrowLeft size={20} />
                         </Link>
                         <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-lg transition-colors ${adminStatusFilter ? "bg-red-100 text-red-600" : isViewingMyGames ? "bg-purple-100 text-purple-600" : "bg-orange-100 text-orange-600"}`}>
+                            <div className={`p-2 rounded-lg transition-colors ${adminStatusFilter ? "bg-red-100 text-red-600" : isViewingMyGames ? "bg-purple-100 text-purple-600" : "bg-modulo-jogos-bg text-modulo-jogos"}`}>
                                 {adminStatusFilter ? <ShieldCheck size={24} /> : <Gamepad2 size={24} />}
                             </div>
                             <h1 className="text-xl font-black text-gray-900 tracking-tight italic uppercase hidden sm:block">
@@ -265,7 +265,7 @@ export default function PesquisarJogosPage() {
             <div className="max-w-7xl mx-auto px-6 py-10 space-y-10">
                 <ResultsHeader
                     icon={Target}
-                    iconClassName={adminStatusFilter ? "text-red-600" : "text-orange-500"}
+                    iconClassName={adminStatusFilter ? "text-modulo-admin" : "text-modulo-jogos"}
                     total={meta.total}
                     label="Total"
                 />
