@@ -7,19 +7,23 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function NovaTecnologia() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Estado para exibir o banner de feedback visual na tela (sucesso ou erro)
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
+    setFeedback(null); // Limpa feedbacks anteriores
 
     const formData = new FormData(e.currentTarget);
     
-    // extrai os campos específicos de tecnologia
+    // Extrai os campos específicos de tecnologia
     const dadosTecnologia = {
       nome: formData.get('nome'),
       tipo: formData.get('tipo'),
@@ -29,13 +33,42 @@ export default function NovaTecnologia() {
       resumo: formData.get('resumo'),
     };
 
-    console.log('dados da tecnologia para a api:', dadosTecnologia);
+    try {
+      const token = localStorage.getItem("userToken");
+      const headers = new Headers();
+      headers.append("Content-Type", "application/json");
+      if (token) headers.append("Authorization", `Bearer ${token}`);
 
-    // simula delay da rede
-    setTimeout(() => {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tecnologias`, {
+        method: "POST",
+        headers: headers,
+        body: JSON.stringify(dadosTecnologia)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Erro ao cadastrar a tecnologia.");
+      }
+
+      // Sucesso na criação
+      setFeedback({
+        type: "success",
+        message: "Tecnologia cadastrada com sucesso! Redirecionando..."
+      });
+
+      setTimeout(() => {
+        router.push('/admin/tecnologias');
+      }, 1500);
+
+    } catch (error: any) {
+      // Erro na requisição
+      setFeedback({
+        type: "error",
+        message: error.message || "Ocorreu um erro ao salvar a tecnologia. Tente novamente."
+      });
+    } finally {
       setIsLoading(false);
-      router.push('/admin/tecnologias');
-    }, 1000);
+    }
   };
 
   return (
@@ -52,6 +85,22 @@ export default function NovaTecnologia() {
           <p className="text-sm text-slate-500">Cadastre uma nova patente, desenho industrial ou programa de computador.</p>
         </div>
       </div>
+
+      {/* Banner de Feedback (Sucesso ou Erro) */}
+      {feedback && (
+        <div className={`p-4 rounded-lg flex items-center gap-3 border ${
+            feedback.type === "success" 
+                ? "bg-emerald-50 border-emerald-200 text-emerald-800" 
+                : "bg-red-50 border-red-200 text-red-800"
+        }`}>
+            {feedback.type === "success" ? (
+                <CheckCircle2 size={22} className="text-emerald-600 shrink-0" />
+            ) : (
+                <AlertCircle size={22} className="text-red-600 shrink-0" />
+            )}
+            <span className="text-sm font-medium">{feedback.message}</span>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="bg-white p-8 rounded-lg shadow-sm border border-slate-200 space-y-8">
         
@@ -85,7 +134,6 @@ export default function NovaTecnologia() {
 
           <div className="space-y-2">
             <Label htmlFor="dataDeposito">Data de Depósito</Label>
-            {/* input type date já traz o calendário nativo do navegador */}
             <Input 
               id="dataDeposito" 
               name="dataDeposito" 

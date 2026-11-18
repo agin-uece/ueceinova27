@@ -21,32 +21,38 @@ export default function GerenciarConteudoPage() {
 
   const modulos = [
     {
-      titulo: "Jogos", icone: Gamepad2, cor: "text-purple-500", corBg: "bg-purple-50",
+      titulo: "Jogos", icone: Gamepad2,
+      cor: "text-modulo-jogos", corBg: "bg-modulo-jogos-bg",
       linkPesquisar: "/jogos/pesquisar", linkCadastrar: "/admin/jogos/cadastrar",
       permitidoProfessor: true
     },
     {
-      titulo: "Laboratórios", icone: Beaker, cor: "text-blue-500", corBg: "bg-blue-50",
+      titulo: "Laboratórios", icone: Beaker,
+      cor: "text-modulo-laboratorios", corBg: "bg-modulo-laboratorios-bg",
       linkPesquisar: "/laboratorios/pesquisar", linkCadastrar: "/admin/laboratorios/cadastrar",
       permitidoProfessor: true
     },
     {
-      titulo: "Pessoas", icone: Users, cor: "text-green-500", corBg: "bg-green-50",
+      titulo: "Pessoas", icone: Users,
+      cor: "text-modulo-pessoas", corBg: "bg-modulo-pessoas-bg",
       linkPesquisar: "/pessoas/pesquisar", linkCadastrar: "/admin/pessoas/cadastrar",
       permitidoProfessor: true
     },
     {
-      titulo: "Startups/Empresas", icone: Rocket, cor: "text-red-500", corBg: "bg-red-50",
+      titulo: "Startups/Empresas", icone: Rocket,
+      cor: "text-modulo-startups", corBg: "bg-modulo-startups-bg",
       linkPesquisar: "/startups/pesquisar", linkCadastrar: "/admin/startups/cadastrar",
       permitidoProfessor: false
     },
     {
-      titulo: "Proteções (PI)", icone: Shield, cor: "text-yellow-500", corBg: "bg-yellow-50",
-      linkPesquisar: "/protecoes/pesquisar", linkCadastrar: "/admin//protecoes/cadastrar",
+      titulo: "Proteções (PI)", icone: Shield,
+      cor: "text-modulo-protecoes", corBg: "bg-modulo-protecoes-bg",
+      linkPesquisar: "/protecoes/pesquisar", linkCadastrar: "/admin/protecoes/cadastrar",
       permitidoProfessor: false
     },
     {
-      titulo: "Serviços", icone: Wrench, cor: "text-cyan-500", corBg: "bg-cyan-50",
+      titulo: "Serviços", icone: Wrench,
+      cor: "text-modulo-servicos", corBg: "bg-modulo-servicos-bg",
       linkPesquisar: "/servicos/pesquisar", linkCadastrar: "/admin/servicos/cadastrar",
       permitidoProfessor: false
     },

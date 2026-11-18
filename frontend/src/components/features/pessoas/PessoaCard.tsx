@@ -47,7 +47,7 @@ export function PessoaCard({ pessoa, userRole, showStatus, canValidate, onDelete
                             {showStatus && pessoa.status && (
                                 <span className={`inline-block px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter
                                     ${pessoa.status === "APROVADO" ? "bg-green-100 text-green-600" :
-                                        pessoa.status === "REJEITADO" ? "bg-red-100 text-red-600" :
+                                        pessoa.status === "REJEITADO" ? "bg-modulo-startups-bg text-modulo-startups" :
                                             "bg-orange-100 text-orange-600"}`}
                                 >
                                     {pessoa.status}

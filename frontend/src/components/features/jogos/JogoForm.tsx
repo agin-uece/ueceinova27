@@ -122,9 +122,11 @@ export function JogoForm({ initialData, onSubmit, isLoading }: JogoFormProps) {
                                 value={formData.descricao}
                                 onChange={handleChange}
                                 rows={4}
+                                maxLength={255}
                                 className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:ring-2 focus:ring-orange-500 outline-none transition-all resize-none"
                                 placeholder="Conte a história ou mecânicas..."
                             />
+                            <p className="text-right text-[10px] font-bold text-gray-400 mt-1">{formData.descricao.length}/255</p>
                         </FormGroup>
                     </div>
 

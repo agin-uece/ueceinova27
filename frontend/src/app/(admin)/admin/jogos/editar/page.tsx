@@ -3,20 +3,33 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Gamepad2, Loader2 } from "lucide-react";
-import Link from "next/link";
 import { JogoForm } from "@/components/features/jogos/JogoForm";
-import { Jogo } from "@/types";
+import { Engine, Jogo, Linguagem } from "@/types";
 import { useSecureAction } from "@/hooks/useSecureAction";
+
+type JogoApi = Omit<Jogo, "engineId" | "linguagens" | "engine"> & {
+    linguagens?: (string | number | Linguagem)[];
+    engineId?: number | null;
+    engine?: string;
+};
+
+type JogoEdicao = Omit<JogoApi, "engineId"> & {
+    linguagensIds: number[];
+    engineId: number | string;
+};
+
+type JogoFormData = {
+    engineId?: number | string | null;
+    [campo: string]: unknown;
+};
 
 function EditarJogoForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const jogoId = searchParams.get("id");
     const { execute, isProcessing: isSaving } = useSecureAction();
-    const [jogo, setJogo] = useState<any>(null);
+    const [jogo, setJogo] = useState<JogoEdicao | null>(null);
     const [isLoadingPage, setIsLoadingPage] = useState(true);
-
-
 
     useEffect(() => {
         if (!jogoId) {
@@ -40,24 +53,32 @@ function EditarJogoForm() {
                 ]);
 
                 if (resJogo.ok) {
-                    const dadosJogo = await resJogo.json();
-                    const listaLinguagens = await resLinguagens.json();
-                    const listaEngines = await resEngines.json();
+                    const dadosJogo: JogoApi = await resJogo.json();
+                    const listaLinguagens: Linguagem[] = await resLinguagens.json();
+                    const listaEngines: Engine[] = await resEngines.json();
 
                     let linguagensIds: number[] = [];
                     if (dadosJogo.linguagens) {
-                        linguagensIds = dadosJogo.linguagens.map((item: any) => {
-                            if (typeof item === 'string') {
-                                const found = listaLinguagens.find((l: any) => l.nome.toUpperCase() === item.toUpperCase());
-                                return found ? found.id : null;
-                            }
-                            return item.id || item;
-                        }).filter(Boolean);
+                        linguagensIds = (dadosJogo.linguagens as (string | number | Linguagem)[])
+                            .map((item) => {
+                                if (typeof item === "string") {
+                                    const found = listaLinguagens.find(
+                                        (l) => l.nome.toUpperCase() === item.toUpperCase()
+                                    );
+                                    return found ? found.id : null;
+                                }
+                                if (typeof item === "number") return item;
+                                return item.id;
+                            })
+                            .filter((id): id is number => Boolean(id));
                     }
 
-                    let engineId = dadosJogo.engineId || "";
-                    if (!engineId && dadosJogo.engine && typeof dadosJogo.engine === 'string') {
-                        const foundEng = listaEngines.find((e: any) => e.nome.toUpperCase() === dadosJogo.engine.toUpperCase());
+                    let engineId: number | string = dadosJogo.engineId || "";
+                    const nomeEngine: unknown = dadosJogo.engine;
+                    if (!engineId && typeof nomeEngine === "string") {
+                        const foundEng = listaEngines.find(
+                            (e) => e.nome.toUpperCase() === nomeEngine.toUpperCase()
+                        );
                         if (foundEng) engineId = foundEng.id;
                     }
 
@@ -77,14 +98,10 @@ function EditarJogoForm() {
         carregarJogoEConverterIds();
     }, [jogoId, router]);
 
-
-
-
-
     const tratarSucesso = () => {
     };
 
-    const handleUpdate = async (formData: any) => {
+    const handleUpdate = async (formData: JogoFormData) => {
         const result = await execute((pin?: string) => {
             const token = localStorage.getItem("userToken");
             const payload = { ...formData, engineId: formData.engineId ? Number(formData.engineId) : null };
@@ -103,8 +120,6 @@ function EditarJogoForm() {
         else if (result.error) alert(`Erro ao atualizar: ${result.error}`);
     };
 
-
-
     if (isLoadingPage) {
         return (
             <div className="min-h-screen flex items-center justify-center">
@@ -121,7 +136,7 @@ function EditarJogoForm() {
                         <ArrowLeft size={24} />
                     </button>
                     <div className="flex items-center gap-3">
-                        <div className="p-2 bg-orange-100 text-orange-600 rounded-xl">
+                        <div className="p-2 bg-modulo-jogos-bg text-modulo-jogos rounded-xl">
                             <Gamepad2 size={28} />
                         </div>
                         <div>
@@ -137,8 +152,6 @@ function EditarJogoForm() {
                 onSubmit={handleUpdate}
                 isLoading={isSaving}
             />
-
-
         </div>
     );
 }

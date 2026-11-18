@@ -126,7 +126,7 @@ export default function PesquisarProtecoesPage() {
                             <ArrowLeft size={20} />
                         </Link>
                         <div className="flex items-center gap-3">
-                            <div className="p-2 bg-purple-100 text-purple-600 rounded-lg">
+                            <div className="p-2 bg-modulo-protecoes-bg text-modulo-protecoes rounded-lg">
                                 <Shield size={24} />
                             </div>
                             <h1 className="text-xl font-black text-gray-900 tracking-tight italic uppercase hidden sm:block">
@@ -147,7 +147,7 @@ export default function PesquisarProtecoesPage() {
             </header>
 
             <div className="max-w-7xl mx-auto px-6 py-10">
-                <ResultsHeader icon={Target} iconClassName="text-purple-600" total={protecoesFiltradas.length} label="Total de Proteções encontradas" />
+                <ResultsHeader icon={Target} iconClassName="text-modulo-protecoes" total={protecoesFiltradas.length} label="Total de Proteções encontradas" />
 
                 {isLoading ? (
                     <SkeletonGrid count={4} />
