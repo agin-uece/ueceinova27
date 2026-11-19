@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import {
-    Rocket, Save, Info, Globe, Mail, Phone, AtSign,
-    Image as ImageIcon, Check, Layers, Loader2
+    Save, Info, Globe, Mail, Phone, AtSign,
+    Image as ImageIcon, Check, Layers, Loader2, AlertCircle
 } from "lucide-react";
 import { FormGroup } from "@/components/ui/FormGroup";
 
@@ -14,6 +14,56 @@ interface StartupFormProps {
     onSubmit: (payload: any) => void;
     isLoading: boolean;
 }
+
+// Formata apenas números no padrão 00.000.000/0000-00 (máx. 14 dígitos / 18 chars)
+const formatarCNPJ = (valor: string) => {
+    const apenasNumeros = valor.replace(/\D/g, "").slice(0, 14);
+    return apenasNumeros
+        .replace(/^(\d{2})(\d)/, "$1.$2")
+        .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+        .replace(/\.(\d{3})(\d)/, ".$1/$2")
+        .replace(/(\d{4})(\d)/, "$1-$2");
+};
+
+// Valida tamanho, sequências inválidas e dígitos verificadores
+const validarCNPJ = (cnpj: string) => {
+    const numeros = cnpj.replace(/\D/g, "");
+    if (numeros.length !== 14) return false;
+    if (/^(\d)\1+$/.test(numeros)) return false;
+
+    let tamanho = numeros.length - 2;
+    let base = numeros.substring(0, tamanho);
+    const digitos = numeros.substring(tamanho);
+    let soma = 0;
+    let pos = tamanho - 7;
+
+    for (let i = tamanho; i >= 1; i--) {
+        soma += Number(base.charAt(tamanho - i)) * pos--;
+        if (pos < 2) pos = 9;
+    }
+    let resultado = soma % 11 < 2 ? 0 : 11 - (soma % 11);
+    if (resultado !== Number(digitos.charAt(0))) return false;
+
+    tamanho = tamanho + 1;
+    base = numeros.substring(0, tamanho);
+    soma = 0;
+    pos = tamanho - 7;
+    for (let i = tamanho; i >= 1; i--) {
+        soma += Number(base.charAt(tamanho - i)) * pos--;
+        if (pos < 2) pos = 9;
+    }
+    resultado = soma % 11 < 2 ? 0 : 11 - (soma % 11);
+    return resultado === Number(digitos.charAt(1));
+};
+
+// Retorna a data local atual no formato YYYY-MM-DD (evitando problemas de fuso horário UTC)
+const obterDataHojeLocal = () => {
+    const hoje = new Date();
+    const ano = hoje.getFullYear();
+    const mes = String(hoje.getMonth() + 1).padStart(2, "0");
+    const dia = String(hoje.getDate()).padStart(2, "0");
+    return `${ano}-${mes}-${dia}`;
+};
 
 export function StartupForm({ initialData, onSubmit, isLoading }: StartupFormProps) {
     const [formData, setFormData] = useState({
@@ -27,21 +77,67 @@ export function StartupForm({ initialData, onSubmit, isLoading }: StartupFormPro
         logo: initialData?.logo || "",
         status: initialData?.status || "INCUBADA",
         fotosInput: initialData?.fotos ? initialData.fotos.join(", ") : "",
-        cnpj: initialData?.cnpj || "",
+        cnpj: initialData?.cnpj ? formatarCNPJ(initialData.cnpj) : "",
         instagram: initialData?.instagram || "",
-        pessoasIds: [] as number[]
-
+        pessoasIds: initialData?.pessoasIds || ([] as number[])
     });
 
+    const [cnpjErro, setCnpjErro] = useState<string | null>(null);
+    const [dataErro, setDataErro] = useState<string | null>(null);
 
+    const dataHoje = obterDataHojeLocal();
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
+
+        if (name === "cnpj") {
+            const formatado = formatarCNPJ(value);
+            setFormData(prev => ({ ...prev, cnpj: formatado }));
+            if (cnpjErro) setCnpjErro(null);
+            return;
+        }
+
+        if (name === "dataFundacao") {
+            setFormData(prev => ({ ...prev, dataFundacao: value }));
+            if (value && value > obterDataHojeLocal()) {
+                setDataErro("A data de fundação não pode ser posterior à data atual.");
+            } else {
+                setDataErro(null);
+            }
+            return;
+        }
+
         setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleCnpjBlur = () => {
+        if (!formData.cnpj) {
+            setCnpjErro("O CNPJ é obrigatório.");
+            return;
+        }
+        if (!validarCNPJ(formData.cnpj)) {
+            setCnpjErro("CNPJ inválido. Verifique os números digitados.");
+        } else {
+            setCnpjErro(null);
+        }
     };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
+        let temErro = false;
+
+        if (!validarCNPJ(formData.cnpj)) {
+            setCnpjErro("Informe um CNPJ válido antes de salvar.");
+            temErro = true;
+        }
+
+        if (formData.dataFundacao && formData.dataFundacao > obterDataHojeLocal()) {
+            setDataErro("A data de fundação não pode ser posterior à data atual.");
+            temErro = true;
+        }
+
+        if (temErro) return;
 
         // Converte a string de fotos em Array
         const fotosArray = formData.fotosInput
@@ -51,6 +147,7 @@ export function StartupForm({ initialData, onSubmit, isLoading }: StartupFormPro
 
         const payload = {
             ...formData,
+            cnpj: formData.cnpj.replace(/\D/g, ""),
             fotos: fotosArray,
             dataFundacao: formData.dataFundacao || null,
         };
@@ -80,10 +177,26 @@ export function StartupForm({ initialData, onSubmit, isLoading }: StartupFormPro
 
                         <FormGroup label="CNPJ *">
                             <input
-                                type="text" name="cnpj" required value={formData.cnpj} onChange={handleChange}
-                                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-red-500 outline-none transition-all text-sm font-medium"
-                                placeholder="CNPJ da Startup/Empresa..."
+                                type="text"
+                                name="cnpj"
+                                inputMode="numeric"
+                                maxLength={18}
+                                required
+                                value={formData.cnpj}
+                                onChange={handleChange}
+                                onBlur={handleCnpjBlur}
+                                className={`w-full px-4 py-3 rounded-xl border bg-slate-50 focus:bg-white focus:ring-2 outline-none transition-all text-sm font-medium ${
+                                    cnpjErro
+                                        ? "border-red-400 focus:ring-red-500 text-red-900"
+                                        : "border-slate-200 focus:ring-red-500"
+                                }`}
+                                placeholder="00.000.000/0000-00"
                             />
+                            {cnpjErro && (
+                                <p className="mt-1.5 text-xs font-semibold text-red-600 flex items-center gap-1.5">
+                                    <AlertCircle size={14} /> {cnpjErro}
+                                </p>
+                            )}
                         </FormGroup>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -91,7 +204,23 @@ export function StartupForm({ initialData, onSubmit, isLoading }: StartupFormPro
                                 <input type="text" name="area" value={formData.area} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 outline-none text-sm" placeholder="Ex: EdTech, Fintech..." />
                             </FormGroup>
                             <FormGroup label="Data de Fundação">
-                                <input type="date" name="dataFundacao" value={formData.dataFundacao} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 outline-none text-sm" />
+                                <input
+                                    type="date"
+                                    name="dataFundacao"
+                                    max={dataHoje}
+                                    value={formData.dataFundacao}
+                                    onChange={handleChange}
+                                    className={`w-full px-4 py-3 rounded-xl border bg-slate-50 outline-none text-sm transition-all ${
+                                        dataErro
+                                            ? "border-red-400 focus:ring-2 focus:ring-red-500 text-red-900"
+                                            : "border-slate-200 focus:ring-2 focus:ring-red-500"
+                                    }`}
+                                />
+                                {dataErro && (
+                                    <p className="mt-1.5 text-xs font-semibold text-red-600 flex items-center gap-1.5">
+                                        <AlertCircle size={14} /> {dataErro}
+                                    </p>
+                                )}
                             </FormGroup>
                         </div>
 
@@ -126,8 +255,6 @@ export function StartupForm({ initialData, onSubmit, isLoading }: StartupFormPro
                         </div>
                     </div>
                 </section>
-
-                
             </div>
 
             {/* COLUNA LATERAL */}

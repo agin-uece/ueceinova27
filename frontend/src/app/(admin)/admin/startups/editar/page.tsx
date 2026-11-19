@@ -2,8 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
-import { ArrowLeft, Rocket, Loader2 } from "lucide-react";
+import { ArrowLeft, Rocket, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { StartupForm } from "@/components/features/startups/StartupForm";
 import { useSecureAction } from "@/hooks/useSecureAction";
 
@@ -14,6 +13,7 @@ function EditarStartupContent() {
 
     const [startup, setStartup] = useState<any>(null);
     const [isLoadingPage, setIsLoadingPage] = useState(true);
+    const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
     
     // 🔐 Hook MFA – gerencia a requisição segura com possível PIN
     const { execute, isProcessing: isSaving } = useSecureAction();
@@ -36,10 +36,11 @@ function EditarStartupContent() {
                     const data = await res.json();
                     setStartup(data);
                 } else {
-                    
+                    setFeedback({ type: "error", message: "Não foi possível carregar os dados desta startup." });
                 }
             } catch (error) {
                 console.error("Erro ao buscar startup:", error);
+                setFeedback({ type: "error", message: "Erro ao conectar com o servidor." });
             } finally {
                 setIsLoadingPage(false);
             }
@@ -49,6 +50,8 @@ function EditarStartupContent() {
     }, [startupId, router]);
 
     const handleUpdate = async (payload: any) => {
+        setFeedback(null);
+
         // 1. Função fetch que será executada pelo hook (com possível PIN)
         const fetchEditar = async (pin?: string) => {
             const token = localStorage.getItem("userToken");
@@ -66,7 +69,11 @@ function EditarStartupContent() {
 
         // 2. Callback de sucesso
         const onSucesso = () => {
-           
+            setFeedback({
+                type: "success",
+                message: "Startup atualizada com sucesso!"
+            });
+            window.scrollTo({ top: 0, behavior: "smooth" });
         };
 
         // 3. Executa via useSecureAction (gerencia MFA se necessário)
@@ -78,7 +85,13 @@ function EditarStartupContent() {
             try {
                 const erroJson = JSON.parse(result.error);
                 mensagem = erroJson.erro || erroJson.message || result.error;
-            } catch (e) {}
+            } catch {}
+
+            setFeedback({
+                type: "error",
+                message: mensagem
+            });
+            window.scrollTo({ top: 0, behavior: "smooth" });
         }
     };
 
@@ -112,6 +125,22 @@ function EditarStartupContent() {
             </header>
 
             <div className="max-w-7xl mx-auto px-6 mt-10">
+                {/* Banner de Feedback (Sucesso ou Erro) */}
+                {feedback && (
+                    <div className={`mb-6 p-4 rounded-xl flex items-center gap-3 border ${
+                        feedback.type === "success" 
+                            ? "bg-emerald-50 border-emerald-200 text-emerald-800" 
+                            : "bg-red-50 border-red-200 text-red-800"
+                    }`}>
+                        {feedback.type === "success" ? (
+                            <CheckCircle2 size={22} className="text-emerald-600 shrink-0" />
+                        ) : (
+                            <AlertCircle size={22} className="text-red-600 shrink-0" />
+                        )}
+                        <span className="text-sm font-medium">{feedback.message}</span>
+                    </div>
+                )}
+
                 <StartupForm 
                     initialData={startup} 
                     onSubmit={handleUpdate} 

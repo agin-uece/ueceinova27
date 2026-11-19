@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Shield, Save, AlertCircle, ArrowLeft, Loader2, FileText, Info } from "lucide-react";
+import { Shield, Save, AlertCircle, CheckCircle2, ArrowLeft, Loader2, FileText, Info } from "lucide-react";
 import Link from "next/link";
 import { useSecureAction } from "@/hooks/useSecureAction";
 import { FormGroup } from "@/components/ui/FormGroup";
@@ -52,7 +52,7 @@ function FormularioEdicaoProtecao() {
 
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
-  const [erro, setErro] = useState("");
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   const { execute, isProcessing: isSaving } = useSecureAction();
 
@@ -114,10 +114,10 @@ function FormularioEdicaoProtecao() {
           if (Array.isArray(data.inventores)) setInventoresStr(data.inventores.join(", "));
           if (Array.isArray(data.autores)) setAutoresStr(data.autores.join(", "));
         } else {
-          setErro("Proteção não encontrada.");
+          setFeedback({ type: "error", message: "Proteção não encontrada." });
         }
       } catch {
-        setErro("Falha ao carregar os dados.");
+        setFeedback({ type: "error", message: "Falha ao carregar os dados." });
       } finally {
         setIsFetching(false);
       }
@@ -150,7 +150,7 @@ function FormularioEdicaoProtecao() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErro("");
+    setFeedback(null);
 
     const payload = {
       ...formData,
@@ -176,14 +176,23 @@ function FormularioEdicaoProtecao() {
     });
 
     if (result.success) {
-      
+      setFeedback({
+        type: "success",
+        message: "Proteção atualizada com sucesso!"
+      });
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } else if (result.error) {
+      let mensagem = result.error;
       try {
         const erroJson = JSON.parse(result.error);
-        setErro(erroJson.erro || erroJson.message || result.error);
-      } catch {
-        setErro(result.error);
-      }
+        mensagem = erroJson.erro || erroJson.message || result.error;
+      } catch {}
+
+      setFeedback({
+        type: "error",
+        message: mensagem
+      });
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
@@ -213,9 +222,19 @@ function FormularioEdicaoProtecao() {
         </div>
       </div>
 
-      {erro && (
-        <div className="bg-red-50 text-red-600 p-4 rounded-2xl flex items-center gap-3 border border-red-100">
-          <AlertCircle size={20} /> <p className="font-bold text-sm">{erro}</p>
+      {/* Banner de Feedback (Sucesso ou Erro) */}
+      {feedback && (
+        <div className={`p-4 rounded-2xl flex items-center gap-3 border ${
+          feedback.type === "success"
+            ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+            : "bg-red-50 border-red-200 text-red-800"
+        }`}>
+          {feedback.type === "success" ? (
+            <CheckCircle2 size={20} className="text-emerald-600 shrink-0" />
+          ) : (
+            <AlertCircle size={20} className="text-red-600 shrink-0" />
+          )}
+          <p className="font-bold text-sm">{feedback.message}</p>
         </div>
       )}
 

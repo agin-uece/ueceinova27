@@ -37,6 +37,20 @@ public class ServicoService {
     @Transactional
     public ServicoResponseDTO criar(ServicoCreateDTO dto, Long usuarioId) {
 
+        java.util.Set<Long> prestadoresIds = dto.prestadoresIds() != null
+                ? new java.util.HashSet<>(dto.prestadoresIds())
+                : java.util.Collections.emptySet();
+
+        validarDuplicidade(
+                null,
+                dto.areaAtuacao(),
+                dto.descricao(),
+                dto.contato(),
+                dto.email(),
+                dto.telefone(),
+                prestadoresIds
+        );
+
         Servico servico = new Servico();
 
         if (dto.prestadoresIds() != null && !dto.prestadoresIds().isEmpty()) {
@@ -88,6 +102,18 @@ public class ServicoService {
         Servico servico = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(MSG_SERVICO_NAO_ENCONTRADO));
 
+        String novaArea = dto.areaAtuacao() != null ? dto.areaAtuacao() : servico.getAreaAtuacao();
+        String novaDescricao = dto.descricao() != null ? dto.descricao() : servico.getDescricao();
+        String novoContato = dto.contato() != null ? dto.contato() : servico.getContato();
+        String novoEmail = dto.email() != null ? dto.email() : servico.getEmail();
+        String novoTelefone = dto.telefone() != null ? dto.telefone() : servico.getTelefone();
+
+        java.util.Set<Long> novosPrestadoresIds = dto.prestadoresIds() != null
+                ? new java.util.HashSet<>(dto.prestadoresIds())
+                : servico.getPrestadores().stream().map(Pessoa::getId).collect(Collectors.toSet());
+
+        validarDuplicidade(id, novaArea, novaDescricao, novoContato, novoEmail, novoTelefone, novosPrestadoresIds);
+
         if (dto.prestadoresIds() != null) {
             List<Pessoa> prestadoresEncontrados = pessoaRepository.findAllById(dto.prestadoresIds());
             servico.setPrestadores(new java.util.HashSet<>(prestadoresEncontrados));
@@ -134,6 +160,37 @@ public class ServicoService {
         Specification<Servico> specFinal = ServicoSpecification.comFiltros(filtro);
 
         return repository.findAll(specFinal, pageable).map(this::toResponseDTO);
+    }
+
+    private void validarDuplicidade(
+            Long idIgnorado,
+            String areaAtuacao,
+            String descricao,
+            String contato,
+            String email,
+            String telefone,
+            java.util.Set<Long> prestadoresIdsNovo) {
+
+        List<Servico> candidatos = repository.findCandidatosDuplicados(
+                areaAtuacao, descricao, contato, email, telefone
+        );
+
+        java.util.Set<Long> idsNovo = prestadoresIdsNovo != null
+                ? prestadoresIdsNovo
+                : java.util.Collections.emptySet();
+
+        boolean existeDuplicado = candidatos.stream()
+                .filter(s -> idIgnorado == null || !s.getId().equals(idIgnorado))
+                .anyMatch(s -> {
+                    java.util.Set<Long> idsExistente = s.getPrestadores().stream()
+                            .map(Pessoa::getId)
+                            .collect(Collectors.toSet());
+                    return idsExistente.equals(idsNovo);
+                });
+
+        if (existeDuplicado) {
+            throw new IllegalArgumentException("Já existe um serviço cadastrado com essas mesmas informações.");
+        }
     }
 
     // 🔹 MAPPER

@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Beaker, Loader2 } from "lucide-react";
+import { ArrowLeft, Beaker, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 
 import { LaboratorioForm } from "@/components/features/laboratorios/LaboratorioForm";
 import { useSecureAction } from "@/hooks/useSecureAction";
@@ -15,6 +15,7 @@ function EditarLaboratorioContent() {
 
     const [lab, setLab] = useState<any>(null);
     const [isLoadingPage, setIsLoadingPage] = useState(true);
+    const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
     const { execute, isProcessing: isSaving } = useSecureAction();
 
@@ -49,13 +50,15 @@ function EditarLaboratorioContent() {
     }, [labId, router]);
 
     const handleUpdate = async (payload: any) => {
+        setFeedback(null);
+
         const result = await execute(async (pin?: string) => {
             const token = localStorage.getItem("userToken");
             const headers = new Headers();
             headers.append("Content-Type", "application/json");
             
             if (token) headers.append("Authorization", `Bearer ${token}`);
-            if (pin) headers.append("X-MFA-PIN", pin); // 🛡️ Injeção do PIN caso necessário
+            if (pin) headers.append("X-MFA-PIN", pin);
 
             return fetch(`${process.env.NEXT_PUBLIC_API_URL}/laboratorios/${labId}`, {
                 method: "PUT",
@@ -65,7 +68,17 @@ function EditarLaboratorioContent() {
         });
 
         if (result.success) {
+            setFeedback({
+                type: "success",
+                message: "Laboratório atualizado com sucesso!"
+            });
+            window.scrollTo({ top: 0, behavior: "smooth" });
         } else if (result.error) {
+            setFeedback({
+                type: "error",
+                message: result.error
+            });
+            window.scrollTo({ top: 0, behavior: "smooth" });
         }
     };
 
@@ -99,7 +112,22 @@ function EditarLaboratorioContent() {
             </header>
 
             <div className="max-w-6xl mx-auto px-6 mt-8">
-                {/* isSaving agora é gerenciado com segurança pelo hook */}
+                {/* Banner de Feedback (Sucesso ou Erro) */}
+                {feedback && (
+                    <div className={`mb-6 p-4 rounded-xl flex items-center gap-3 border ${
+                        feedback.type === "success" 
+                            ? "bg-emerald-50 border-emerald-200 text-emerald-800" 
+                            : "bg-red-50 border-red-200 text-red-800"
+                    }`}>
+                        {feedback.type === "success" ? (
+                            <CheckCircle2 size={22} className="text-emerald-600 shrink-0" />
+                        ) : (
+                            <AlertCircle size={22} className="text-red-600 shrink-0" />
+                        )}
+                        <span className="text-sm font-medium">{feedback.message}</span>
+                    </div>
+                )}
+
                 <LaboratorioForm 
                     initialData={lab} 
                     onSubmit={handleUpdate} 

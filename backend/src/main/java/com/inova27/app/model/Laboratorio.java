@@ -5,7 +5,7 @@ import lombok.*;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
-import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -57,9 +57,9 @@ public class Laboratorio {
     @Column(length = 150)
     private String vinculado;//CRIAR//OK//EDITAR//
 
-    private LocalDateTime horarioAbertura;//CRIAR//OK//EDITAR//
+    private LocalTime horarioAbertura;//CRIAR//OK//EDITAR//
 
-    private LocalDateTime horarioFechamento;//CRIAR//OK//EDITAR//
+    private LocalTime horarioFechamento;//CRIAR//OK//EDITAR//
 
     private String urlFoto;//CRIAR//OK//EDITAR//
 
