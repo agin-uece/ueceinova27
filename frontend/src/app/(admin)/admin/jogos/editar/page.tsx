@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Gamepad2, Loader2 } from "lucide-react";
+import { ArrowLeft, Gamepad2, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { JogoForm } from "@/components/features/jogos/JogoForm";
 import { Engine, Jogo, Linguagem } from "@/types";
 import { useSecureAction } from "@/hooks/useSecureAction";
@@ -28,8 +28,12 @@ function EditarJogoForm() {
     const searchParams = useSearchParams();
     const jogoId = searchParams.get("id");
     const { execute, isProcessing: isSaving } = useSecureAction();
+    
     const [jogo, setJogo] = useState<JogoEdicao | null>(null);
     const [isLoadingPage, setIsLoadingPage] = useState(true);
+
+    // Estado unificado para banner de sucesso ou erro
+    const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
     useEffect(() => {
         if (!jogoId) {
@@ -98,10 +102,9 @@ function EditarJogoForm() {
         carregarJogoEConverterIds();
     }, [jogoId, router]);
 
-    const tratarSucesso = () => {
-    };
-
     const handleUpdate = async (formData: JogoFormData) => {
+        setFeedback(null);
+
         const result = await execute((pin?: string) => {
             const token = localStorage.getItem("userToken");
             const payload = { ...formData, engineId: formData.engineId ? Number(formData.engineId) : null };
@@ -116,8 +119,19 @@ function EditarJogoForm() {
             });
         });
 
-        if (result.success) tratarSucesso();
-        else if (result.error) alert(`Erro ao atualizar: ${result.error}`);
+        if (result.success) {
+            setFeedback({
+                type: "success",
+                message: "Jogo atualizado com sucesso!"
+            });
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        } else if (result.error) {
+            setFeedback({
+                type: "error",
+                message: result.error
+            });
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        }
     };
 
     if (isLoadingPage) {
@@ -146,6 +160,22 @@ function EditarJogoForm() {
                     </div>
                 </div>
             </header>
+
+            {/* Banner de Feedback (Sucesso ou Erro) */}
+            {feedback && (
+                <div className={`mb-6 p-4 rounded-xl flex items-center gap-3 border ${
+                    feedback.type === "success" 
+                        ? "bg-emerald-50 border-emerald-200 text-emerald-800" 
+                        : "bg-red-50 border-red-200 text-red-800"
+                }`}>
+                    {feedback.type === "success" ? (
+                        <CheckCircle2 size={22} className="text-emerald-600 shrink-0" />
+                    ) : (
+                        <AlertCircle size={22} className="text-red-600 shrink-0" />
+                    )}
+                    <span className="text-sm font-medium">{feedback.message}</span>
+                </div>
+            )}
 
             <JogoForm
                 initialData={jogo}
