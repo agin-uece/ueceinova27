@@ -4,6 +4,7 @@ import com.inova27.app.model.GeneroJogo;
 import com.inova27.app.model.Plataforma;
 import com.inova27.app.model.TipoJogo;
 import com.inova27.app.model.EstagioDesenvolvimento;
+import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -17,8 +18,8 @@ public record JogoUpdateDTO(
         LocalDate dataLancamento,
         String linkDownload,
         String site,
-        Long engineId,
-        Set<Long> linguagensIds,
+        @Size(max = 100) String engine,
+        Set<String> linguagens,
         TipoJogo tipoJogo,
         String anoDesenvolvimento,
         EstagioDesenvolvimento estagioDesenvolvimento,

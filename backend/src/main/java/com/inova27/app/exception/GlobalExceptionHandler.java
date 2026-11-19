@@ -61,12 +61,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     // ==========================================
     // Erros de domínio
     // ==========================================
-    @ExceptionHandler({ResourceNotFoundException.class, JogoNaoEncontradoException.class, EngineNaoEncontradaException.class})
+    @ExceptionHandler({ResourceNotFoundException.class, JogoNaoEncontradoException.class})
     public ResponseEntity<Object> handleNaoEncontrado(RuntimeException ex) {
         return erro(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
-    @ExceptionHandler({JogoJaExisteException.class, EngineJaExisteException.class, ConflitoException.class})
+    @ExceptionHandler({JogoJaExisteException.class, ConflitoException.class})
     public ResponseEntity<Object> handleConflito(RuntimeException ex) {
         return erro(HttpStatus.CONFLICT, ex.getMessage());
     }

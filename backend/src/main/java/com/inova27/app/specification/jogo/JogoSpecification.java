@@ -1,9 +1,7 @@
 package com.inova27.app.specification.jogo;
 
 import com.inova27.app.dto.jogo.JogoFiltroDTO;
-import com.inova27.app.model.Engine;
 import com.inova27.app.model.Jogo;
-import com.inova27.app.model.Linguagem;
 import com.inova27.app.model.Protecao;
 import org.springframework.data.jpa.domain.Specification;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -44,6 +42,10 @@ public class JogoSpecification {
         if (filtro.nome() != null && !filtro.nome().isBlank()) {
             predicates.add(cb.like(cb.lower(root.get("nome")), "%" + filtro.nome().toLowerCase() + "%"));
         }
+        // Filtro por Engine (Busca parcial com LIKE e Case Insensitive)
+        if (filtro.engine() != null && !filtro.engine().isBlank()) {
+            predicates.add(cb.like(cb.lower(root.get("engine")), "%" + filtro.engine().toLowerCase() + "%"));
+        }
     }
 
     private static void adicionarFiltrosExatos(List<Predicate> predicates, Root<Jogo> root, CriteriaBuilder cb, JogoFiltroDTO filtro) {
@@ -69,16 +71,10 @@ public class JogoSpecification {
     }
 
     private static void adicionarFiltrosDeRelacionamento(List<Predicate> predicates, Root<Jogo> root, CriteriaBuilder cb, JogoFiltroDTO filtro) {
-        // Relacionamento ManyToOne (Engine)
-        if (filtro.engineId() != null) {
-            Join<Jogo, Engine> engineJoin = root.join("engine");
-            predicates.add(cb.equal(engineJoin.get("id"), filtro.engineId()));
-        }
-
-        // Relacionamento ManyToMany (Linguagens)
-        if (filtro.linguagemId() != null) {
-            Join<Jogo, Linguagem> linguagemJoin = root.join("linguagens");
-            predicates.add(cb.equal(linguagemJoin.get("id"), filtro.linguagemId()));
+        // ElementCollection (Linguagens) - Busca parcial dentro da coleção de linguagens
+        if (filtro.linguagem() != null && !filtro.linguagem().isBlank()) {
+            Join<Jogo, String> linguagemJoin = root.join("linguagens");
+            predicates.add(cb.like(cb.lower(linguagemJoin), "%" + filtro.linguagem().toLowerCase() + "%"));
         }
 
         // Relacionamento OneToMany (Protecoes)
