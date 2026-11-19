@@ -31,7 +31,6 @@ interface LaboratorioFormProps {
 }
 
 export function LaboratorioForm({ initialData, onSubmit, isLoading }: LaboratorioFormProps) {
-    // Se vier do initialData, desmembra a localização e as tags para os inputs
     const baseLocalizacao = initialData?.localizacao ? initialData.localizacao.split(" | Complemento: ")[0] : "";
     const compLocalizacao = initialData?.localizacao && initialData.localizacao.includes(" | Complemento: ")
         ? initialData.localizacao.split(" | Complemento: ")[1]
@@ -39,10 +38,13 @@ export function LaboratorioForm({ initialData, onSubmit, isLoading }: Laboratori
 
     const tagsIniciais = initialData?.tags ? initialData.tags.join(", ") : "";
 
-    // Como o datetime-local espera o formato YYYY-MM-DDTHH:mm, precisamos limpar o :00 final se vier do BD
-    const formatDateTimeForInput = (dateStr: string) => {
-        if (!dateStr) return "";
-        return dateStr.length === 19 ? dateStr.substring(0, 16) : dateStr;
+    // Extrai apenas HH:mm seja de "HH:mm:ss" ou de um ISO "YYYY-MM-DDTHH:mm:ss"
+    const formatTimeForInput = (timeStr?: string) => {
+        if (!timeStr) return "";
+        if (timeStr.includes("T")) {
+            return timeStr.split("T")[1].substring(0, 5);
+        }
+        return timeStr.substring(0, 5);
     };
 
     const [formData, setFormData] = useState({
@@ -57,8 +59,8 @@ export function LaboratorioForm({ initialData, onSubmit, isLoading }: Laboratori
         telefone: initialData?.telefone || "",
         naturezas: initialData?.naturezas || [] as string[],
         vinculado: initialData?.vinculado || "",
-        horarioAbertura: formatDateTimeForInput(initialData?.horarioAbertura),
-        horarioFechamento: formatDateTimeForInput(initialData?.horarioFechamento),
+        horarioAbertura: formatTimeForInput(initialData?.horarioAbertura),
+        horarioFechamento: formatTimeForInput(initialData?.horarioFechamento),
         urlFoto: initialData?.urlFoto || "",
         localizacaoBase: baseLocalizacao,
         localizacaoComplemento: compLocalizacao,
@@ -92,7 +94,6 @@ export function LaboratorioForm({ initialData, onSubmit, isLoading }: Laboratori
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Monta a localização e as tags
         let localizacaoFinal = formData.localizacaoBase;
         if (formData.localizacaoComplemento.trim() !== "") {
             localizacaoFinal += ` | Complemento: ${formData.localizacaoComplemento}`;
@@ -100,23 +101,22 @@ export function LaboratorioForm({ initialData, onSubmit, isLoading }: Laboratori
 
         const tagsArray = formData.tagsInput
             .split(",")
-            .map((tag: string) => tag.trim()) // Adicionado : string
-            .filter((tag: string) => tag.length > 0); // Adicionado : string
+            .map((tag: string) => tag.trim())
+            .filter((tag: string) => tag.length > 0);
 
-        const formatarData = (dataStr: string) => {
-            if (!dataStr) return null;
-            return dataStr.length === 16 ? `${dataStr}:00` : dataStr;
+        const formatarHorario = (horaStr: string) => {
+            if (!horaStr) return null;
+            return horaStr.length === 5 ? `${horaStr}:00` : horaStr;
         };
 
         const payload = {
             ...formData,
             localizacao: localizacaoFinal,
             tags: tagsArray,
-            horarioAbertura: formatarData(formData.horarioAbertura),
-            horarioFechamento: formatarData(formData.horarioFechamento),
+            horarioAbertura: formatarHorario(formData.horarioAbertura),
+            horarioFechamento: formatarHorario(formData.horarioFechamento),
         };
 
-        // Envia para a Page
         onSubmit(payload);
     };
 
@@ -295,7 +295,6 @@ export function LaboratorioForm({ initialData, onSubmit, isLoading }: Laboratori
                                 </FormGroup>
                             </div>
 
-
                             <FormGroup label="Resolução">
                                 <textarea
                                     name="resolucao"
@@ -339,10 +338,10 @@ export function LaboratorioForm({ initialData, onSubmit, isLoading }: Laboratori
                     </div>
                     <div className="space-y-4">
                         <FormGroup label="Horário de Abertura">
-                            <input type="datetime-local" name="horarioAbertura" value={formData.horarioAbertura} onChange={handleChange} className="w-full px-4 py-2.5 rounded-xl border border-gray-100 bg-gray-50 outline-none text-sm text-gray-700" />
+                            <input type="time" name="horarioAbertura" value={formData.horarioAbertura} onChange={handleChange} className="w-full px-4 py-2.5 rounded-xl border border-gray-100 bg-gray-50 outline-none text-sm text-gray-700" />
                         </FormGroup>
                         <FormGroup label="Horário de Fechamento">
-                            <input type="datetime-local" name="horarioFechamento" value={formData.horarioFechamento} onChange={handleChange} className="w-full px-4 py-2.5 rounded-xl border border-gray-100 bg-gray-50 outline-none text-sm text-gray-700" />
+                            <input type="time" name="horarioFechamento" value={formData.horarioFechamento} onChange={handleChange} className="w-full px-4 py-2.5 rounded-xl border border-gray-100 bg-gray-50 outline-none text-sm text-gray-700" />
                         </FormGroup>
                     </div>
                 </section>
