@@ -7,9 +7,7 @@ import com.inova27.app.dto.jogo.JogoUpdateDTO;
 import com.inova27.app.exception.*;
 import com.inova27.app.mapper.DocumentoSemanticoMapper;
 import com.inova27.app.model.*;
-import com.inova27.app.repository.EngineRepository;
 import com.inova27.app.repository.JogoRepository;
-import com.inova27.app.repository.LinguagemRepository;
 import com.inova27.app.specification.jogo.JogoSpecification;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -34,8 +32,6 @@ public class JogoService {
     private final JogoRepository repository;
     private final DocumentoSemanticoMapper mapper;
     private final IndexadorSemanticoService indexador;
-    private final EngineRepository engineRepository;
-    private final LinguagemRepository linguagemRepository;
     private final AuditoriaService auditoriaService;
     private final SolicitacaoAlteracaoService solicitacaoService;
 
@@ -75,15 +71,10 @@ public class JogoService {
         jogo.setEstagioDesenvolvimento(dto.estagioDesenvolvimento());
         jogo.setUrlFoto(dto.urlFoto());
 
-        if (dto.engineId() != null) {
-            var engine = engineRepository.findById(dto.engineId())
-                    .orElseThrow(() -> new IllegalArgumentException("Engine não encontrada"));
-            jogo.setEngine(engine);
-        }
+        jogo.setEngine(normalizarEngine(dto.engine()));
 
-        if (dto.linguagensIds() != null && !dto.linguagensIds().isEmpty()) {
-            var linguagens = new HashSet<>(linguagemRepository.findAllById(dto.linguagensIds()));
-            jogo.setLinguagens(linguagens);
+        if (dto.linguagens() != null) {
+            jogo.setLinguagens(normalizarLinguagens(dto.linguagens()));
         }
 
         jogo.setFaixaEtaria(dto.faixaEtaria());
@@ -276,18 +267,29 @@ public class JogoService {
         if (dto.urlFoto() != null) jogo.setUrlFoto(dto.urlFoto());
     }
 
-    // 🔥 DIVISÃO 2: Apenas as buscas no banco e coleções
+    // 🔥 DIVISÃO 2: Engine e coleções de texto
     private void aplicarRelacionamentos(Jogo jogo, JogoUpdateDTO dto) {
-        if (dto.engineId() != null) {
-            var engine = engineRepository.findById(dto.engineId())
-                    .orElseThrow(EngineNaoEncontradaException::new);
-            jogo.setEngine(engine);
+        if (dto.engine() != null) {
+            jogo.setEngine(normalizarEngine(dto.engine()));
         }
 
-        if (dto.linguagensIds() != null) {
-            var linguagens = new HashSet<>(linguagemRepository.findAllById(dto.linguagensIds()));
-            jogo.setLinguagens(linguagens);
+        if (dto.linguagens() != null) {
+            jogo.setLinguagens(normalizarLinguagens(dto.linguagens()));
         }
+    }
+
+    private String normalizarEngine(String engine) {
+        if (engine == null || engine.isBlank()) {
+            return null;
+        }
+        return engine.trim();
+    }
+
+    private Set<String> normalizarLinguagens(Set<String> linguagens) {
+        return linguagens.stream()
+                .filter(l -> l != null && !l.isBlank())
+                .map(String::trim)
+                .collect(Collectors.toCollection(HashSet::new));
     }
 
     // 🔹 MAPPER
@@ -296,11 +298,7 @@ public class JogoService {
                 jogo.getProtecoes().stream().map(Protecao::getNome).collect(Collectors.toSet());
 
         Set<String> linguagens = jogo.getLinguagens() == null ? new HashSet<>() :
-                jogo.getLinguagens().stream()
-                        .map(Linguagem::getNome)
-                        .collect(Collectors.toSet());
-
-        String engineNome = jogo.getEngine() != null ? jogo.getEngine().getNome() : null;
+                new HashSet<>(jogo.getLinguagens());
 
         return new JogoResponseDTO(
                 jogo.getId(),
@@ -312,7 +310,7 @@ public class JogoService {
                 jogo.getLinkDownload(),
                 jogo.getSite(),
                 linguagens,
-                engineNome,
+                jogo.getEngine(),
                 nomesProtecoes,
                 jogo.getTipoJogo(),
                 jogo.getAnoDesenvolvimento(),

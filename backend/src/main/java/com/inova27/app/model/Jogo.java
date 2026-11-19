@@ -57,17 +57,16 @@ public class Jogo {
     @Enumerated(EnumType.STRING)
     private EstagioDesenvolvimento estagioDesenvolvimento;//criar//OK//EDITAR//OK////EXPANDIDO//OK
 
-    @ManyToOne
-    @JoinColumn(name = "engine_id")
-    private Engine engine;//criar//OK//EDITAR//OK////EXPANDIDO//OK
+    @Column(length = 100)
+    private String engine;//criar//OK//EDITAR//OK////EXPANDIDO//OK
 
-    @ManyToMany
-    @JoinTable(
-            name = "jogo_linguagem",
-            joinColumns = @JoinColumn(name = "jogo_id"),
-            inverseJoinColumns = @JoinColumn(name = "linguagem_id")
+    @ElementCollection
+    @CollectionTable(
+            name = "jogo_linguagens",
+            joinColumns = @JoinColumn(name = "jogo_id")
     )
-    private Set<Linguagem> linguagens = new HashSet<>();//criar//OK//EDITAR//OK////EXPANDIDO//OK
+    @Column(name = "linguagem", length = 100)
+    private Set<String> linguagens = new HashSet<>();//criar//OK//EDITAR//OK////EXPANDIDO//OK
 
     private Long userInclusaoId;//criar//OK//EDITAR//OK////EXPANDIDO//
 
