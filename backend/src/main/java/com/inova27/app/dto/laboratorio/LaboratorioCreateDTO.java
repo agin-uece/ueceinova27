@@ -2,7 +2,7 @@ package com.inova27.app.dto.laboratorio;
 
 import com.inova27.app.model.NaturezaLaboratorio;
 
-import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Set;
 
 public record LaboratorioCreateDTO(
@@ -15,8 +15,8 @@ public record LaboratorioCreateDTO(
         String telefone,
         Set<NaturezaLaboratorio> naturezas,
         String vinculado,
-        LocalDateTime horarioAbertura,
-        LocalDateTime horarioFechamento,
+        LocalTime horarioAbertura,
+        LocalTime horarioFechamento,
         String urlFoto,
         String localizacao,
         String parcerias,
