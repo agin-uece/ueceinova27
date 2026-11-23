@@ -3,6 +3,7 @@ package com.inova27.app.specification.startup;
 import com.inova27.app.dto.startup.StartupFiltroDTO;
 import com.inova27.app.model.Pessoa;
 import com.inova27.app.model.Startup;
+import com.inova27.app.utils.TextoBuscaUtils;
 import org.springframework.data.jpa.domain.Specification;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Predicate;
@@ -20,12 +21,12 @@ public class StartupSpecification {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            // 🔹 Filtros de Texto (Busca parcial com LIKE e Case Insensitive)
+            // 🔹 Filtros de Texto (Busca parcial, ignorando maiúsculas e acentos)
             if (filtro.nome() != null && !filtro.nome().isBlank()) {
-                predicates.add(cb.like(cb.lower(root.get("nome")), "%" + filtro.nome().toLowerCase() + "%"));
+                predicates.add(TextoBuscaUtils.contem(cb, root.get("nome"), filtro.nome()));
             }
             if (filtro.area() != null && !filtro.area().isBlank()) {
-                predicates.add(cb.like(cb.lower(root.get("area")), "%" + filtro.area().toLowerCase() + "%"));
+                predicates.add(TextoBuscaUtils.contem(cb, root.get("area"), filtro.area()));
             }
 
             // 🔹 Filtros Exatos (Data e Enum)

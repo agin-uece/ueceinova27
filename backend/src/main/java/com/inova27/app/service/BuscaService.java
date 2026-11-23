@@ -1,9 +1,9 @@
 package com.inova27.app.service;
 
-import java.text.Normalizer;
 import com.inova27.app.dto.buscasemantica.BuscaResultadoDTO;
 import com.inova27.app.repository.BuscaSemanticaRepository;
 import com.inova27.app.utils.EmbeddingUtils;
+import com.inova27.app.utils.TextoBuscaUtils;
 import org.springframework.stereotype.Service;
 import java.util.List;
 
@@ -23,14 +23,8 @@ public class BuscaService {
 
     public List<BuscaResultadoDTO> buscar(String texto) {
 
-        // 1. Remove os acentos usando Normalização NFD e Regex
-        String textoSemAcento = Normalizer.normalize(texto, Normalizer.Form.NFD)
-                .replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
-
-        String textoLimpo = textoSemAcento
-                .trim()
-                .toLowerCase()
-                .replaceAll("\\s+", " ");
+        // 1. Minúsculas e sem acentos (a consulta aplica unaccent no texto indexado para comparar igual)
+        String textoLimpo = TextoBuscaUtils.normalizar(texto);
 
 
         // 3. Gera a lista de doubles do modelo (Ollama/OpenAI)

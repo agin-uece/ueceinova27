@@ -4,6 +4,7 @@ import com.inova27.app.dto.laboratorio.LaboratorioFiltroDTO;
 import com.inova27.app.model.Laboratorio;
 import com.inova27.app.model.NaturezaLaboratorio;
 import com.inova27.app.model.Pessoa;
+import com.inova27.app.utils.TextoBuscaUtils;
 import org.springframework.data.jpa.domain.Specification;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Join;
@@ -37,18 +38,18 @@ public class LaboratorioSpecification {
     }
 
     private static void adicionarFiltrosDeTexto(List<Predicate> predicates, Root<Laboratorio> root, CriteriaBuilder cb, LaboratorioFiltroDTO filtro) {
-        // Textos (Busca parcial com LIKE e Case Insensitive)
+        // Textos (Busca parcial, ignorando maiúsculas e acentos)
         if (filtro.nome() != null && !filtro.nome().isBlank()) {
-            predicates.add(cb.like(cb.lower(root.get("nome")), "%" + filtro.nome().toLowerCase() + "%"));
+            predicates.add(TextoBuscaUtils.contem(cb, root.get("nome"), filtro.nome()));
         }
         if (filtro.coordenacao() != null && !filtro.coordenacao().isBlank()) {
-            predicates.add(cb.like(cb.lower(root.get("coordenacao")), "%" + filtro.coordenacao().toLowerCase() + "%"));
+            predicates.add(TextoBuscaUtils.contem(cb, root.get("coordenacao"), filtro.coordenacao()));
         }
         if (filtro.area() != null && !filtro.area().isBlank()) {
-            predicates.add(cb.like(cb.lower(root.get("area")), "%" + filtro.area().toLowerCase() + "%"));
+            predicates.add(TextoBuscaUtils.contem(cb, root.get("area"), filtro.area()));
         }
         if (filtro.vinculado() != null && !filtro.vinculado().isBlank()) {
-            predicates.add(cb.like(cb.lower(root.get("vinculado")), "%" + filtro.vinculado().toLowerCase() + "%"));
+            predicates.add(TextoBuscaUtils.contem(cb, root.get("vinculado"), filtro.vinculado()));
         }
     }
 
@@ -61,7 +62,7 @@ public class LaboratorioSpecification {
         // ElementCollection (Tags) - Busca parcial dentro da coleção de tags
         if (filtro.tag() != null && !filtro.tag().isBlank()) {
             Join<Laboratorio, String> tagsJoin = root.join("tags");
-            predicates.add(cb.like(cb.lower(tagsJoin), "%" + filtro.tag().toLowerCase() + "%"));
+            predicates.add(TextoBuscaUtils.contem(cb, tagsJoin, filtro.tag()));
         }
     }
 

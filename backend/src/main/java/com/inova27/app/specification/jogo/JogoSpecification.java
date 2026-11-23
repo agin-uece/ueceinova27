@@ -3,6 +3,7 @@ package com.inova27.app.specification.jogo;
 import com.inova27.app.dto.jogo.JogoFiltroDTO;
 import com.inova27.app.model.Jogo;
 import com.inova27.app.model.Protecao;
+import com.inova27.app.utils.TextoBuscaUtils;
 import org.springframework.data.jpa.domain.Specification;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Join;
@@ -38,13 +39,13 @@ public class JogoSpecification {
     }
 
     private static void adicionarFiltroDeTexto(List<Predicate> predicates, Root<Jogo> root, CriteriaBuilder cb, JogoFiltroDTO filtro) {
-        // Filtro por Nome (Busca parcial com LIKE e Case Insensitive)
+        // Filtro por Nome (Busca parcial, ignorando maiúsculas e acentos)
         if (filtro.nome() != null && !filtro.nome().isBlank()) {
-            predicates.add(cb.like(cb.lower(root.get("nome")), "%" + filtro.nome().toLowerCase() + "%"));
+            predicates.add(TextoBuscaUtils.contem(cb, root.get("nome"), filtro.nome()));
         }
-        // Filtro por Engine (Busca parcial com LIKE e Case Insensitive)
+        // Filtro por Engine (Busca parcial, ignorando maiúsculas e acentos)
         if (filtro.engine() != null && !filtro.engine().isBlank()) {
-            predicates.add(cb.like(cb.lower(root.get("engine")), "%" + filtro.engine().toLowerCase() + "%"));
+            predicates.add(TextoBuscaUtils.contem(cb, root.get("engine"), filtro.engine()));
         }
     }
 
@@ -74,7 +75,7 @@ public class JogoSpecification {
         // ElementCollection (Linguagens) - Busca parcial dentro da coleção de linguagens
         if (filtro.linguagem() != null && !filtro.linguagem().isBlank()) {
             Join<Jogo, String> linguagemJoin = root.join("linguagens");
-            predicates.add(cb.like(cb.lower(linguagemJoin), "%" + filtro.linguagem().toLowerCase() + "%"));
+            predicates.add(TextoBuscaUtils.contem(cb, linguagemJoin, filtro.linguagem()));
         }
 
         // Relacionamento OneToMany (Protecoes)

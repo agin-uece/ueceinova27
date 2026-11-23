@@ -46,4 +46,15 @@ class BuscaServiceTest {
         assertThat(resultados).isEmpty();
         verify(embeddingService, times(1)).gerarEmbeddingParaBusca("java");
     }
+
+    @Test
+    @DisplayName("Deve enviar o termo sem acentos, em minúsculas e com espaços colapsados")
+    void testBuscar_NormalizaTermo() {
+        when(embeddingService.gerarEmbeddingParaBusca("criopreservacao grafica")).thenReturn(List.of(0.1));
+        when(repository.buscarCompleto(anyString(), eq("criopreservacao grafica"))).thenReturn(Collections.emptyList());
+
+        buscaService.buscar("  Criopreservação   GRÁFICA ");
+
+        verify(repository).buscarCompleto(anyString(), eq("criopreservacao grafica"));
+    }
 }

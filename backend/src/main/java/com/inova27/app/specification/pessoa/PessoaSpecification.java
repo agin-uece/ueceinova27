@@ -5,6 +5,7 @@ import com.inova27.app.model.Laboratorio;
 import com.inova27.app.model.Pessoa;
 import com.inova27.app.model.Protecao;
 import com.inova27.app.model.Startup;
+import com.inova27.app.utils.TextoBuscaUtils;
 import org.springframework.data.jpa.domain.Specification;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Join;
@@ -38,21 +39,21 @@ public class PessoaSpecification {
     }
 
     private static void adicionarFiltrosDeTextoParcial(List<Predicate> predicates, Root<Pessoa> root, CriteriaBuilder cb, PessoaFiltroDTO filtro) {
-        // 🔹 Textos (Busca parcial com LIKE e Case Insensitive)
+        // 🔹 Textos (Busca parcial, ignorando maiúsculas e acentos)
         if (filtro.nome() != null && !filtro.nome().isBlank()) {
-            predicates.add(cb.like(cb.lower(root.get("nome")), "%" + filtro.nome().toLowerCase() + "%"));
+            predicates.add(TextoBuscaUtils.contem(cb, root.get("nome"), filtro.nome()));
         }
         if (filtro.areaPesquisa() != null && !filtro.areaPesquisa().isBlank()) {
-            predicates.add(cb.like(cb.lower(root.get("areaPesquisa")), "%" + filtro.areaPesquisa().toLowerCase() + "%"));
+            predicates.add(TextoBuscaUtils.contem(cb, root.get("areaPesquisa"), filtro.areaPesquisa()));
         }
         if (filtro.titulacao() != null && !filtro.titulacao().isBlank()) {
-            predicates.add(cb.like(cb.lower(root.get("titulacao")), "%" + filtro.titulacao().toLowerCase() + "%"));
+            predicates.add(TextoBuscaUtils.contem(cb, root.get("titulacao"), filtro.titulacao()));
         }
         if (filtro.instituicao() != null && !filtro.instituicao().isBlank()) {
-            predicates.add(cb.like(cb.lower(root.get("instituicao")), "%" + filtro.instituicao().toLowerCase() + "%"));
+            predicates.add(TextoBuscaUtils.contem(cb, root.get("instituicao"), filtro.instituicao()));
         }
         if (filtro.curso() != null && !filtro.curso().isBlank()) {
-            predicates.add(cb.like(cb.lower(root.get("curso")), "%" + filtro.curso().toLowerCase() + "%"));
+            predicates.add(TextoBuscaUtils.contem(cb, root.get("curso"), filtro.curso()));
         }
     }
 
