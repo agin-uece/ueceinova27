@@ -29,7 +29,9 @@ export default async function EntidadeDetailsPage({ searchParams }: { searchPara
         } catch (e) { console.error(e); }
     }
 
-    const nome = data.nome || data.titulo || "Sem Nome";
+    // Serviço não tem "nome": usa os prestadores, como no card da listagem
+    const nomeServico = entidade === 'servicos' && data.prestadoresNomes?.length ? data.prestadoresNomes.join(", ") : null;
+    const nome = data.nome || data.titulo || nomeServico || "Sem Nome";
     const defaultImage = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRO1HxPlq-7dE9Qk7GSDm7CvcVHhtgaS1c5pw&s";
     const foto = data.urlFoto || (data.fotos?.[0]) || data.logo || defaultImage;
     const urlRetorno = `/${entidade}/pesquisar`;
