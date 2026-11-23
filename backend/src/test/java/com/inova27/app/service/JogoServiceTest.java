@@ -8,9 +8,7 @@ import com.inova27.app.exception.JogoNaoEncontradoException;
 import com.inova27.app.exception.PermissaoNegadaException;
 import com.inova27.app.mapper.DocumentoSemanticoMapper;
 import com.inova27.app.model.*;
-import com.inova27.app.repository.EngineRepository;
 import com.inova27.app.repository.JogoRepository;
-import com.inova27.app.repository.LinguagemRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -27,6 +25,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -41,8 +40,6 @@ class JogoServiceTest {
     @Mock private JogoRepository repository;
     @Mock private DocumentoSemanticoMapper mapper;
     @Mock private IndexadorSemanticoService indexador;
-    @Mock private EngineRepository engineRepository;
-    @Mock private LinguagemRepository linguagemRepository;
     @Mock private AuditoriaService auditoriaService;
     @Mock private SolicitacaoAlteracaoService solicitacaoService;
 
@@ -126,6 +123,28 @@ class JogoServiceTest {
             assertThatThrownBy(() -> jogoService.criar(dto, admin))
                     .isInstanceOf(JogoJaExisteException.class);
         }
+
+        @Test
+        @DisplayName("Deve salvar engine e linguagens como Strings normalizadas")
+        void deveSalvarEngineELinguagensComoStrings() {
+            JogoCreateDTO dto = new JogoCreateDTO(
+                    "Jogo Godot", "Desc", null, null, null, null, null,
+                    "  Godot  ", Set.of(" GDScript ", "C#", "   "),
+                    null, null, null, null, null, null
+            );
+
+            when(repository.existsByNome("Jogo Godot")).thenReturn(false);
+            when(repository.save(any(Jogo.class))).thenAnswer(i -> {
+                Jogo j = i.getArgument(0);
+                j.setId(15L);
+                return j;
+            });
+
+            JogoResponseDTO resultado = jogoService.criar(dto, admin);
+
+            assertThat(resultado.engine()).isEqualTo("Godot");
+            assertThat(resultado.linguagens()).containsExactlyInAnyOrder("GDScript", "C#");
+        }
     }
 
     // =========================================================
@@ -186,7 +205,11 @@ class JogoServiceTest {
         @Test
         @DisplayName("Deve atualizar diretamente se usuário for admin")
         void deveAtualizarDiretamenteSeAdmin() {
-            JogoUpdateDTO dto = new JogoUpdateDTO("Nome Editado Admin", null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+            JogoUpdateDTO dto = new JogoUpdateDTO(
+                    "Nome Editado Admin", null, null, null, null, null, null,
+                    "Unity", Set.of("C#", "HLSL"),
+                    null, null, null, null, null, null
+            );
             jogoPadrao.setStatus(StatusValidacao.APROVADO); // Para testar re-indexação
 
             when(repository.findById(10L)).thenReturn(Optional.of(jogoPadrao));
@@ -195,6 +218,8 @@ class JogoServiceTest {
             JogoResponseDTO resultado = jogoService.atualizar(10L, dto, admin);
 
             assertThat(resultado.nome()).isEqualTo("Nome Editado Admin");
+            assertThat(resultado.engine()).isEqualTo("Unity");
+            assertThat(resultado.linguagens()).containsExactlyInAnyOrder("C#", "HLSL");
             verify(repository).save(jogoPadrao);
             verify(indexador).indexar(any());
             verify(auditoriaService).registrarLog(eq("Jogo"), eq(10L), eq(AcaoAuditoria.EDICAO), eq(1L), eq(dto));

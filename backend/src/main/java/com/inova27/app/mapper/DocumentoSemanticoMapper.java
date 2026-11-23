@@ -62,7 +62,7 @@ public class DocumentoSemanticoMapper {
     // 🎮 JOGO
     public DocumentoSemantico fromJogo(Jogo j) {
 
-        String engineNome = j.getEngine() != null ? j.getEngine().getNome() : "Não especificada";
+        String engineNome = (j.getEngine() != null && !j.getEngine().isBlank()) ? j.getEngine().trim() : "Não especificada";
         String linguagens = extrairNomesLinguagens(j.getLinguagens());
 
         String criadores = (j.getCriadores() == null || j.getCriadores().isEmpty()) ? "" :
@@ -288,10 +288,11 @@ public class DocumentoSemanticoMapper {
         return (s == null || s.trim().isEmpty() || s.equals("null")) ? "" : s.trim();
     }
 
-    private String extrairNomesLinguagens(Collection<Linguagem> linguagens) {
+    private String extrairNomesLinguagens(Collection<String> linguagens) {
         if (linguagens == null || linguagens.isEmpty()) return "";
         return linguagens.stream()
-                .map(Linguagem::getNome)
+                .filter(l -> l != null && !l.isBlank())
+                .map(String::trim)
                 .collect(Collectors.joining(", "));
     }
 

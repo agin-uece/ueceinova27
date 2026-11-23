@@ -43,5 +43,3 @@ api.paths.laboratorios-id=/laboratorios/{id}
 api.paths.startups-id=/startups/{id}
 api.paths.protecoes-id=/protecoes/{id}
 api.paths.servicos-id=/servicos/{id}
-api.paths.engines-id=/engines/{id}
-api.paths.linguagens-id=/linguagens/{id}

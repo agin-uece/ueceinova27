@@ -43,12 +43,6 @@ public class SecurityConfig {
     @Value("${api.paths.servicos-id}")
     private String pathServicosId;
 
-    @Value("${api.paths.engines-id}")
-    private String pathEnginesId;
-
-    @Value("${api.paths.linguagens-id}")
-    private String pathLinguagensId;
-
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity httpSecurity,
@@ -117,16 +111,6 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/servicos").hasRole(ROLE_ADMIN)
                         .requestMatchers(HttpMethod.PUT, pathServicosId).hasRole(ROLE_ADMIN)
                         .requestMatchers(HttpMethod.DELETE, pathServicosId).hasRole(ROLE_ADMIN)
-                        .requestMatchers(HttpMethod.GET, "/engines").permitAll()
-                        .requestMatchers(HttpMethod.GET, pathEnginesId).permitAll()
-                        .requestMatchers(HttpMethod.POST, "/engines").hasRole(ROLE_ADMIN)
-                        .requestMatchers(HttpMethod.PUT, pathEnginesId).hasRole(ROLE_ADMIN)
-                        .requestMatchers(HttpMethod.DELETE, pathEnginesId).hasRole(ROLE_ADMIN)
-                        .requestMatchers(HttpMethod.GET, "/linguagens").permitAll()
-                        .requestMatchers(HttpMethod.GET, pathLinguagensId).permitAll()
-                        .requestMatchers(HttpMethod.POST, "/linguagens").hasRole(ROLE_ADMIN)
-                        .requestMatchers(HttpMethod.PUT, pathLinguagensId).hasRole(ROLE_ADMIN)
-                        .requestMatchers(HttpMethod.DELETE, pathLinguagensId).hasRole(ROLE_ADMIN)
                         .anyRequest().hasRole(ROLE_ADMIN)
                 )
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)

@@ -13,8 +13,8 @@ public record JogoFiltroDTO(
         LocalDate dataLancamento,
         TipoJogo tipoJogo,
         EstagioDesenvolvimento estagioDesenvolvimento,
-        Long engineId,
-        Long linguagemId,
+        String engine,
+        String linguagem,
         Long protecaoId,
         String faixaEtaria
 
