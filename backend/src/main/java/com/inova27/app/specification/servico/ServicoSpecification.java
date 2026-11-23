@@ -3,6 +3,7 @@ package com.inova27.app.specification.servico;
 import com.inova27.app.dto.servico.ServicoFiltroDTO;
 import com.inova27.app.model.Pessoa;
 import com.inova27.app.model.Servico;
+import com.inova27.app.utils.TextoBuscaUtils;
 import org.springframework.data.jpa.domain.Specification;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Predicate;
@@ -26,9 +27,9 @@ public class ServicoSpecification {
                 predicates.add(cb.equal(joinPessoas.get("id"), filtro.pessoaId()));
             }
 
-            // 🔹 Filtro de Texto: Área de Atuação (Busca parcial com LIKE e Case Insensitive)
+            // 🔹 Filtro de Texto: Área de Atuação (Busca parcial, ignorando maiúsculas e acentos)
             if (filtro.areaAtuacao() != null && !filtro.areaAtuacao().isBlank()) {
-                predicates.add(cb.like(cb.lower(root.get("areaAtuacao")), "%" + filtro.areaAtuacao().toLowerCase() + "%"));
+                predicates.add(TextoBuscaUtils.contem(cb, root.get("areaAtuacao"), filtro.areaAtuacao()));
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));

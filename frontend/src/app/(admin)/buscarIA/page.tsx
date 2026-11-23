@@ -100,9 +100,13 @@ const CORES_TAG: Record<string, string> = {
 // 2. Funções de Chamada (Fetch)
 // ==========================================
 
+// Esta página roda no servidor do Next (dentro do container): "localhost" seria o próprio container do front.
+// Sem a variável, mantém o endereço usado no perfil prod.
+const API_INTERNA = process.env.API_URL_INTERNA ?? "http://inova27-backend:8080";
+
 async function fetchResultadosBusca(query: string): Promise<ResultadoBusca[]> {
     try {
-        const res = await fetch(`http://inova27-backend:8080/busca?q=${query}`, {
+        const res = await fetch(`${API_INTERNA}/busca?q=${encodeURIComponent(query)}`, {
             cache: "no-store",
         });
         if (!res.ok) return [];
@@ -117,7 +121,7 @@ async function fetchResultadosBusca(query: string): Promise<ResultadoBusca[]> {
 
 async function fetchDetalhes(entidade: string, id: number): Promise<DetalhesEntidade | null> {
     try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/${entidade}/${id}`, {
+        const res = await fetch(`${API_INTERNA}/${entidade}/${id}`, {
             cache: "no-store",
         });
         if (!res.ok) return null;

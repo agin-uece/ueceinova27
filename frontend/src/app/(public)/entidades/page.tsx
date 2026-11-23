@@ -5,9 +5,13 @@ import { Tag, SectionHeader } from "@/components/ui/SharedUI";
 import { SidebarDetalhes } from "@/components/detalhes/SidebarDetalhes";
 import { SecaoPessoas, SecaoStartups, SecaoProtecoes, SecaoJogos, SecaoLaboratorios, SecaoServicos } from "@/components/detalhes/EntitySections";
 
+// Esta página roda no servidor do Next (dentro do container): "localhost" seria o próprio container do front.
+// Sem a variável, mantém o endereço usado no perfil prod.
+const API_INTERNA = process.env.API_URL_INTERNA ?? "http://inova27-backend:8080";
+
 async function getDetalhes(entidade: string, id: string) {
     try {
-        const res = await fetch(`http://inova27-backend:8080/${entidade}/${id}`, { cache: "no-store" });
+        const res = await fetch(`${API_INTERNA}/${entidade}/${id}`, { cache: "no-store" });
         return res.ok ? await res.json() : null;
     } catch (e) { return null; }
 }
@@ -24,7 +28,7 @@ export default async function EntidadeDetailsPage({ searchParams }: { searchPara
     let nomeJogoVinculado = null;
     if (entidade === 'protecoes' && data.jogoId) {
         try {
-            const resJogo = await fetch(`http://inova27-backend:8080/jogos/${data.jogoId}`, { cache: "no-store" });
+            const resJogo = await fetch(`${API_INTERNA}/jogos/${data.jogoId}`, { cache: "no-store" });
             if (resJogo.ok) nomeJogoVinculado = (await resJogo.json()).nome;
         } catch (e) { console.error(e); }
     }
