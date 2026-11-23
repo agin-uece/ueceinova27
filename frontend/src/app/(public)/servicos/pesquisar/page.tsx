@@ -1,5 +1,7 @@
 "use client";
 
+import { apiFetch } from "@/lib/api";
+
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeft, Target, Wrench } from "lucide-react";
@@ -98,7 +100,7 @@ export default function PesquisarServicosPage() {
             if (token) headers["Authorization"] = `Bearer ${token}`;
             if (pin) headers["X-MFA-PIN"] = pin;
 
-            return fetch(`${process.env.NEXT_PUBLIC_API_URL}/servicos/${servicoToDelete}`, {
+            return apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/servicos/${servicoToDelete}`, {
                 method: "DELETE",
                 headers
             });

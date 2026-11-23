@@ -1,5 +1,7 @@
 "use client";
 
+import { apiFetch } from "@/lib/api";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -44,7 +46,7 @@ export default function CadastrarAdminPage() {
 
         const result = await execute((pin?: string) => {
             const token = localStorage.getItem("userToken");
-            return fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/register`, {
+            return apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/register`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

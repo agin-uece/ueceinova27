@@ -1,5 +1,7 @@
 "use client";
 
+import { apiFetch } from "@/lib/api";
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -26,7 +28,7 @@ export default function CadastrarLaboratorioPage() {
             if (token) headers.append("Authorization", `Bearer ${token}`);
             if (pin) headers.append("X-MFA-PIN", pin); 
 
-            return fetch(`${process.env.NEXT_PUBLIC_API_URL}/laboratorios`, {
+            return apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/laboratorios`, {
                 method: "POST",
                 headers: headers,
                 body: JSON.stringify(payload)

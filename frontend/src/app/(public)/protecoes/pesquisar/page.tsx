@@ -1,5 +1,7 @@
 "use client";
 
+import { apiFetch } from "@/lib/api";
+
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { ArrowLeft, Shield, Target } from "lucide-react";
@@ -96,7 +98,7 @@ export default function PesquisarProtecoesPage() {
             if (token) headers["Authorization"] = `Bearer ${token}`;
             if (pin) headers["X-MFA-PIN"] = pin;
 
-            return fetch(`${process.env.NEXT_PUBLIC_API_URL}/protecoes/${protecaoToDelete}`, {
+            return apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/protecoes/${protecaoToDelete}`, {
                 method: "DELETE",
                 headers
             });

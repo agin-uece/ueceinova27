@@ -1,5 +1,7 @@
 "use client";
 
+import { apiFetch } from "@/lib/api";
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Shield, ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react";
@@ -41,7 +43,7 @@ export default function CadastrarProtecaoPage() {
             if (token) headers["Authorization"] = `Bearer ${token}`;
             if (pin) headers["X-MFA-PIN"] = pin;
 
-            return fetch(`${process.env.NEXT_PUBLIC_API_URL}/protecoes`, {
+            return apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/protecoes`, {
                 method: "POST",
                 headers,
                 body: JSON.stringify(payload),

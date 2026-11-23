@@ -1,5 +1,7 @@
 "use client";
 
+import { apiFetch } from "@/lib/api";
+
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Gamepad2, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
@@ -51,7 +53,7 @@ function EditarJogoForm() {
                 }
 
                 const [resJogo, resLinguagens, resEngines] = await Promise.all([
-                    fetch(`${process.env.NEXT_PUBLIC_API_URL}/jogos/${jogoId}`, { headers }),
+                    apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/jogos/${jogoId}`, { headers }),
                     fetch(`${process.env.NEXT_PUBLIC_API_URL}/linguagens`),
                     fetch(`${process.env.NEXT_PUBLIC_API_URL}/engines`)
                 ]);
@@ -108,7 +110,7 @@ function EditarJogoForm() {
         const result = await execute((pin?: string) => {
             const token = localStorage.getItem("userToken");
             const payload = { ...formData, engineId: formData.engineId ? Number(formData.engineId) : null };
-            return fetch(`${process.env.NEXT_PUBLIC_API_URL}/jogos/${jogoId}`, {
+            return apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/jogos/${jogoId}`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",

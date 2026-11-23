@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { User, ArrowLeft } from 'lucide-react';
+import { clearSession, isTokenExpired } from '@/lib/auth';
 
 export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -16,6 +17,12 @@ export function Header() {
   useEffect(() => {
     const token = localStorage.getItem("userToken");
     const userString = localStorage.getItem("userData");
+
+    // Nas páginas públicas, token expirado só encerra a sessão (sem redirecionar)
+    if (token && isTokenExpired(token)) {
+      clearSession();
+      return;
+    }
 
     setIsLoggedIn(!!token);
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { apiFetch } from "@/lib/api";
+
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Rocket, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
@@ -30,7 +32,7 @@ function EditarStartupContent() {
                 const headers = new Headers();
                 if (token) headers.append("Authorization", `Bearer ${token}`);
 
-                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/startups/${startupId}`, { headers });
+                const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/startups/${startupId}`, { headers });
 
                 if (res.ok) {
                     const data = await res.json();
@@ -60,7 +62,7 @@ function EditarStartupContent() {
             if (token) headers.append("Authorization", `Bearer ${token}`);
             if (pin) headers.append("X-MFA-PIN", pin);
 
-            return fetch(`${process.env.NEXT_PUBLIC_API_URL}/startups/${startupId}`, {
+            return apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/startups/${startupId}`, {
                 method: "PUT",
                 headers: headers,
                 body: JSON.stringify(payload)

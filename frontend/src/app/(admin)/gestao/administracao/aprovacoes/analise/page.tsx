@@ -1,5 +1,7 @@
 "use client";
 
+import { apiFetch } from "@/lib/api";
+
 import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Check, X, ArrowLeft, Loader2, AlertCircle, ShieldCheck, CheckCircle2 } from "lucide-react";
@@ -41,7 +43,7 @@ function AnaliseDetalhadaContent() {
         try {
             if (tipo === "CRIACAO" && entidadeQuery) {
                 const rota = ROTAS_API[entidadeQuery];
-                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/${rota}/${id}`, {
+                const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/${rota}/${id}`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
                 if (res.ok) {
@@ -49,7 +51,7 @@ function AnaliseDetalhadaContent() {
                     setInfoBase({ entidade: entidadeQuery, id });
                 }
             } else if (tipo === "EDICAO" || tipo === "EXCLUSAO") {
-                const resSol = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/solicitacoes?size=100`, {
+                const resSol = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/solicitacoes?size=100`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
                 const jsonSol = await resSol.json();
@@ -60,7 +62,7 @@ function AnaliseDetalhadaContent() {
                     if (tipo === "EDICAO") setDadosNovos(JSON.parse(solicitacao.dadosNovos));
 
                     const rota = ROTAS_API[solicitacao.entidade];
-                    const resOrig = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/${rota}/${solicitacao.entidadeId}`, {
+                    const resOrig = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/${rota}/${solicitacao.entidadeId}`, {
                         headers: { "Authorization": `Bearer ${token}` }
                     });
                     if (resOrig.ok) setDadosOriginais(await resOrig.json());
@@ -89,12 +91,12 @@ function AnaliseDetalhadaContent() {
 
                 if (tipo === "CRIACAO") {
                     const rota = ROTAS_API[infoBase.entidade];
-                    return fetch(`${process.env.NEXT_PUBLIC_API_URL}/${rota}/${id}/validar?aprovado=${aprovadoAtual}`, {
+                    return apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/${rota}/${id}/validar?aprovado=${aprovadoAtual}`, {
                         method: "PUT",
                         headers,
                     });
                 } else {
-                    return fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/solicitacoes/${id}/avaliar`, {
+                    return apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/solicitacoes/${id}/avaliar`, {
                         method: "PUT",
                         headers: { ...headers, "Content-Type": "application/json" },
                         body: JSON.stringify({ aprovado: aprovadoAtual }),

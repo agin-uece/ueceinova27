@@ -1,5 +1,7 @@
 "use client";
 
+import { apiFetch } from "@/lib/api";
+
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeft, Users, Target, ShieldCheck, User } from "lucide-react";
@@ -98,7 +100,7 @@ export default function PesquisarPessoasPage() {
         setIsLoading(true);
         try {
             const token = localStorage.getItem("userToken");
-            const res = await fetch(url, {
+            const res = await apiFetch(url, {
                 headers: token ? { "Authorization": `Bearer ${token}` } : {}
             });
             if (res.ok) {
@@ -163,7 +165,7 @@ export default function PesquisarPessoasPage() {
             console.log("🔐 DELETE headers:", headers);
             console.log("🔐 PIN recebido:", pin);
 
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/pessoas/${pessoaToDelete}`, {
+            const response = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/pessoas/${pessoaToDelete}`, {
                 method: "DELETE",
                 headers
             });
@@ -199,7 +201,7 @@ export default function PesquisarPessoasPage() {
             if (token) headers["Authorization"] = `Bearer ${token}`;
             if (pin) headers["X-MFA-PIN"] = pin;
 
-            return fetch(`${process.env.NEXT_PUBLIC_API_URL}/pessoas/${pessoaToValidate}/validar?aprovado=${aprovado}`, {
+            return apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/pessoas/${pessoaToValidate}/validar?aprovado=${aprovado}`, {
                 method: "PUT",
                 headers
             });

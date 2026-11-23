@@ -1,5 +1,7 @@
 "use client";
 
+import { apiFetch } from "@/lib/api";
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -27,7 +29,7 @@ export default function MeuPerfilPage() {
             if (!token) { router.push("/login"); return; }
 
             try {
-                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/usuarios/meus-dados`, {
+                const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/usuarios/meus-dados`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
 
@@ -80,7 +82,7 @@ export default function MeuPerfilPage() {
 
         const result = await execute((pin?: string) => {
             const token = localStorage.getItem("userToken");
-            return fetch(`${process.env.NEXT_PUBLIC_API_URL}/usuarios/meus-dados`, {
+            return apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/usuarios/meus-dados`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",

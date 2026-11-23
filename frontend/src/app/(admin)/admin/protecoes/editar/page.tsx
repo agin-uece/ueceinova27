@@ -1,5 +1,7 @@
 "use client";
 
+import { apiFetch } from "@/lib/api";
+
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Shield, Save, AlertCircle, CheckCircle2, ArrowLeft, Loader2, FileText, Info } from "lucide-react";
@@ -164,7 +166,7 @@ function FormularioEdicaoProtecao() {
 
     const result = await execute((pin?: string) => {
       const token = localStorage.getItem("userToken");
-      return fetch(`${process.env.NEXT_PUBLIC_API_URL}/protecoes/${protecaoId}`, {
+      return apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/protecoes/${protecaoId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

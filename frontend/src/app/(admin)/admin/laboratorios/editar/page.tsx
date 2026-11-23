@@ -1,5 +1,7 @@
 "use client";
 
+import { apiFetch } from "@/lib/api";
+
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -31,7 +33,7 @@ function EditarLaboratorioContent() {
                 const headers = new Headers();
                 if (token) headers.append("Authorization", `Bearer ${token}`);
 
-                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/laboratorios/${labId}`, { headers });
+                const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/laboratorios/${labId}`, { headers });
 
                 if (res.ok) {
                     const data = await res.json();
@@ -60,7 +62,7 @@ function EditarLaboratorioContent() {
             if (token) headers.append("Authorization", `Bearer ${token}`);
             if (pin) headers.append("X-MFA-PIN", pin);
 
-            return fetch(`${process.env.NEXT_PUBLIC_API_URL}/laboratorios/${labId}`, {
+            return apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/laboratorios/${labId}`, {
                 method: "PUT",
                 headers: headers,
                 body: JSON.stringify(payload)

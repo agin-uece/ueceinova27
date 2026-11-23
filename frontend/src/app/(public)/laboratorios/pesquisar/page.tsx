@@ -1,5 +1,7 @@
 "use client";
 
+import { apiFetch } from "@/lib/api";
+
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeft, Beaker, Target, ShieldCheck, ChevronUp, ChevronDown, User } from "lucide-react";
@@ -66,7 +68,7 @@ export default function PesquisarLaboratoriosPage() {
         setIsLoading(true);
         try {
             const token = localStorage.getItem("userToken");
-            const res = await fetch(url, {
+            const res = await apiFetch(url, {
                 headers: token ? { "Authorization": `Bearer ${token}` } : {}
             });
             if (res.ok) {
@@ -131,7 +133,7 @@ export default function PesquisarLaboratoriosPage() {
             if (token) headers.append("Authorization", `Bearer ${token}`);
             if (pin) headers.append("X-MFA-PIN", pin);
 
-            return fetch(`${process.env.NEXT_PUBLIC_API_URL}/laboratorios/${labToDelete}`, {
+            return apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/laboratorios/${labToDelete}`, {
                 method: "DELETE",
                 headers: headers
             });
@@ -171,7 +173,7 @@ export default function PesquisarLaboratoriosPage() {
             if (token) headers.append("Authorization", `Bearer ${token}`);
             if (pin) headers.append("X-MFA-PIN", pin);
 
-            return fetch(`${process.env.NEXT_PUBLIC_API_URL}/laboratorios/${labToValidate}/validar?aprovado=${aprovado}`, {
+            return apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/laboratorios/${labToValidate}/validar?aprovado=${aprovado}`, {
                 method: "PUT",
                 headers: headers
             });

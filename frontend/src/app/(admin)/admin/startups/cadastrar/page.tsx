@@ -1,5 +1,7 @@
 "use client";
 
+import { apiFetch } from "@/lib/api";
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Rocket, XCircle, CheckCircle2, AlertCircle } from "lucide-react";
@@ -27,7 +29,7 @@ export default function CadastrarStartupPage() {
             if (token) headers.append("Authorization", `Bearer ${token}`);
             if (pin) headers.append("X-MFA-PIN", pin);
 
-            return fetch(`${process.env.NEXT_PUBLIC_API_URL}/startups`, {
+            return apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/startups`, {
                 method: "POST",
                 headers: headers,
                 body: JSON.stringify(payload)

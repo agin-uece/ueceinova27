@@ -1,5 +1,7 @@
 "use client";
 
+import { apiFetch } from "@/lib/api";
+
 import { useState, useEffect } from "react";
 import { ArrowLeft, Gamepad2, Target, ShieldCheck, ChevronUp, ChevronDown, User } from "lucide-react";
 import Link from "next/link";
@@ -91,7 +93,7 @@ export default function PesquisarJogosPage() {
         setIsLoading(true);
         try {
             const token = localStorage.getItem("userToken");
-            const res = await fetch(url, { headers: token ? { "Authorization": `Bearer ${token}` } : {} });
+            const res = await apiFetch(url, { headers: token ? { "Authorization": `Bearer ${token}` } : {} });
             if (res.ok) {
                 const data = await res.json();
                 if (Array.isArray(data)) {
@@ -133,7 +135,7 @@ export default function PesquisarJogosPage() {
     const fetchDeletarJogo = (pin?: string): Promise<Response> => {
         if (!jogoToDelete) return Promise.reject(new Error("Nenhum jogo selecionado."));
         const token = localStorage.getItem("userToken");
-        return fetch(`${process.env.NEXT_PUBLIC_API_URL}/jogos/${jogoToDelete}`, {
+        return apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/jogos/${jogoToDelete}`, {
             method: "DELETE",
             headers: {
                 "Content-Type": "application/json",
@@ -167,7 +169,7 @@ export default function PesquisarJogosPage() {
         setIsValidating(true);
         try {
             const token = localStorage.getItem("userToken");
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/jogos/${jogoToValidate}/validar?aprovado=${aprovado}`, {
+            const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/jogos/${jogoToValidate}/validar?aprovado=${aprovado}`, {
                 method: "PUT", headers: { "Authorization": `Bearer ${token}` }
             });
             if (res.ok) {

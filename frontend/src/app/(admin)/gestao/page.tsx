@@ -1,5 +1,7 @@
 "use client";
 
+import { apiFetch } from "@/lib/api";
+
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Search, ChevronRight, Compass, ShieldCheck, Users, Rocket, Beaker, Gamepad2, Briefcase, UserPlus, FolderPlus } from "lucide-react";
@@ -49,7 +51,7 @@ export default function GestaoDashboard() {
     const carregarRotas = async () => {
       try {
         // Busca a lista completa SEM passar o parâmetro 'q'
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/menu/permitidas`, {
+        const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/menu/permitidas`, {
           headers: {
             "Authorization": `Bearer ${token}`
           }

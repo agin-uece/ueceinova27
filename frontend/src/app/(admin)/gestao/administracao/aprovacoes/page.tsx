@@ -1,5 +1,7 @@
 "use client";
 
+import { apiFetch } from "@/lib/api";
+
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -71,7 +73,7 @@ export default function CentralAprovacoesPage() {
                 let url = `${process.env.NEXT_PUBLIC_API_URL}/admin/solicitacoes?status=PENDENTE&acao=${tipoAcao}&size=50`;
                 if (filtroEntidade) url += `&entidade=${filtroEntidade}`;
 
-                const res = await fetch(url, { headers: { "Authorization": `Bearer ${token}` } });
+                const res = await apiFetch(url, { headers: { "Authorization": `Bearer ${token}` } });
                 if (res.ok) {
                     const data = await res.json();
                     setSolicitacoes(data.content || []);
@@ -82,7 +84,7 @@ export default function CentralAprovacoesPage() {
                 const promessas = entidadesParaBuscar.map(async (ent) => {
                     const rota = ROTAS_API[ent];
                     try {
-                        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/${rota}/status/PENDENTE`, {
+                        const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/${rota}/status/PENDENTE`, {
                             headers: { "Authorization": `Bearer ${token}` }
                         });
                         if (res.ok) {
@@ -132,7 +134,7 @@ export default function CentralAprovacoesPage() {
             const token = localStorage.getItem("userToken");
             Array.from(idsParaBuscar).forEach(async (id) => {
                 try {
-                    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/usuarios/${id}`, {
+                    const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/usuarios/${id}`, {
                         headers: { "Authorization": `Bearer ${token}` }
                     });
                     if (res.ok) {

@@ -1,5 +1,7 @@
 "use client";
 
+import { apiFetch } from "@/lib/api";
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Gamepad2, CheckCircle2, AlertCircle } from "lucide-react";
@@ -22,7 +24,7 @@ export default function CadastroJogoPage() {
             const token = localStorage.getItem("userToken");
             const payload = { ...formData, engineId: formData?.engineId ? Number(formData.engineId) : null };
             
-            return fetch(`${process.env.NEXT_PUBLIC_API_URL}/jogos`, {
+            return apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/jogos`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

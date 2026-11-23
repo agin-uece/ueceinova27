@@ -1,5 +1,7 @@
 "use client";
 
+import { apiFetch } from "@/lib/api";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -31,7 +33,7 @@ export default function ValidarUsuariosPage() {
         const fetchPendentes = async () => {
             try {
                 const token = localStorage.getItem("userToken");
-                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/usuarios/pendentes`, {
+                const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/usuarios/pendentes`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
                 if (res.ok) setUsuarios(await res.json());
@@ -56,7 +58,7 @@ export default function ValidarUsuariosPage() {
 
         const result = await execute((pin?: string) => {
             const token = localStorage.getItem("userToken");
-            return fetch(`${process.env.NEXT_PUBLIC_API_URL}/usuarios/${userToValidate.id}/validar`, {
+            return apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/usuarios/${userToValidate.id}/validar`, {
                 method: "PUT",
                 headers: {
                     "Authorization": `Bearer ${token}`,

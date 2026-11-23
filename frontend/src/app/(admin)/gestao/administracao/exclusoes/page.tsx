@@ -1,5 +1,7 @@
 "use client";
 
+import { apiFetch } from "@/lib/api";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2, ArrowLeft, Loader2, Search, AlertCircle } from "lucide-react";
@@ -45,7 +47,7 @@ export default function ExclusaoRegistrosPage() {
         setSearchQuery("");
         try {
             const token = localStorage.getItem("userToken");
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/${entidade}`, {
+            const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/${entidade}`, {
                 headers: { "Authorization": `Bearer ${token}` }
             });
             if (res.ok) {
@@ -76,7 +78,7 @@ export default function ExclusaoRegistrosPage() {
         await execute(
             (pin?: string) => {
                 const token = localStorage.getItem("userToken");
-                return fetch(`${process.env.NEXT_PUBLIC_API_URL}/${entidadeSelecionada}/${idParaDeletar}`, {
+                return apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/${entidadeSelecionada}/${idParaDeletar}`, {
                     method: "DELETE",
                     headers: {
                         "Authorization": `Bearer ${token}`,

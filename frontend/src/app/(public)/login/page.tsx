@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -40,6 +40,13 @@ export default function LoginPage() {
     const [success, setSuccess] = useState(""); // 🔥 NOVO: Estado para mensagens de sucesso
     const [isLoading, setIsLoading] = useState(false);
     const [mfaPendente, setMfaPendente] = useState(false); // login de ADMIN aguardando o código por e-mail
+
+    // Redirecionado pelo apiFetch/layout quando o token JWT expirou
+    useEffect(() => {
+        if (new URLSearchParams(window.location.search).get("sessao") === "expirada") {
+            setError("Sua sessão expirou. Faça login novamente.");
+        }
+    }, []);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });

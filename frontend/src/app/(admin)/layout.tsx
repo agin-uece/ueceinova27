@@ -18,7 +18,8 @@ import {
   ChevronRight   // Ícone mais intuitivo
 } from 'lucide-react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
+import { clearSession, encerrarSessaoExpirada, isTokenExpired } from '@/lib/auth';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -28,6 +29,7 @@ export default function AdminRootLayout({
   children: React.ReactNode;
 }>) {
   const router = useRouter();
+  const pathname = usePathname();
   const [hasToken, setHasToken] = useState(false);
   const [userRole, setUserRole] = useState("");
   const [userName, setUserName] = useState("");
@@ -36,6 +38,12 @@ export default function AdminRootLayout({
   useEffect(() => {
     const token = localStorage.getItem("userToken");
     const userDataStr = localStorage.getItem("userData");
+
+    // Sessão expirada (token JWT vale 2h): desloga e volta para o login
+    if (token && isTokenExpired(token)) {
+      encerrarSessaoExpirada();
+      return;
+    }
 
     setHasToken(!!token);
 
@@ -48,11 +56,10 @@ export default function AdminRootLayout({
         console.error("Erro ao ler userData", e);
       }
     }
-  }, []);
+  }, [pathname]);
 
   const handleLogout = () => {
-    localStorage.removeItem("userToken");
-    localStorage.removeItem("userData");
+    clearSession();
     router.push("/");
   };
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { apiFetch } from "@/lib/api";
+
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { 
@@ -71,7 +73,7 @@ function EditarPessoaForm() {
                 }
 
                 const [resPessoa, resS, resP, resL] = await Promise.all([
-                    fetch(`${process.env.NEXT_PUBLIC_API_URL}/pessoas/${id}`, { headers }),
+                    apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/pessoas/${id}`, { headers }),
                     fetch(`${process.env.NEXT_PUBLIC_API_URL}/startups`),
                     fetch(`${process.env.NEXT_PUBLIC_API_URL}/protecoes`),
                     fetch(`${process.env.NEXT_PUBLIC_API_URL}/laboratorios`)
@@ -140,7 +142,7 @@ function EditarPessoaForm() {
             if (token) headers.append("Authorization", `Bearer ${token}`);
             if (pin) headers.append("X-MFA-PIN", pin);
 
-            return fetch(`${process.env.NEXT_PUBLIC_API_URL}/pessoas/${id}`, {
+            return apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/pessoas/${id}`, {
                 method: "PUT",
                 headers: headers,
                 body: JSON.stringify(formData)
