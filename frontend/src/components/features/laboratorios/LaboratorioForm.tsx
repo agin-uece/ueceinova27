@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Info, MapPin, ImageIcon, Clock, Check, Save, Loader2, Globe, Layers } from "lucide-react";
+import { Info, MapPin, ImageIcon, Clock, Check, Save, Loader2, Globe, Layers, AlertCircle } from "lucide-react";
 import { FormGroup } from "@/components/ui/FormGroup";
 
 const NATUREZA_OPCOES = ["ENSINO", "PESQUISA", "EXTENSAO"];
@@ -38,7 +38,6 @@ export function LaboratorioForm({ initialData, onSubmit, isLoading }: Laboratori
 
     const tagsIniciais = initialData?.tags ? initialData.tags.join(", ") : "";
 
-    // Extrai apenas HH:mm seja de "HH:mm:ss" ou de um ISO "YYYY-MM-DDTHH:mm:ss"
     const formatTimeForInput = (timeStr?: string) => {
         if (!timeStr) return "";
         if (timeStr.includes("T")) {
@@ -73,6 +72,20 @@ export function LaboratorioForm({ initialData, onSubmit, isLoading }: Laboratori
         qtdPosDoc: initialData?.qtdPosDoc ?? 0,
     });
 
+    // Validação em tempo real: bloqueia abertura >= fechamento quando ambos estão preenchidos
+    const horarioInvalido = Boolean(
+        formData.horarioAbertura &&
+        formData.horarioFechamento &&
+        formData.horarioAbertura >= formData.horarioFechamento
+    );
+
+    const horarioIncompleto = Boolean(
+        (formData.horarioAbertura && !formData.horarioFechamento) ||
+        (!formData.horarioAbertura && formData.horarioFechamento)
+    );
+
+    const erroHorario = horarioInvalido || horarioIncompleto;
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value, type } = e.target;
 
@@ -93,6 +106,11 @@ export function LaboratorioForm({ initialData, onSubmit, isLoading }: Laboratori
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Impede o envio caso os horários estejam inconsistentes
+        if (horarioInvalido || erroHorario) {
+            return;
+        }
 
         let localizacaoFinal = formData.localizacaoBase;
         if (formData.localizacaoComplemento.trim() !== "") {
@@ -331,22 +349,55 @@ export function LaboratorioForm({ initialData, onSubmit, isLoading }: Laboratori
                     </FormGroup>
                 </section>
 
-                <section className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 space-y-4">
+                <section className={`bg-white p-6 rounded-3xl shadow-sm border space-y-4 transition-colors ${erroHorario ? "border-red-300" : "border-gray-100"}`}>
                     <div className="flex items-center gap-2 border-b pb-3">
-                        <Clock size={18} className="text-blue-500" />
+                        <Clock size={18} className={erroHorario ? "text-red-500" : "text-blue-500"} />
                         <h2 className="font-bold text-gray-800 uppercase text-xs tracking-widest">Disponibilidade</h2>
                     </div>
                     <div className="space-y-4">
-                        <FormGroup label="Horário de Abertura">
-                            <input type="time" name="horarioAbertura" value={formData.horarioAbertura} onChange={handleChange} className="w-full px-4 py-2.5 rounded-xl border border-gray-100 bg-gray-50 outline-none text-sm text-gray-700" />
+                        <FormGroup label={formData.horarioFechamento ? "Horário de Abertura *" : "Horário de Abertura"}>
+                            <input
+                                type="time"
+                                name="horarioAbertura"
+                                required={Boolean(formData.horarioFechamento)}
+                                value={formData.horarioAbertura}
+                                onChange={handleChange}
+                                className={`w-full px-4 py-2.5 rounded-xl border outline-none text-sm text-gray-700 ${erroHorario ? "border-red-300 bg-red-50/50" : "border-gray-100 bg-gray-50"}`}
+                            />
                         </FormGroup>
-                        <FormGroup label="Horário de Fechamento">
-                            <input type="time" name="horarioFechamento" value={formData.horarioFechamento} onChange={handleChange} className="w-full px-4 py-2.5 rounded-xl border border-gray-100 bg-gray-50 outline-none text-sm text-gray-700" />
+                        <FormGroup label={formData.horarioAbertura ? "Horário de Fechamento *" : "Horário de Fechamento"}>
+                            <input
+                                type="time"
+                                name="horarioFechamento"
+                                required={Boolean(formData.horarioAbertura)}
+                                min={formData.horarioAbertura || undefined}
+                                value={formData.horarioFechamento}
+                                onChange={handleChange}
+                                className={`w-full px-4 py-2.5 rounded-xl border outline-none text-sm text-gray-700 ${erroHorario ? "border-red-300 bg-red-50/50" : "border-gray-100 bg-gray-50"}`}
+                            />
                         </FormGroup>
+
+                        {horarioInvalido && (
+                            <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
+                                <AlertCircle size={16} className="shrink-0 mt-0.5 text-red-600" />
+                                <span>O horário de abertura deve ser anterior ao horário de fechamento.</span>
+                            </div>
+                        )}
+
+                        {horarioIncompleto && (
+                            <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
+                                <AlertCircle size={16} className="shrink-0 mt-0.5 text-red-600" />
+                                <span>Preencha tanto o horário de abertura quanto o de fechamento.</span>
+                            </div>
+                        )}
                     </div>
                 </section>
 
-                <button type="submit" disabled={isLoading} className="w-full py-5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-3xl shadow-xl shadow-blue-100 transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-xs border border-transparent disabled:opacity-50">
+                <button
+                    type="submit"
+                    disabled={isLoading || erroHorario}
+                    className="w-full py-5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-3xl shadow-xl shadow-blue-100 transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-xs border border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                >
                     {isLoading ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
                     {initialData ? "Atualizar Laboratório" : "Salvar Laboratório"}
                 </button>

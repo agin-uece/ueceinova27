@@ -20,8 +20,7 @@ export default function CadastroJogoPage() {
 
         const result = await execute((pin?: string) => {
             const token = localStorage.getItem("userToken");
-            const payload = { ...formData, engineId: formData?.engineId ? Number(formData.engineId) : null };
-            
+
             return fetch(`${process.env.NEXT_PUBLIC_API_URL}/jogos`, {
                 method: "POST",
                 headers: {
@@ -29,7 +28,7 @@ export default function CadastroJogoPage() {
                     ...(token && { "Authorization": `Bearer ${token}` }),
                     ...(pin && { "X-MFA-PIN": pin }),
                 },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(formData)
             });
         });
 

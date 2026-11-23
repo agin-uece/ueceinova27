@@ -115,7 +115,8 @@ export interface Jogo {
     faixaEtaria?: string;
     plataforma: string;
     urlFoto: string | null;
-    engine: string;
+    engine: string | null;
+    linguagens?: string[];
     status?: string;
 }
 
@@ -139,8 +140,8 @@ export interface JogoFormData {
     dataLancamento: string;
     linkDownload: string;
     site: string;
-    engineId: string | number;
-    linguagensIds: number[];
+    engine: string;
+    linguagens: string[];
     tipoJogo: string;
     anoDesenvolvimento: string;
     estagioDesenvolvimento: string;

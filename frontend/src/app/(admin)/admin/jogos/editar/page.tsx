@@ -4,23 +4,12 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Gamepad2, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { JogoForm } from "@/components/features/jogos/JogoForm";
-import { Engine, Jogo, Linguagem } from "@/types";
+import { Jogo } from "@/types";
 import { useSecureAction } from "@/hooks/useSecureAction";
 
-type JogoApi = Omit<Jogo, "engineId" | "linguagens" | "engine"> & {
-    linguagens?: (string | number | Linguagem)[];
-    engineId?: number | null;
-    engine?: string;
-};
-
-type JogoEdicao = Omit<JogoApi, "engineId"> & {
-    linguagensIds: number[];
-    engineId: number | string;
-};
-
-type JogoFormData = {
-    engineId?: number | string | null;
-    [campo: string]: unknown;
+type JogoEdicao = Omit<Jogo, "engine" | "linguagens"> & {
+    engine: string;
+    linguagens: string[];
 };
 
 function EditarJogoForm() {
@@ -28,7 +17,7 @@ function EditarJogoForm() {
     const searchParams = useSearchParams();
     const jogoId = searchParams.get("id");
     const { execute, isProcessing: isSaving } = useSecureAction();
-    
+
     const [jogo, setJogo] = useState<JogoEdicao | null>(null);
     const [isLoadingPage, setIsLoadingPage] = useState(true);
 
@@ -41,55 +30,27 @@ function EditarJogoForm() {
             return;
         }
 
-        const carregarJogoEConverterIds = async () => {
+        const carregarJogo = async () => {
             try {
                 const token = localStorage.getItem("userToken");
-
                 const headers = new Headers();
                 if (token) {
                     headers.append("Authorization", `Bearer ${token}`);
                 }
 
-                const [resJogo, resLinguagens, resEngines] = await Promise.all([
-                    fetch(`${process.env.NEXT_PUBLIC_API_URL}/jogos/${jogoId}`, { headers }),
-                    fetch(`${process.env.NEXT_PUBLIC_API_URL}/linguagens`),
-                    fetch(`${process.env.NEXT_PUBLIC_API_URL}/engines`)
-                ]);
+                const resJogo = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/jogos/${jogoId}`, { headers });
 
                 if (resJogo.ok) {
-                    const dadosJogo: JogoApi = await resJogo.json();
-                    const listaLinguagens: Linguagem[] = await resLinguagens.json();
-                    const listaEngines: Engine[] = await resEngines.json();
-
-                    let linguagensIds: number[] = [];
-                    if (dadosJogo.linguagens) {
-                        linguagensIds = (dadosJogo.linguagens as (string | number | Linguagem)[])
-                            .map((item) => {
-                                if (typeof item === "string") {
-                                    const found = listaLinguagens.find(
-                                        (l) => l.nome.toUpperCase() === item.toUpperCase()
-                                    );
-                                    return found ? found.id : null;
-                                }
-                                if (typeof item === "number") return item;
-                                return item.id;
-                            })
-                            .filter((id): id is number => Boolean(id));
-                    }
-
-                    let engineId: number | string = dadosJogo.engineId || "";
-                    const nomeEngine: unknown = dadosJogo.engine;
-                    if (!engineId && typeof nomeEngine === "string") {
-                        const foundEng = listaEngines.find(
-                            (e) => e.nome.toUpperCase() === nomeEngine.toUpperCase()
-                        );
-                        if (foundEng) engineId = foundEng.id;
-                    }
+                    const dadosJogo = await resJogo.json();
 
                     setJogo({
                         ...dadosJogo,
-                        linguagensIds,
-                        engineId
+                        engine: dadosJogo.engine || "",
+                        linguagens: Array.isArray(dadosJogo.linguagens)
+                            ? dadosJogo.linguagens.map((item: any) =>
+                                typeof item === "string" ? item : item?.nome
+                              ).filter(Boolean)
+                            : [],
                     });
                 }
             } catch (error) {
@@ -99,15 +60,14 @@ function EditarJogoForm() {
             }
         };
 
-        carregarJogoEConverterIds();
+        carregarJogo();
     }, [jogoId, router]);
 
-    const handleUpdate = async (formData: JogoFormData) => {
+    const handleUpdate = async (formData: Record<string, unknown>) => {
         setFeedback(null);
 
         const result = await execute((pin?: string) => {
             const token = localStorage.getItem("userToken");
-            const payload = { ...formData, engineId: formData.engineId ? Number(formData.engineId) : null };
             return fetch(`${process.env.NEXT_PUBLIC_API_URL}/jogos/${jogoId}`, {
                 method: "PUT",
                 headers: {
@@ -115,7 +75,7 @@ function EditarJogoForm() {
                     ...(token && { "Authorization": `Bearer ${token}` }),
                     ...(pin && { "X-MFA-PIN": pin }),
                 },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(formData)
             });
         });
 
@@ -126,9 +86,17 @@ function EditarJogoForm() {
             });
             window.scrollTo({ top: 0, behavior: "smooth" });
         } else if (result.error) {
+            let mensagem = result.error;
+            try {
+                const erroJson = JSON.parse(result.error);
+                mensagem = erroJson.erro || erroJson.message || result.error;
+            } catch {}
+
             setFeedback({
                 type: "error",
-                message: result.error
+                message: typeof mensagem === "string"
+                    ? mensagem
+                    : "Ocorreu um erro ao tentar atualizar o jogo."
             });
             window.scrollTo({ top: 0, behavior: "smooth" });
         }
