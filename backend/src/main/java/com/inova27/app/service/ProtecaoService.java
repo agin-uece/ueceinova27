@@ -23,6 +23,7 @@ import java.util.List;
 public class ProtecaoService {
 
     private static final String ENTIDADE_PROTECAO = "Protecao";
+    private static final String MSG_COD_ID_EM_USO = "Já existe uma proteção com este Código ID.";
 
     private final ProtecaoRepository repository;
     private final JogoRepository jogoRepository;
@@ -38,7 +39,7 @@ public class ProtecaoService {
         }
 
         if (dto.codId() != null && repository.existsByCodId(dto.codId())) {
-            throw new BusinessException("Já existe uma proteção com este Código ID.");
+            throw new BusinessException(MSG_COD_ID_EM_USO);
         }
 
         Protecao protecao = new Protecao();
@@ -109,6 +110,11 @@ public class ProtecaoService {
     public ProtecaoResponseDTO atualizar(Long id, ProtecaoUpdateDTO dto, Long usuarioId) {
         Protecao protecao = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Proteção não encontrada para atualização."));
+
+        if (dto.codId() != null && !dto.codId().isBlank()
+                && repository.existsByCodIdAndIdNot(dto.codId(), id)) {
+            throw new BusinessException(MSG_COD_ID_EM_USO);
+        }
 
         mapearCamposAtualizacao(protecao, dto);
 

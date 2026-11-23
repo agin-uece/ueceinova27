@@ -49,12 +49,13 @@ public class JogoService {
         if (dto.nome() == null || dto.nome().isBlank()) {
             throw new IllegalArgumentException("O nome do jogo é obrigatório.");
         }
-        if (repository.existsByNome(dto.nome())) {
-            throw new JogoJaExisteException(dto.nome());
+        String nomeNormalizado = dto.nome().trim();
+        if (repository.existsByNomeIgnoreCase(nomeNormalizado)) {
+            throw new JogoJaExisteException(nomeNormalizado);
         }
 
         Jogo jogo = new Jogo();
-        jogo.setNome(dto.nome());
+        jogo.setNome(nomeNormalizado);
         jogo.setDescricao(dto.descricao());
         jogo.setGenero(dto.genero());
         jogo.setPlataforma(dto.plataforma());
@@ -179,6 +180,11 @@ public class JogoService {
 
         verificarPermissaoEdicao(jogo, usuario);
 
+        if (dto.nome() != null && !dto.nome().isBlank()
+                && repository.existsByNomeIgnoreCaseAndIdNot(dto.nome().trim(), id)) {
+            throw new JogoJaExisteException(dto.nome().trim());
+        }
+
         if (!isAdmin(usuario)) {
             solicitacaoService.registrarSolicitacao(
                     TipoEntidade.JOGO, id, TipoAcao.EDICAO, dto, usuario.getId());
@@ -252,7 +258,7 @@ public class JogoService {
 
     // 🔥 DIVISÃO 1: Apenas os atributos básicos
     private void aplicarAtributosBasicos(Jogo jogo, JogoUpdateDTO dto) {
-        if (dto.nome() != null && !dto.nome().isBlank()) jogo.setNome(dto.nome());
+        if (dto.nome() != null && !dto.nome().isBlank()) jogo.setNome(dto.nome().trim());
         if (dto.descricao() != null) jogo.setDescricao(dto.descricao());
         if (dto.genero() != null) jogo.setGenero(dto.genero());
         if (dto.plataforma() != null) jogo.setPlataforma(dto.plataforma());

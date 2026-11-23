@@ -160,6 +160,47 @@ class LaboratorioServiceTest {
 
             verify(solicitacaoService).registrarSolicitacao(eq(TipoEntidade.LABORATORIO), eq(10L), eq(TipoAcao.EDICAO), any(), eq(2L));
         }
+
+        @Test
+        @DisplayName("Admin não deve conseguir atualizar nome para um já existente em outro laboratório")
+        void adminNaoAtualizaParaNomeDuplicado() {
+            LaboratorioUpdateDTO dto = new LaboratorioUpdateDTO(" Larces ", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+            when(repository.findById(10L)).thenReturn(Optional.of(labPadrao));
+            when(repository.existsByNomeIgnoreCaseAndIdNot("Larces", 10L)).thenReturn(true);
+
+            assertThatThrownBy(() -> laboratorioService.atualizar(10L, dto, admin))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessage("Já existe um laboratório com esse nome");
+
+            verify(repository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Pesquisador não deve criar solicitação de edição com nome já existente em outro laboratório")
+        void donoNaoSolicitaEdicaoComNomeDuplicado() {
+            LaboratorioUpdateDTO dto = new LaboratorioUpdateDTO("Larces", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+            when(repository.findById(10L)).thenReturn(Optional.of(labPadrao));
+            when(repository.existsByNomeIgnoreCaseAndIdNot("Larces", 10L)).thenReturn(true);
+
+            assertThatThrownBy(() -> laboratorioService.atualizar(10L, dto, pesquisador))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessage("Já existe um laboratório com esse nome");
+
+            verify(solicitacaoService, never()).registrarSolicitacao(any(), any(), any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("Admin deve conseguir atualizar mantendo o próprio nome")
+        void adminAtualizaMantendoProprioNome() {
+            LaboratorioUpdateDTO dto = new LaboratorioUpdateDTO("Lab de IA", "Nova desc", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+            when(repository.findById(10L)).thenReturn(Optional.of(labPadrao));
+            when(repository.existsByNomeIgnoreCaseAndIdNot("Lab de IA", 10L)).thenReturn(false);
+            when(repository.save(any())).thenReturn(labPadrao);
+
+            laboratorioService.atualizar(10L, dto, admin);
+
+            verify(repository).save(labPadrao);
+        }
     }
 
     @Nested

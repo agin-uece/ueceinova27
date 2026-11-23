@@ -10,6 +10,7 @@ import java.util.List;
 @Repository
 public interface ProtecaoRepository extends JpaRepository<Protecao, Long> {
     boolean existsByCodId(String codId);
+    boolean existsByCodIdAndIdNot(String codId, Long id);
 
     // Proteções ativas que não aparecem na busca semântica (ex.: inseridas direto por SQL)
     @Query(value = """

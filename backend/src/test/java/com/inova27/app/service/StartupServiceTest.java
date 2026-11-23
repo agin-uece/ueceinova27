@@ -77,7 +77,7 @@ class StartupServiceTest {
         @Test
         @DisplayName("Cadastro com CNPJ já usado por outra startup: 409 (ConflitoException)")
         void cadastroComCnpjDuplicado() {
-            when(repository.existsByNome("Startup Y")).thenReturn(false);
+            when(repository.existsByNomeIgnoreCase("Startup Y")).thenReturn(false);
             when(repository.existsByCnpj("12ABC34501DE35")).thenReturn(true);
 
             // a máscara é removida no DTO: a checagem compara o valor normalizado
@@ -90,7 +90,7 @@ class StartupServiceTest {
         @Test
         @DisplayName("Cadastro com CNPJ novo grava o valor normalizado")
         void cadastroGravaNormalizado() {
-            when(repository.existsByNome("Startup Y")).thenReturn(false);
+            when(repository.existsByNomeIgnoreCase("Startup Y")).thenReturn(false);
             when(repository.existsByCnpj("12ABC34501DE35")).thenReturn(false);
             when(repository.save(any(Startup.class))).thenAnswer(i -> i.getArgument(0));
 
@@ -131,7 +131,7 @@ class StartupServiceTest {
         @Test
         @DisplayName("Deve criar startup com sucesso")
         void deveCriarStartupComSucesso() {
-            when(repository.existsByNome("Startup X")).thenReturn(false);
+            when(repository.existsByNomeIgnoreCase("Startup X")).thenReturn(false);
             when(repository.save(any(Startup.class))).thenReturn(startupPadrao);
             when(mapper.fromStartup(any())).thenReturn(null);
 
@@ -162,7 +162,7 @@ class StartupServiceTest {
         @Test
         @DisplayName("Deve lançar exceção quando nome já existe")
         void deveLancarExcecaoQuandoNomeJaExiste() {
-            when(repository.existsByNome("Startup X")).thenReturn(true);
+            when(repository.existsByNomeIgnoreCase("Startup X")).thenReturn(true);
 
             assertThatThrownBy(() -> startupService.criar(dtoCreate("Startup X"), 1L))
                     .isInstanceOf(IllegalArgumentException.class)
@@ -248,6 +248,32 @@ class StartupServiceTest {
             assertThatThrownBy(() -> startupService.atualizar(99L, dtoUpdate("Nome"), 1L))
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Startup não encontrada");
+        }
+
+        @Test
+        @DisplayName("Deve lançar exceção ao atualizar nome para um já existente em outra startup")
+        void deveLancarExcecaoAoAtualizarParaNomeDuplicado() {
+            when(repository.findById(1L)).thenReturn(Optional.of(startupPadrao));
+            when(repository.existsByNomeIgnoreCaseAndIdNot("Startup Existente", 1L)).thenReturn(true);
+
+            assertThatThrownBy(() -> startupService.atualizar(1L, dtoUpdate(" Startup Existente "), 1L))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessage("Já existe uma startup cadastrada com este nome.");
+
+            verify(repository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Deve permitir atualizar mantendo o próprio nome")
+        void devePermitirAtualizarMantendoProprioNome() {
+            when(repository.findById(1L)).thenReturn(Optional.of(startupPadrao));
+            when(repository.existsByNomeIgnoreCaseAndIdNot("Startup X", 1L)).thenReturn(false);
+            when(repository.save(any())).thenReturn(startupPadrao);
+
+            StartupResponseDTO resultado = startupService.atualizar(1L, dtoUpdate("Startup X"), 1L);
+
+            assertThat(resultado).isNotNull();
+            verify(repository).save(startupPadrao);
         }
     }
 
