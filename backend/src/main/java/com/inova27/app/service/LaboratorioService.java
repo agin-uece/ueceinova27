@@ -30,6 +30,7 @@ public class LaboratorioService {
     // 🔥 CONSTANTES CRIADAS PARA RESOLVER OS AVISOS DO SONARQUBE
     private static final String ENTIDADE_LABORATORIO = "Laboratorio";
     private static final String MSG_LABORATORIO_NAO_ENCONTRADO = "Laboratório não encontrado";
+    private static final String MSG_NOME_EM_USO = "Já existe um laboratório com esse nome";
 
     private final LaboratorioRepository repository;
     private final DocumentoSemanticoMapper mapper;
@@ -87,10 +88,11 @@ public class LaboratorioService {
     @Transactional
     public LaboratorioResponseDTO criar(LaboratorioCreateDTO dto, Usuario usuario) {
         if (dto.nome() == null || dto.nome().isBlank()) throw new IllegalArgumentException("Nome é obrigatório");
-        if (repository.existsByNome(dto.nome())) throw new IllegalArgumentException("Já existe um laboratório com esse nome");
+        String nomeNormalizado = dto.nome().trim();
+        if (repository.existsByNomeIgnoreCase(nomeNormalizado)) throw new IllegalArgumentException(MSG_NOME_EM_USO);
 
         Laboratorio lab = new Laboratorio();
-        lab.setNome(dto.nome());
+        lab.setNome(nomeNormalizado);
         lab.setDescricao(dto.descricao());
         lab.setCoordenacao(dto.coordenacao());
         lab.setArea(dto.area());
@@ -169,6 +171,11 @@ public class LaboratorioService {
             throw new UnauthorizedActionException("Você não tem permissão para atualizar este laboratório.");
         }
 
+        if (dto.nome() != null && !dto.nome().isBlank()
+                && repository.existsByNomeIgnoreCaseAndIdNot(dto.nome().trim(), id)) {
+            throw new IllegalArgumentException(MSG_NOME_EM_USO);
+        }
+
         if (!isAdmin) {
             solicitacaoService.registrarSolicitacao(
                     TipoEntidade.LABORATORIO,
@@ -203,7 +210,7 @@ public class LaboratorioService {
 
     // 🔥 DIVISÃO 1: Apenas os atributos de texto básicos
     private void aplicarTextosBasicos(Laboratorio lab, LaboratorioUpdateDTO dto) {
-        if (dto.nome() != null && !dto.nome().isBlank()) lab.setNome(dto.nome());
+        if (dto.nome() != null && !dto.nome().isBlank()) lab.setNome(dto.nome().trim());
         if (dto.descricao() != null) lab.setDescricao(dto.descricao());
         if (dto.coordenacao() != null) lab.setCoordenacao(dto.coordenacao());
         if (dto.area() != null) lab.setArea(dto.area());

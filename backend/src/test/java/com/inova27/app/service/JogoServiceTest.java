@@ -79,7 +79,7 @@ class JogoServiceTest {
         void deveCriarPendenteSeUsuarioComum() {
             JogoCreateDTO dto = new JogoCreateDTO("Novo Jogo", "Desc", null, null, null, null, null, null, null, null, null, null, null, null, null);
 
-            when(repository.existsByNome("Novo Jogo")).thenReturn(false);
+            when(repository.existsByNomeIgnoreCase("Novo Jogo")).thenReturn(false);
             when(repository.save(any(Jogo.class))).thenAnswer(i -> {
                 Jogo j = i.getArgument(0);
                 j.setId(11L);
@@ -99,7 +99,7 @@ class JogoServiceTest {
         void deveCriarAprovadoSeAdmin() {
             JogoCreateDTO dto = new JogoCreateDTO("Super Jogo", "Desc", null, null, null, null, null, null, null, null, null, null, null, null, null);
 
-            when(repository.existsByNome("Super Jogo")).thenReturn(false);
+            when(repository.existsByNomeIgnoreCase("Super Jogo")).thenReturn(false);
             when(repository.save(any(Jogo.class))).thenAnswer(i -> {
                 Jogo j = i.getArgument(0);
                 j.setId(12L);
@@ -118,7 +118,7 @@ class JogoServiceTest {
         @DisplayName("Deve lançar JogoJaExisteException quando nome já existe")
         void deveLancarExcecaoSeNomeJaExiste() {
             JogoCreateDTO dto = new JogoCreateDTO("Tetris", null, null, null, null, null, null, null, null, null, null, null, null, null, null);
-            when(repository.existsByNome("Tetris")).thenReturn(true);
+            when(repository.existsByNomeIgnoreCase("Tetris")).thenReturn(true);
 
             assertThatThrownBy(() -> jogoService.criar(dto, admin))
                     .isInstanceOf(JogoJaExisteException.class);
@@ -133,7 +133,7 @@ class JogoServiceTest {
                     null, null, null, null, null, null
             );
 
-            when(repository.existsByNome("Jogo Godot")).thenReturn(false);
+            when(repository.existsByNomeIgnoreCase("Jogo Godot")).thenReturn(false);
             when(repository.save(any(Jogo.class))).thenAnswer(i -> {
                 Jogo j = i.getArgument(0);
                 j.setId(15L);
@@ -237,6 +237,32 @@ class JogoServiceTest {
 
             assertThatThrownBy(() -> jogoService.atualizar(10L, dto, outroUsuario))
                     .isInstanceOf(PermissaoNegadaException.class);
+        }
+
+        @Test
+        @DisplayName("Deve lançar JogoJaExisteException ao atualizar para nome de outro jogo (Admin)")
+        void deveLancarExcecaoAoAtualizarParaNomeDuplicadoAdmin() {
+            JogoUpdateDTO dto = new JogoUpdateDTO(" Tetris ", null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+            when(repository.findById(10L)).thenReturn(Optional.of(jogoPadrao));
+            when(repository.existsByNomeIgnoreCaseAndIdNot("Tetris", 10L)).thenReturn(true);
+
+            assertThatThrownBy(() -> jogoService.atualizar(10L, dto, admin))
+                    .isInstanceOf(JogoJaExisteException.class);
+
+            verify(repository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Deve lançar JogoJaExisteException ao solicitar edição com nome de outro jogo (Owner)")
+        void deveLancarExcecaoAoSolicitarEdicaoComNomeDuplicado() {
+            JogoUpdateDTO dto = new JogoUpdateDTO("Tetris", null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+            when(repository.findById(10L)).thenReturn(Optional.of(jogoPadrao));
+            when(repository.existsByNomeIgnoreCaseAndIdNot("Tetris", 10L)).thenReturn(true);
+
+            assertThatThrownBy(() -> jogoService.atualizar(10L, dto, professor))
+                    .isInstanceOf(JogoJaExisteException.class);
+
+            verify(solicitacaoService, never()).registrarSolicitacao(any(), any(), any(), any(), any());
         }
     }
 

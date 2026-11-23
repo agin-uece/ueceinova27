@@ -11,7 +11,9 @@ import java.util.List;
 @Repository
 public interface LaboratorioRepository extends JpaRepository<Laboratorio, Long>, JpaSpecificationExecutor<Laboratorio> {
 
-    boolean existsByNome(String nome);
+    boolean existsByNomeIgnoreCase(String nome);
+
+    boolean existsByNomeIgnoreCaseAndIdNot(String nome, Long id);
 
     List<Laboratorio> findByStatus(StatusValidacao status);
 

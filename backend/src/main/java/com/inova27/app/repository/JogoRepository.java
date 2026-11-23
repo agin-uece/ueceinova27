@@ -12,7 +12,8 @@ import java.util.List;
 
 @Repository
 public interface JogoRepository extends JpaRepository<Jogo, Long>, JpaSpecificationExecutor<Jogo> {
-    boolean existsByNome(String nome);
+    boolean existsByNomeIgnoreCase(String nome);
+    boolean existsByNomeIgnoreCaseAndIdNot(String nome, Long id);
     List<Jogo> findByStatus(StatusValidacao status);
     Page<Jogo> findByUserInclusaoId(Long usuarioId, Pageable pageable);
 }
