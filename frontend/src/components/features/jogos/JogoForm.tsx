@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Info, ImageIcon, Layers, Globe, Save, Loader2 } from "lucide-react";
-import { Engine, Linguagem } from "@/types";
+import { useState } from "react";
+import { Info, ImageIcon, Layers, Globe, Save, Loader2, Plus, X } from "lucide-react";
 import { FormGroup } from "@/components/ui/FormGroup";
 
 const GENERO_OPCOES = ["ACAO", "AVENTURA", "RPG", "ESTRATEGIA", "ESPORTE", "SIMULACAO"];
@@ -18,11 +17,14 @@ interface JogoFormProps {
 }
 
 export function JogoForm({ initialData, onSubmit, isLoading }: JogoFormProps) {
-    const [engines, setEngines] = useState<Engine[]>([]);
-    const [linguagens, setLinguagens] = useState<Linguagem[]>([]);
     const [criadoresStr, setCriadoresStr] = useState<string>(
         initialData?.criadores?.join(", ") || ""
     );
+
+    const [linguagens, setLinguagens] = useState<string[]>(
+        Array.isArray(initialData?.linguagens) ? initialData.linguagens : []
+    );
+    const [linguagemInput, setLinguagemInput] = useState("");
 
     const [formData, setFormData] = useState({
         nome: initialData?.nome || "",
@@ -32,8 +34,7 @@ export function JogoForm({ initialData, onSubmit, isLoading }: JogoFormProps) {
         dataLancamento: initialData?.dataLancamento || "",
         linkDownload: initialData?.linkDownload || "",
         site: initialData?.site || "",
-        engineId: initialData?.engineId || "",
-        linguagensIds: initialData?.linguagensIds || [] as number[],
+        engine: initialData?.engine || "",
         tipoJogo: initialData?.tipoJogo || "",
         anoDesenvolvimento: initialData?.anoDesenvolvimento || "",
         estagioDesenvolvimento: initialData?.estagioDesenvolvimento || "",
@@ -41,39 +42,61 @@ export function JogoForm({ initialData, onSubmit, isLoading }: JogoFormProps) {
         faixaEtaria: initialData?.faixaEtaria || "",
     });
 
-    useEffect(() => {
-        const carregarAuxiliares = async () => {
-            const [resE, resL] = await Promise.all([
-                fetch(`${process.env.NEXT_PUBLIC_API_URL}/engines`),
-                fetch(`${process.env.NEXT_PUBLIC_API_URL}/linguagens`)
-            ]);
-            if (resE.ok) setEngines(await resE.json());
-            if (resL.ok) setLinguagens(await resL.json());
-        };
-        carregarAuxiliares();
-    }, []);
-
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    const toggleLinguagem = (id: number) => {
-        const selecionados = formData.linguagensIds.includes(id)
-            ? formData.linguagensIds.filter((item: number) => item !== id)
-            : [...formData.linguagensIds, id];
-        setFormData({ ...formData, linguagensIds: selecionados });
+    const adicionarLinguagem = (valorBruto?: string) => {
+        const texto = valorBruto ?? linguagemInput;
+        const novas = texto
+            .split(",")
+            .map((l) => l.trim())
+            .filter((l) => l.length > 0);
+
+        if (novas.length === 0) return;
+
+        setLinguagens((prev) => {
+            const existentesLower = new Set(prev.map((item) => item.toLowerCase()));
+            const unicas = novas.filter((item) => !existentesLower.has(item.toLowerCase()));
+            return [...prev, ...unicas];
+        });
+        setLinguagemInput("");
+    };
+
+    const handleLinguagemKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Enter" || e.key === ",") {
+            e.preventDefault();
+            adicionarLinguagem();
+        }
+    };
+
+    const removerLinguagem = (lingParaRemover: string) => {
+        setLinguagens((prev) => prev.filter((l) => l !== lingParaRemover));
     };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
+        // Caso o usuário tenha digitado algo no input de linguagem e clicado direto em Salvar sem dar Enter
+        const pendentes = linguagemInput
+            .split(",")
+            .map((l) => l.trim())
+            .filter((l) => l.length > 0);
+
+        const existentesLower = new Set(linguagens.map((item) => item.toLowerCase()));
+        const linguagensFinais = [
+            ...linguagens,
+            ...pendentes.filter((item) => !existentesLower.has(item.toLowerCase())),
+        ];
+
         const payloadLimpo = {
             ...Object.fromEntries(
                 Object.entries(formData).map(([chave, valor]) => [
                     chave,
-                    valor === "" ? null : valor
+                    typeof valor === "string" && valor.trim() === "" ? null : valor
                 ])
             ),
+            linguagens: linguagensFinais,
             criadores: criadoresStr
                 .split(",")
                 .map((c: string) => c.trim())
@@ -173,30 +196,62 @@ export function JogoForm({ initialData, onSubmit, isLoading }: JogoFormProps) {
                             </select>
                         </FormGroup>
                         <FormGroup label="Engine Utilizada">
-                            <select name="engineId" value={formData.engineId} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 outline-none">
-                                <option value="">Selecione...</option>
-                                {engines.map(eng => <option key={eng.id} value={eng.id}>{eng.nome}</option>)}
-                            </select>
+                            <input
+                                type="text"
+                                name="engine"
+                                maxLength={100}
+                                value={formData.engine}
+                                onChange={handleChange}
+                                className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                                placeholder="Ex: Godot, Unity, Unreal Engine..."
+                            />
                         </FormGroup>
                     </div>
 
-                    <div className="pt-4">
-                        <label className="block text-xs font-bold text-gray-400 uppercase mb-3">Linguagens de Programação</label>
-                        <div className="flex flex-wrap gap-2">
-                            {linguagens.map((ling) => {
-                                const selected = formData.linguagensIds.includes(ling.id);
-                                return (
-                                    <button
-                                        key={ling.id}
-                                        type="button"
-                                        onClick={() => toggleLinguagem(ling.id)}
-                                        className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-tighter border transition-all ${selected ? "bg-orange-500 border-orange-500 text-white" : "bg-gray-50 border-gray-100 text-gray-400 hover:border-orange-200"}`}
-                                    >
-                                        {selected && "✓ "}{ling.nome}
-                                    </button>
-                                );
-                            })}
+                    <div className="pt-4 space-y-3">
+                        <label className="block text-xs font-bold text-gray-400 uppercase">
+                            Linguagens de Programação
+                        </label>
+
+                        <div className="flex gap-2">
+                            <input
+                                type="text"
+                                value={linguagemInput}
+                                onChange={(e) => setLinguagemInput(e.target.value)}
+                                onKeyDown={handleLinguagemKeyDown}
+                                className="flex-1 px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:ring-2 focus:ring-orange-500 outline-none transition-all text-sm"
+                                placeholder="Ex: GDScript, C#, C++ (pressione Enter ou vírgula)"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => adicionarLinguagem()}
+                                className="px-4 py-3 rounded-xl bg-orange-50 text-orange-600 hover:bg-orange-100 font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-colors border border-orange-200 shrink-0"
+                            >
+                                <Plus size={16} />
+                                Adicionar
+                            </button>
                         </div>
+
+                        {linguagens.length > 0 && (
+                            <div className="flex flex-wrap gap-2 pt-1">
+                                {linguagens.map((ling) => (
+                                    <span
+                                        key={ling}
+                                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-orange-500 text-white shadow-xs"
+                                    >
+                                        {ling}
+                                        <button
+                                            type="button"
+                                            onClick={() => removerLinguagem(ling)}
+                                            className="hover:bg-orange-600 rounded-full p-0.5 transition-colors"
+                                            title={`Remover ${ling}`}
+                                        >
+                                            <X size={13} />
+                                        </button>
+                                    </span>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </section>
             </div>
