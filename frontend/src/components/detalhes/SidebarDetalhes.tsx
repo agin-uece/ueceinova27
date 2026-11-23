@@ -30,10 +30,23 @@ interface SidebarProps {
 }
 
 export const SidebarDetalhes = ({ entidade, data, urlRetorno, nomeJogoVinculado }: SidebarProps) => {
-    const getHorario = () => {
-        if (data.horarioAbertura && data.horarioFechamento) {
-            return `${data.horarioAbertura.split('T')[1]?.substring(0, 5)} às ${data.horarioFechamento.split('T')[1]?.substring(0, 5)}`;
+    const formatarHora = (valor?: string | null) => {
+        if (!valor) return null;
+        if (valor.includes("T")) {
+            return valor.split("T")[1]?.substring(0, 5) ?? null;
         }
+        return valor.substring(0, 5);
+    };
+
+    const getHorario = () => {
+        const abertura = formatarHora(data.horarioAbertura);
+        const fechamento = formatarHora(data.horarioFechamento);
+
+        if (abertura && fechamento) {
+            return `${abertura} às ${fechamento}`;
+        }
+        if (abertura) return `A partir das ${abertura}`;
+        if (fechamento) return `Até às ${fechamento}`;
         return null;
     };
 
