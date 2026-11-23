@@ -1,5 +1,6 @@
 -- 1. Garante que a extensão existe
 CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS unaccent; -- buscas sem diferenciar acentos
 
 -- 2. Cria a tabela exatamente como o seu Entity espera
 CREATE TABLE IF NOT EXISTS busca_semantica (

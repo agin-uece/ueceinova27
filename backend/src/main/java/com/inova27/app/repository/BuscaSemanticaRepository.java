@@ -30,28 +30,68 @@ public interface BuscaSemanticaRepository extends JpaRepository<BuscaSemantica, 
     @Query("DELETE FROM BuscaSemantica b WHERE b.entidade = :entidade AND b.idOrigem = :idOrigem")
     void removerPorEntidadeEIdOrigem(@Param("entidade") String entidade, @Param("idOrigem") Long idOrigem);
 
+    /**
+     * Busca híbrida. Um documento entra se:
+     * - o título for igual ao termo;
+     * - todas as palavras do termo aparecerem no título/texto, mesmo como pedaço de palavra ("chalc" acha "chalcona");
+     * - casar na busca textual do Postgres (palavra inteira, com radical: "diabetico" acha "diabetes");
+     * - ou for semanticamente parecido (embedding).
+     * Título e texto passam por unaccent, porque o termo chega sem acentos (TextoBuscaUtils.normalizar).
+     * Ordem: título exato; título com palavras começando pelos termos ("vira" -> "ViraVolta");
+     * título contendo os termos ("vira" -> "antiviral"); busca textual; texto contendo os termos; só semântica.
+     */
+    // ponytail: unaccent/to_tsvector calculados por linha (seq scan); com dezenas de milhares de linhas,
+    // guardar o texto normalizado em coluna com índice GIN (pg_trgm / tsvector)
     @Query(value = """
                 WITH parametros AS (
-                    SELECT 
+                    SELECT
                         CAST(:embedding AS vector) AS query_vetor,
-                        LOWER(TRIM(:texto)) AS query_texto,
-                        websearch_to_tsquery('portuguese', :texto) AS query_fts 
+                        :texto AS query_texto,
+                        string_to_array(:texto, ' ') AS query_palavras,
+                        websearch_to_tsquery('portuguese', :texto) AS query_fts
+                ),
+                documentos AS (
+                    SELECT
+                        b.*,
+                        unaccent(LOWER(coalesce(b.titulo, ''))) AS titulo_norm,
+                        unaccent(LOWER(coalesce(b.titulo, '') || ' ' || coalesce(b.texto_completo, ''))) AS texto_norm
+                    FROM busca_semantica b
+                ),
+                avaliados AS (
+                    SELECT
+                        d.*,
+                        p.query_vetor,
+                        d.titulo_norm = p.query_texto AS titulo_igual,
+                        (SELECT bool_and(strpos(' ' || regexp_replace(d.titulo_norm, '[^a-z0-9]+', ' ', 'g'), ' ' || w) > 0)
+                            FROM unnest(p.query_palavras) w) IS TRUE AS titulo_inicio_palavra,
+                        (SELECT bool_and(strpos(d.titulo_norm, w) > 0) FROM unnest(p.query_palavras) w) IS TRUE AS titulo_contem,
+                        (SELECT bool_and(strpos(d.texto_norm, w) > 0) FROM unnest(p.query_palavras) w) IS TRUE AS texto_contem,
+                        to_tsvector('portuguese', d.texto_norm) @@ p.query_fts AS fts
+                    FROM documentos d
+                    CROSS JOIN parametros p
                 )
-                SELECT 
-                    b.entidade,
-                    b.id_origem,
-                    b.titulo,
-                    b.descricao,
-                    1 - (b.embedding <=> p.query_vetor) AS similaridade
-                FROM busca_semantica b
-                CROSS JOIN parametros p
+                SELECT
+                    a.entidade,
+                    a.id_origem,
+                    a.titulo,
+                    a.descricao,
+                    1 - (a.embedding <=> a.query_vetor) AS similaridade
+                FROM avaliados a
                 WHERE
-                    LOWER(b.titulo) = p.query_texto
-                    OR to_tsvector('portuguese', coalesce(b.titulo, '') || ' ' || coalesce(b.texto_completo, '')) @@ p.query_fts
-                    OR 1 - (b.embedding <=> p.query_vetor) > 0.70
-                ORDER BY 
-                    CASE WHEN LOWER(b.titulo) = p.query_texto THEN 0 ELSE 1 END,
-                    b.embedding <=> p.query_vetor ASC
+                    a.titulo_igual
+                    OR a.texto_contem
+                    OR a.fts
+                    OR 1 - (a.embedding <=> a.query_vetor) > 0.70
+                ORDER BY
+                    CASE
+                        WHEN a.titulo_igual THEN 0
+                        WHEN a.titulo_inicio_palavra THEN 1
+                        WHEN a.titulo_contem THEN 2
+                        WHEN a.fts THEN 3
+                        WHEN a.texto_contem THEN 4
+                        ELSE 5
+                    END,
+                    a.embedding <=> a.query_vetor ASC
                 LIMIT 10
             """, nativeQuery = true)
     List<Object[]> buscarCompleto(@Param("embedding") String embedding, @Param("texto") String texto);

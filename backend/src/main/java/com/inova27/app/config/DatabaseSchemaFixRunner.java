@@ -16,6 +16,15 @@ public class DatabaseSchemaFixRunner implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
+        // Usada pelas buscas (TextoBuscaUtils / BuscaSemanticaRepository). O init.sql só roda em volume novo,
+        // então bancos já existentes ganham a extensão aqui. É "trusted": basta permissão CREATE no banco.
+        try {
+            jdbcTemplate.execute("CREATE EXTENSION IF NOT EXISTS unaccent");
+        } catch (Exception e) {
+            log.error("Não foi possível criar a extensão 'unaccent'; as buscas por texto vão falhar até ela existir: {}",
+                    e.getMessage());
+        }
+
         try {
             jdbcTemplate.execute("""
                 ALTER TABLE IF EXISTS laboratorios

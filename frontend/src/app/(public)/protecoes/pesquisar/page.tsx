@@ -56,10 +56,13 @@ export default function PesquisarProtecoesPage() {
 
     // --- FILTRAGEM LOCAL (usando useMemo para performance) ---
     const protecoesFiltradas = useMemo(() => {
+        // Ignora maiúsculas e acentos: "criopreservacao" acha "Criopreservação"
+        const normalizar = (texto: string) => texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+        const busca = normalizar(filtros.buscaGeral);
         return todasProtecoes.filter(p => {
-            const bateBusca = !filtros.buscaGeral ||
-                p.nome.toLowerCase().includes(filtros.buscaGeral.toLowerCase()) ||
-                (p.codId && p.codId.toLowerCase().includes(filtros.buscaGeral.toLowerCase()));
+            const bateBusca = !busca ||
+                normalizar(p.nome).includes(busca) ||
+                (p.codId && normalizar(p.codId).includes(busca));
 
             const bateNatureza = !filtros.natureza || p.natureza === filtros.natureza;
             const bateStatus = !filtros.status || (p.status && p.status.toLowerCase().includes(filtros.status.toLowerCase()));
