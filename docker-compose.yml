@@ -173,6 +173,8 @@ services:
     environment:
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
+      # Chamadas feitas pelo servidor do Next (dentro do container) usam o nome do serviço na rede do Docker
+      API_URL_INTERNA: http://backend-dev:8080
     command: ["npm", "run", "dev", "--", "-H", "0.0.0.0"]
 
   # ===========================================================================
