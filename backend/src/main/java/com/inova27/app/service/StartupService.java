@@ -32,6 +32,7 @@ public class StartupService {
     // 🔥 CONSTANTES CRIADAS PARA RESOLVER OS AVISOS DO SONARQUBE
     private static final String ENTIDADE_STARTUP = "Startup";
     private static final String MSG_STARTUP_NAO_ENCONTRADA = "Startup não encontrada";
+    private static final String MSG_NOME_EM_USO = "Já existe uma startup cadastrada com este nome.";
     private static final String MSG_CNPJ_EM_USO = "Já existe uma startup cadastrada com este CNPJ.";
 
     private final StartupRepository repository;
@@ -52,15 +53,16 @@ public class StartupService {
         if (dto.nome() == null || dto.nome().isBlank()) {
             throw new IllegalArgumentException("O nome da startup é obrigatório.");
         }
-        if (repository.existsByNome(dto.nome())) {
-            throw new IllegalArgumentException("Já existe uma startup cadastrada com este nome.");
+        String nomeNormalizado = dto.nome().trim();
+        if (repository.existsByNomeIgnoreCase(nomeNormalizado)) {
+            throw new IllegalArgumentException(MSG_NOME_EM_USO);
         }
         if (dto.cnpj() != null && repository.existsByCnpj(dto.cnpj())) {
             throw new ConflitoException(MSG_CNPJ_EM_USO);
         }
 
         Startup startup = new Startup();
-        startup.setNome(dto.nome());
+        startup.setNome(nomeNormalizado);
         startup.setDescricao(dto.descricao());
         startup.setArea(dto.area());
         startup.setDataFundacao(dto.dataFundacao());
@@ -112,7 +114,13 @@ public class StartupService {
         Startup startup = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(MSG_STARTUP_NAO_ENCONTRADA + " para atualização."));
 
-        if (dto.nome() != null && !dto.nome().isBlank()) startup.setNome(dto.nome());
+        if (dto.nome() != null && !dto.nome().isBlank()) {
+            String nomeNormalizado = dto.nome().trim();
+            if (repository.existsByNomeIgnoreCaseAndIdNot(nomeNormalizado, id)) {
+                throw new IllegalArgumentException(MSG_NOME_EM_USO);
+            }
+            startup.setNome(nomeNormalizado);
+        }
         if (dto.descricao() != null) startup.setDescricao(dto.descricao());
         if (dto.area() != null) startup.setArea(dto.area());
         if (dto.dataFundacao() != null) startup.setDataFundacao(dto.dataFundacao());

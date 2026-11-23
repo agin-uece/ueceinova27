@@ -206,6 +206,40 @@ class ProtecaoServiceTest {
             assertThatThrownBy(() -> protecaoService.atualizar(99L, dto, 1L))
                     .isInstanceOf(ResourceNotFoundException.class);
         }
+
+        @Test
+        @DisplayName("Deve lançar BusinessException ao atualizar codId para um já existente em outra proteção")
+        void deveLancarErroAoAtualizarParaCodIdDuplicado() {
+            ProtecaoUpdateDTO dto = new ProtecaoUpdateDTO(
+                    "BR_OUTRO", null, null, null, null, null, null, null,
+                    null, null, null, null, null, null, null, null, null
+            );
+            when(repository.findById(10L)).thenReturn(Optional.of(protecaoPadrao));
+            when(repository.existsByCodIdAndIdNot("BR_OUTRO", 10L)).thenReturn(true);
+
+            assertThatThrownBy(() -> protecaoService.atualizar(10L, dto, 1L))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessage("Já existe uma proteção com este Código ID.");
+
+            verify(repository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Deve permitir atualizar mantendo o próprio codId")
+        void devePermitirAtualizarMantendoProprioCodId() {
+            ProtecaoUpdateDTO dto = new ProtecaoUpdateDTO(
+                    "BR102026", "Nome Atualizado", null, null, null, null, null, null,
+                    null, null, null, null, null, null, null, null, null
+            );
+            when(repository.findById(10L)).thenReturn(Optional.of(protecaoPadrao));
+            when(repository.existsByCodIdAndIdNot("BR102026", 10L)).thenReturn(false);
+            when(repository.save(any(Protecao.class))).thenReturn(protecaoPadrao);
+
+            ProtecaoResponseDTO resultado = protecaoService.atualizar(10L, dto, 1L);
+
+            assertThat(resultado.nome()).isEqualTo("Nome Atualizado");
+            verify(repository).save(protecaoPadrao);
+        }
     }
 
     // =========================================================
