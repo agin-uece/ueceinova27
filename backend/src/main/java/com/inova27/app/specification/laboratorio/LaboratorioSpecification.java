@@ -48,8 +48,11 @@ public class LaboratorioSpecification {
         if (filtro.area() != null && !filtro.area().isBlank()) {
             predicates.add(TextoBuscaUtils.contem(cb, root.get("area"), filtro.area()));
         }
-        if (filtro.vinculado() != null && !filtro.vinculado().isBlank()) {
-            predicates.add(TextoBuscaUtils.contem(cb, root.get("vinculado"), filtro.vinculado()));
+        if (filtro.curso() != null && !filtro.curso().isBlank()) {
+            predicates.add(TextoBuscaUtils.contem(cb, root.get("curso"), filtro.curso()));
+        }
+        if (filtro.centro() != null && !filtro.centro().isBlank()) {
+            predicates.add(TextoBuscaUtils.contem(cb, root.get("centro"), filtro.centro()));
         }
     }
 

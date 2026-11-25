@@ -1,5 +1,6 @@
 package com.inova27.app.service;
 
+import com.inova27.app.exception.BusinessException;
 import com.inova27.app.exception.ConflitoException;
 import com.inova27.app.exception.ResourceNotFoundException;
 import com.inova27.app.dto.startup.StartupCreateDTO;
@@ -8,8 +9,10 @@ import com.inova27.app.dto.startup.StartupResponseDTO;
 import com.inova27.app.dto.startup.StartupUpdateDTO;
 import com.inova27.app.mapper.DocumentoSemanticoMapper;
 import com.inova27.app.model.AcaoAuditoria;
+import com.inova27.app.model.Incubacao;
 import com.inova27.app.model.Pessoa;
 import com.inova27.app.model.Startup;
+import com.inova27.app.repository.IncubacaoRepository;
 import com.inova27.app.repository.PessoaRepository;
 import com.inova27.app.repository.StartupRepository;
 import com.inova27.app.specification.startup.StartupSpecification;
@@ -34,9 +37,11 @@ public class StartupService {
     private static final String MSG_STARTUP_NAO_ENCONTRADA = "Startup não encontrada";
     private static final String MSG_NOME_EM_USO = "Já existe uma startup cadastrada com este nome.";
     private static final String MSG_CNPJ_EM_USO = "Já existe uma startup cadastrada com este CNPJ.";
+    private static final String MSG_INCUBACAO_INEXISTENTE = "Incubação não encontrada.";
 
     private final StartupRepository repository;
     private final PessoaRepository pessoaRepository;
+    private final IncubacaoRepository incubacaoRepository;
     private final DocumentoSemanticoMapper mapper;
     private final IndexadorSemanticoService indexador;
     private final AuditoriaService auditoriaService;
@@ -70,7 +75,7 @@ public class StartupService {
         startup.setEmail(dto.email());
         startup.setTelefone(dto.telefone());
         startup.setLogo(dto.logo());
-        startup.setStatus(dto.status());
+        startup.setIncubacao(buscarIncubacao(dto.incubacaoId()));
         startup.setUserInclusaoId(usuarioId);
         startup.setInstagram(dto.instagram());
         startup.setCnpj(dto.cnpj());
@@ -128,7 +133,7 @@ public class StartupService {
         if (dto.email() != null) startup.setEmail(dto.email());
         if (dto.telefone() != null) startup.setTelefone(dto.telefone());
         if (dto.logo() != null) startup.setLogo(dto.logo());
-        if (dto.status() != null) startup.setStatus(dto.status());
+        if (dto.incubacaoId() != null) startup.setIncubacao(buscarIncubacao(dto.incubacaoId()));
         if (dto.cnpj() != null) {
             if (repository.existsByCnpjAndIdNot(dto.cnpj(), id)) {
                 throw new ConflitoException(MSG_CNPJ_EM_USO);
@@ -169,6 +174,13 @@ public class StartupService {
         indexador.removerIndex("startups", id);
     }
 
+    // Id inválido vindo do formulário é erro de entrada (400), não recurso inexistente na URL (404)
+    private Incubacao buscarIncubacao(Long incubacaoId) {
+        if (incubacaoId == null) throw new BusinessException("A incubação é obrigatória.");
+        return incubacaoRepository.findById(incubacaoId)
+                .orElseThrow(() -> new BusinessException(MSG_INCUBACAO_INEXISTENTE));
+    }
+
     // 🔹 MAPPER
     private StartupResponseDTO toResponseDTO(Startup startup) {
         // 🔥 Agora utilizando o getNome() da entidade Pessoa que já conhecemos
@@ -185,7 +197,8 @@ public class StartupService {
                 startup.getEmail(),
                 startup.getTelefone(),
                 startup.getLogo(),
-                startup.getStatus(),
+                startup.getIncubacao() != null ? startup.getIncubacao().getId() : null,
+                startup.getIncubacao() != null ? startup.getIncubacao().getNome() : null,
                 startup.getFotos(),
                 pessoasStrings,startup.getCnpj(),startup.getInstagram()
         );

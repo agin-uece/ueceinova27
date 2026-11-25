@@ -62,7 +62,7 @@ class LaboratorioServiceTest {
         @Test
         @DisplayName("Deve criar lab PENDENTE para pesquisador e notificar")
         void deveCriarPendente() {
-            LaboratorioCreateDTO dto = new LaboratorioCreateDTO("Lab Inovação", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+            LaboratorioCreateDTO dto = new LaboratorioCreateDTO("Lab Inovação", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
             when(repository.save(any())).thenReturn(labPadrao);
 
             laboratorioService.criar(dto, pesquisador);
@@ -74,7 +74,7 @@ class LaboratorioServiceTest {
         @Test
         @DisplayName("Deve criar lab APROVADO se for ADMIN")
         void deveCriarAprovado() {
-            LaboratorioCreateDTO dto = new LaboratorioCreateDTO("Lab Admin", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+            LaboratorioCreateDTO dto = new LaboratorioCreateDTO("Lab Admin", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
             when(repository.save(any())).thenAnswer(i -> {
                 Laboratorio l = i.getArgument(0);
                 l.setStatus(StatusValidacao.APROVADO);
@@ -116,7 +116,7 @@ class LaboratorioServiceTest {
         @Test
         @DisplayName("Admin deve atualizar diretamente")
         void adminAtualizaDireto() {
-            LaboratorioUpdateDTO dto = new LaboratorioUpdateDTO("Novo Nome", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+            LaboratorioUpdateDTO dto = new LaboratorioUpdateDTO("Novo Nome", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
             when(repository.findById(10L)).thenReturn(Optional.of(labPadrao));
             when(repository.save(any())).thenReturn(labPadrao);
 
@@ -153,7 +153,7 @@ class LaboratorioServiceTest {
         @Test
         @DisplayName("Pesquisador deve criar solicitação ao editar seu próprio lab")
         void donoCriaSolicitacaoEdicao() {
-            LaboratorioUpdateDTO dto = new LaboratorioUpdateDTO("Nome", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+            LaboratorioUpdateDTO dto = new LaboratorioUpdateDTO("Nome", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
             when(repository.findById(10L)).thenReturn(Optional.of(labPadrao));
 
             laboratorioService.atualizar(10L, dto, pesquisador);
@@ -164,7 +164,7 @@ class LaboratorioServiceTest {
         @Test
         @DisplayName("Admin não deve conseguir atualizar nome para um já existente em outro laboratório")
         void adminNaoAtualizaParaNomeDuplicado() {
-            LaboratorioUpdateDTO dto = new LaboratorioUpdateDTO(" Larces ", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+            LaboratorioUpdateDTO dto = new LaboratorioUpdateDTO(" Larces ", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
             when(repository.findById(10L)).thenReturn(Optional.of(labPadrao));
             when(repository.existsByNomeIgnoreCaseAndIdNot("Larces", 10L)).thenReturn(true);
 
@@ -178,7 +178,7 @@ class LaboratorioServiceTest {
         @Test
         @DisplayName("Pesquisador não deve criar solicitação de edição com nome já existente em outro laboratório")
         void donoNaoSolicitaEdicaoComNomeDuplicado() {
-            LaboratorioUpdateDTO dto = new LaboratorioUpdateDTO("Larces", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+            LaboratorioUpdateDTO dto = new LaboratorioUpdateDTO("Larces", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
             when(repository.findById(10L)).thenReturn(Optional.of(labPadrao));
             when(repository.existsByNomeIgnoreCaseAndIdNot("Larces", 10L)).thenReturn(true);
 
@@ -192,7 +192,7 @@ class LaboratorioServiceTest {
         @Test
         @DisplayName("Admin deve conseguir atualizar mantendo o próprio nome")
         void adminAtualizaMantendoProprioNome() {
-            LaboratorioUpdateDTO dto = new LaboratorioUpdateDTO("Lab de IA", "Nova desc", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+            LaboratorioUpdateDTO dto = new LaboratorioUpdateDTO("Lab de IA", "Nova desc", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
             when(repository.findById(10L)).thenReturn(Optional.of(labPadrao));
             when(repository.existsByNomeIgnoreCaseAndIdNot("Lab de IA", 10L)).thenReturn(false);
             when(repository.save(any())).thenReturn(labPadrao);
@@ -200,6 +200,23 @@ class LaboratorioServiceTest {
             laboratorioService.atualizar(10L, dto, admin);
 
             verify(repository).save(labPadrao);
+        }
+
+        @Test
+        @DisplayName("Admin grava curso e centro separados e eles voltam na resposta")
+        void adminAtualizaCursoECentro() {
+            // posições 9 e 10 do LaboratorioUpdateDTO: curso, centro
+            LaboratorioUpdateDTO dto = new LaboratorioUpdateDTO(null, null, null, null, null, null, null, null,
+                    "Ciência da Computação", "CCT", null, null, null, null, null, null, null, null, null, null, null, null, null);
+            when(repository.findById(10L)).thenReturn(Optional.of(labPadrao));
+            when(repository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+            LaboratorioResponseDTO resposta = laboratorioService.atualizar(10L, dto, admin);
+
+            assertThat(labPadrao.getCurso()).isEqualTo("Ciência da Computação");
+            assertThat(labPadrao.getCentro()).isEqualTo("CCT");
+            assertThat(resposta.curso()).isEqualTo("Ciência da Computação");
+            assertThat(resposta.centro()).isEqualTo("CCT");
         }
     }
 

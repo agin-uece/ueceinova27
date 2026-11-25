@@ -1,5 +1,6 @@
 package com.inova27.app.service;
 
+import com.inova27.app.exception.BusinessException;
 import com.inova27.app.exception.ConflitoException;
 import com.inova27.app.exception.ResourceNotFoundException;
 import com.inova27.app.dto.startup.StartupCreateDTO;
@@ -7,7 +8,9 @@ import com.inova27.app.dto.startup.StartupResponseDTO;
 import com.inova27.app.dto.startup.StartupUpdateDTO;
 import com.inova27.app.mapper.DocumentoSemanticoMapper;
 import com.inova27.app.model.AcaoAuditoria;
+import com.inova27.app.model.Incubacao;
 import com.inova27.app.model.Startup;
+import com.inova27.app.repository.IncubacaoRepository;
 import com.inova27.app.repository.PessoaRepository;
 import com.inova27.app.repository.StartupRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,6 +36,7 @@ class StartupServiceTest {
 
     @Mock private StartupRepository repository;
     @Mock private PessoaRepository pessoaRepository;
+    @Mock private IncubacaoRepository incubacaoRepository;
     @Mock private DocumentoSemanticoMapper mapper;
     @Mock private IndexadorSemanticoService indexador;
     @Mock private AuditoriaService auditoriaService;
@@ -41,6 +45,7 @@ class StartupServiceTest {
     private StartupService startupService;
 
     private Startup startupPadrao;
+    private Incubacao incubada;
 
     @BeforeEach
     void setUp() {
@@ -50,14 +55,23 @@ class StartupServiceTest {
         startupPadrao.setDescricao("Descrição");
         startupPadrao.setPessoas(new HashSet<>());
         startupPadrao.setFotos(new HashSet<>());
+
+        incubada = new Incubacao("Incubada");
+        incubada.setId(1L);
+        // lenient: vários testes falham antes de chegar na incubação
+        lenient().when(incubacaoRepository.findById(1L)).thenReturn(Optional.of(incubada));
     }
 
-    // StartupCreateDTO(nome, descricao, area, dataFundacao, site, email, telefone, logo, status, fotos, cnpj, instagram, pessoasIds)
+    // StartupCreateDTO(nome, descricao, area, dataFundacao, site, email, telefone, logo, incubacaoId, fotos, cnpj, instagram, pessoasIds)
     private StartupCreateDTO dtoCreate(String nome) {
-        return new StartupCreateDTO(nome, null, null, null, null, null, null, null, null, null, null, null, null);
+        return dtoCreate(nome, 1L);
     }
 
-    // StartupUpdateDTO(nome, descricao, area, dataFundacao, site, email, telefone, logo, status, fotos, cnpj, instagram, pessoasIds)
+    private StartupCreateDTO dtoCreate(String nome, Long incubacaoId) {
+        return new StartupCreateDTO(nome, null, null, null, null, null, null, null, incubacaoId, null, null, null, null);
+    }
+
+    // StartupUpdateDTO(nome, descricao, area, dataFundacao, site, email, telefone, logo, incubacaoId, fotos, cnpj, instagram, pessoasIds)
     private StartupUpdateDTO dtoUpdate(String nome) {
         return new StartupUpdateDTO(nome, null, null, null, null, null, null, null, null, null, null, null, null);
     }
@@ -67,7 +81,7 @@ class StartupServiceTest {
     class CnpjUnico {
 
         private StartupCreateDTO criarComCnpj(String cnpj) {
-            return new StartupCreateDTO("Startup Y", null, null, null, null, null, null, null, null, null, cnpj, null, null);
+            return new StartupCreateDTO("Startup Y", null, null, null, null, null, null, null, 1L, null, cnpj, null, null);
         }
 
         private StartupUpdateDTO atualizarCnpj(String cnpj) {
@@ -167,6 +181,41 @@ class StartupServiceTest {
             assertThatThrownBy(() -> startupService.criar(dtoCreate("Startup X"), 1L))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("Já existe uma startup cadastrada com este nome.");
+        }
+
+        @Test
+        @DisplayName("Grava a incubação escolhida e devolve id e nome na resposta")
+        void gravaIncubacao() {
+            when(repository.existsByNomeIgnoreCase("Startup X")).thenReturn(false);
+            when(repository.save(any(Startup.class))).thenAnswer(i -> i.getArgument(0));
+
+            StartupResponseDTO resultado = startupService.criar(dtoCreate("Startup X"), 1L);
+
+            assertThat(resultado.incubacaoId()).isEqualTo(1L);
+            assertThat(resultado.incubacao()).isEqualTo("Incubada");
+        }
+
+        @Test
+        @DisplayName("Sem incubação: 400 (BusinessException), nada é salvo")
+        void semIncubacao() {
+            when(repository.existsByNomeIgnoreCase("Startup X")).thenReturn(false);
+
+            assertThatThrownBy(() -> startupService.criar(dtoCreate("Startup X", null), 1L))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessage("A incubação é obrigatória.");
+            verify(repository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Incubação inexistente: 400 (BusinessException), nada é salvo")
+        void incubacaoInexistente() {
+            when(repository.existsByNomeIgnoreCase("Startup X")).thenReturn(false);
+            when(incubacaoRepository.findById(99L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> startupService.criar(dtoCreate("Startup X", 99L), 1L))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessage("Incubação não encontrada.");
+            verify(repository, never()).save(any());
         }
     }
 
@@ -274,6 +323,24 @@ class StartupServiceTest {
 
             assertThat(resultado).isNotNull();
             verify(repository).save(startupPadrao);
+        }
+
+        @Test
+        @DisplayName("Troca a incubação quando incubacaoId é enviado; sem ele, mantém a atual")
+        void trocaIncubacao() {
+            Incubacao associada = new Incubacao("Associada");
+            associada.setId(2L);
+            startupPadrao.setIncubacao(incubada);
+            when(repository.findById(1L)).thenReturn(Optional.of(startupPadrao));
+            when(incubacaoRepository.findById(2L)).thenReturn(Optional.of(associada));
+            when(repository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+            startupService.atualizar(1L, dtoUpdate(null), 1L);
+            assertThat(startupPadrao.getIncubacao()).isSameAs(incubada);
+
+            StartupUpdateDTO trocar = new StartupUpdateDTO(null, null, null, null, null, null, null, null, 2L, null, null, null, null);
+            StartupResponseDTO resultado = startupService.atualizar(1L, trocar, 1L);
+            assertThat(resultado.incubacao()).isEqualTo("Associada");
         }
     }
 

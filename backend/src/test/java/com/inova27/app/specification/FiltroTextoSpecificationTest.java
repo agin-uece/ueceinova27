@@ -52,11 +52,11 @@ class FiltroTextoSpecificationTest {
     }
 
     @Test
-    @DisplayName("Laboratório: nome, coordenação, área, vínculo e tag")
+    @DisplayName("Laboratório: nome, coordenação, área, curso, centro e tag")
     void laboratorio() {
-        var filtro = new LaboratorioFiltroDTO("Gráf", "Antônio", "Visão", null, "Física", "Óptica", null);
+        var filtro = new LaboratorioFiltroDTO("Gráf", "Antônio", "Visão", null, "Computação", "Física", "Óptica", null);
         assertPadroes(LaboratorioSpecification.comFiltros(filtro),
-                "%graf%", "%antonio%", "%visao%", "%fisica%", "%optica%");
+                "%graf%", "%antonio%", "%visao%", "%computacao%", "%fisica%", "%optica%");
     }
 
     @Test
@@ -71,6 +71,17 @@ class FiltroTextoSpecificationTest {
     void startup() {
         var filtro = new StartupFiltroDTO("Agro", "Precisão", null, null, null);
         assertPadroes(StartupSpecification.comFiltros(filtro), "%agro%", "%precisao%");
+    }
+
+    @Test
+    @DisplayName("Startup: filtro por incubação compara o id da incubação")
+    void startupPorIncubacao() {
+        var filtro = new StartupFiltroDTO(null, null, null, 3L, null);
+        StartupSpecification.comFiltros(filtro).toPredicate(root, query, cb);
+
+        verify(root).get("incubacao");
+        verify(cb).equal(any(), eq(3L));
+        verify(cb, never()).like(any(Expression.class), anyString(), anyChar());
     }
 
     @Test

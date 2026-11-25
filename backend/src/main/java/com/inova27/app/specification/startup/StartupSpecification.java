@@ -29,12 +29,12 @@ public class StartupSpecification {
                 predicates.add(TextoBuscaUtils.contem(cb, root.get("area"), filtro.area()));
             }
 
-            // 🔹 Filtros Exatos (Data e Enum)
+            // 🔹 Filtros Exatos (Data e Incubação)
             if (filtro.dataFundacao() != null) {
                 predicates.add(cb.equal(root.get("dataFundacao"), filtro.dataFundacao()));
             }
-            if (filtro.status() != null) {
-                predicates.add(cb.equal(root.get("status"), filtro.status()));
+            if (filtro.incubacaoId() != null) {
+                predicates.add(cb.equal(root.get("incubacao").get("id"), filtro.incubacaoId()));
             }
 
             // 🔹 Relacionamento ManyToMany (Pessoas)

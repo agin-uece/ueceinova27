@@ -176,7 +176,8 @@ public class DocumentoSemanticoMapper {
                 Nome: %s
                 Area: %s
                 Natureza: %s
-                Vinculado a: %s
+                Curso: %s
+                Centro: %s
                 Coordenacao: %s
                 Localizacao: %s
                 Parcerias: %s
@@ -188,7 +189,8 @@ public class DocumentoSemanticoMapper {
                 safe(l.getNome()),
                 safe(l.getArea()),
                 naturezas,
-                safe(l.getVinculado()),
+                safe(l.getCurso()),
+                safe(l.getCentro()),
                 safe(l.getCoordenacao()),
                 safe(l.getLocalizacao()),
                 safe(l.getParcerias()),
@@ -213,22 +215,23 @@ public class DocumentoSemanticoMapper {
 
         String nomesPessoas = (s.getPessoas() == null || s.getPessoas().isEmpty()) ? "" :
                 s.getPessoas().stream().map(Pessoa::getNome).collect(Collectors.joining(", "));
+        String nomeIncubacao = s.getIncubacao() != null ? s.getIncubacao().getNome() : null;
 
         String descricao = "Startup da área " + safe(s.getArea()) +
                 ", fundada em " + safe(String.valueOf(s.getDataFundacao())) +
-                ", status: " + safe(String.valueOf(s.getStatus()));
+                ", incubação: " + safe(nomeIncubacao);
 
         String texto = """
                 Nome: %s
                 Area: %s
-                Status: %s
+                Incubacao: %s
                 Data de fundacao: %s
                 Membros: %s
                 Descricao: %s
                 """.formatted(
                 safe(s.getNome()),
                 safe(s.getArea()),
-                safe(String.valueOf(s.getStatus())),
+                safe(nomeIncubacao),
                 safe(String.valueOf(s.getDataFundacao())),
                 nomesPessoas,
                 safe(s.getDescricao())

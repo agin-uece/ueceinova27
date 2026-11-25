@@ -60,9 +60,11 @@ public class Startup {
     private Set<String> fotos = new HashSet<>();
 
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private StatusStartup status;
+    // Anulável no banco só para o ddl-auto conseguir criar a coluna em tabelas com dados;
+    // obrigatória no cadastro (StartupCreateDTO). Preenchida para as antigas pelo DatabaseSchemaFixRunner.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_incubacao")
+    private Incubacao incubacao;
 
     // 🔹 Relacionamento N:N (Startup <-> Pessoa)
     @ManyToMany(mappedBy = "startups")
