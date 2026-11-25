@@ -7,6 +7,12 @@ export interface SpringPageResponse<T> {
     size: number;
 }
 
+// Tipagem de Opção de Incubação
+export interface Incubacao {
+    id: number;
+    nome: string;
+}
+
 // Tipagem Específica da Startup
 export interface Startup {
     id?: number;
@@ -18,11 +24,10 @@ export interface Startup {
     email: string;
     telefone: string;
     logo: string;
-    status: "INCUBADA" | "ASSOCIADA" | "INTEGRADA";
+    incubacao?: string;
+    incubacaoId?: number;
     fotos: string[];
 }
-
-// ... (tipagens anteriores de Startup)
 
 export interface Servico {
     id: number;
@@ -39,8 +44,6 @@ export interface PessoaPrestador {
     id: number;
     nome: string;
 }
-
-// ... outras tipagens
 
 export interface Protecao {
     id?: number;
@@ -62,8 +65,6 @@ export interface Protecao {
     inventores?: string[];
     codId?: string;
 }
-
-// ... outras tipagens
 
 export interface Pessoa {
     id?: number;
@@ -93,14 +94,14 @@ export interface EntidadeBasica {
     nome: string;
 }
 
-// ... outras tipagens
-
 export interface Laboratorio {
     id: number;
     nome: string;
     descricao: string;
     coordenacao: string;
     area: string;
+    curso?: string;
+    centro?: string;
     urlFoto: string | null;
     naturezas: string[];
     status?: string;
@@ -131,7 +132,6 @@ export interface Linguagem {
     nome: string;
 }
 
-// Adicione à interface Jogo ou crie uma nova para o formulário
 export interface JogoFormData {
     nome: string;
     descricao: string;

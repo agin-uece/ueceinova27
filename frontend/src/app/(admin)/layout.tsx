@@ -125,10 +125,17 @@ export default function AdminRootLayout({
 
           {/* Administração */}
           {hasToken && userRole === "ADMIN" && (
-            <Link href="/gestao/administracao" className={`flex items-center gap-3 px-4 py-3 rounded-md hover:bg-slate-800 transition-colors group ${sidebarCollapsed ? 'justify-center' : ''}`}>
-              <Shield size={20} className="text-gray-400 group-hover:text-white transition-colors" />
-              {!sidebarCollapsed && <span className="font-medium text-gray-300 group-hover:text-white transition-colors">Administração</span>}
-            </Link>
+            <>
+              <Link href="/gestao/administracao" className={`flex items-center gap-3 px-4 py-3 rounded-md hover:bg-slate-800 transition-colors group ${sidebarCollapsed ? 'justify-center' : ''}`}>
+                <Shield size={20} className="text-gray-400 group-hover:text-white transition-colors" />
+                {!sidebarCollapsed && <span className="font-medium text-gray-300 group-hover:text-white transition-colors">Administração</span>}
+              </Link>
+
+              <Link href="/admin/incubacoes" className={`flex items-center gap-3 px-4 py-3 rounded-md hover:bg-slate-800 transition-colors group ${sidebarCollapsed ? 'justify-center' : ''}`}>
+                <Layers size={20} className="text-gray-400 group-hover:text-white transition-colors" />
+                {!sidebarCollapsed && <span className="font-medium text-gray-300 group-hover:text-white transition-colors">Incubações</span>}
+              </Link>
+            </>
           )}
 
           <Link href="/gestao/conteudo" className={`flex items-center gap-3 px-4 py-3 rounded-md hover:bg-slate-800 transition-colors group ${sidebarCollapsed ? 'justify-center' : ''}`}>

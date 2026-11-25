@@ -4,14 +4,10 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeft, Rocket, Target } from "lucide-react";
 
-// 1. Tipagens importadas da nossa pasta 'types'
-import { Startup, SpringPageResponse } from "@/types";
-
-// 2. Componentes UI Genéricos importados
+import { Startup, Incubacao } from "@/types/entidades";
+import { SpringPageResponse } from "@/types";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Pagination } from "@/components/ui/Pagination";
-
-// 3. Componentes da Feature de Startups importados
 import { StartupCard } from "@/components/features/startups/StartupCard";
 import { StartupFilters } from "@/components/features/startups/StartupFilters";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -19,48 +15,59 @@ import { SkeletonGrid } from "@/components/ui/SkeletonGrid";
 import { ResultsHeader } from "@/components/ui/ResultsHeader";
 import { useSecureAction } from "@/hooks/useSecureAction";
 
+const FILTROS_INICIAIS = {
+    nome: "",
+    area: "",
+    incubacaoId: "",
+    dataFundacao: ""
+};
+
 export default function PesquisarStartupsPage() {
-    // --- ESTADOS ---
     const [startups, setStartups] = useState<Startup[]>([]);
+    const [incubacoes, setIncubacoes] = useState<Incubacao[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isFilterVisible, setIsFilterVisible] = useState(false);
     const [meta, setMeta] = useState({ total: 0, pages: 0, current: 0 });
 
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [userRole, setUserRole] = useState("");
-
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [startupToDelete, setStartupToDelete] = useState<number | null>(null);
 
-    // 🔐 Hook MFA para exclusão
     const { execute: executeDelete, isProcessing: isDeleting } = useSecureAction();
+    const [filtros, setFiltros] = useState(FILTROS_INICIAIS);
 
-    const [filtros, setFiltros] = useState({
-        nome: "", area: "", status: "", dataFundacao: ""
-    });
-
-    // --- EFEITOS E REQUISIÇÕES ---
     useEffect(() => {
-        const carregarSessao = () => {
-            const token = localStorage.getItem("userToken");
-            const userDataStr = localStorage.getItem("userData");
-            setIsLoggedIn(!!token);
-            if (userDataStr) {
-                try {
-                    const userObj = JSON.parse(userDataStr);
-                    setUserRole(userObj.role || "");
-                } catch (e) { console.error("Erro ao ler userData"); }
+        const userDataStr = localStorage.getItem("userData");
+        if (userDataStr) {
+            try {
+                const userObj = JSON.parse(userDataStr);
+                setUserRole(userObj.role || "");
+            } catch {
+                console.error("Erro ao ler userData");
+            }
+        }
+
+        const carregarIncubacoes = async () => {
+            try {
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/incubacoes`);
+                if (res.ok) {
+                    const data: Incubacao[] = await res.json();
+                    setIncubacoes(Array.isArray(data) ? data : []);
+                }
+            } catch (error) {
+                console.error("Erro ao buscar opções de incubação:", error);
             }
         };
-        carregarSessao();
+
+        carregarIncubacoes();
         handleBuscar(0);
     }, []);
 
-    const handleBuscar = async (page: number = 0) => {
+    const handleBuscar = async (page: number = 0, filtrosAtivos = filtros) => {
         setIsLoading(true);
         try {
             const params = new URLSearchParams();
-            Object.entries(filtros).forEach(([key, value]) => {
+            Object.entries(filtrosAtivos).forEach(([key, value]) => {
                 if (value) params.append(key, value);
             });
             params.append("page", page.toString());
@@ -84,15 +91,14 @@ export default function PesquisarStartupsPage() {
         }
     };
 
-    // --- HANDLERS DO FILTRO ---
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFiltros(prev => ({ ...prev, [name]: value }));
     };
 
     const handleClearFilters = () => {
-        setFiltros({ nome: "", area: "", status: "", dataFundacao: "" });
-        handleBuscar(0);
+        setFiltros(FILTROS_INICIAIS);
+        handleBuscar(0, FILTROS_INICIAIS);
     };
 
     const handleSubmitFilters = (e: React.FormEvent) => {
@@ -101,7 +107,6 @@ export default function PesquisarStartupsPage() {
         handleBuscar(0);
     };
 
-    // --- HANDLERS DO MODAL DE EXCLUSÃO (COM MFA) ---
     const openDeleteModal = (id: number) => {
         setStartupToDelete(id);
         setIsDeleteModalOpen(true);
@@ -115,7 +120,6 @@ export default function PesquisarStartupsPage() {
     const confirmarExclusao = async () => {
         if (!startupToDelete) return;
 
-        // 1. Função fetch que aceita PIN opcional para MFA
         const fetchDelete = async (pin?: string) => {
             const token = localStorage.getItem("userToken");
             const headers: HeadersInit = {};
@@ -128,27 +132,17 @@ export default function PesquisarStartupsPage() {
             });
         };
 
-        // 2. Callback de sucesso
         const onSucesso = () => {
             setStartups(prev => prev.filter(s => s.id !== startupToDelete));
-            setMeta(prev => ({ ...prev, total: prev.total - 1 }));
+            setMeta(prev => ({ ...prev, total: Math.max(0, prev.total - 1) }));
             closeDeleteModal();
         };
 
-        // 3. Executa via useSecureAction (gerencia MFA se necessário)
-        const result = await executeDelete(fetchDelete, onSucesso);
-
-        // 4. Tratamento de erro (sucesso já disparou onSucesso)
-        if (!result.success && result.error) {
-        }
+        await executeDelete(fetchDelete, onSucesso);
     };
 
-    // ==========================================
-    // RENDERIZAÇÃO DA PÁGINA (Muito mais enxuta)
-    // ==========================================
     return (
         <main className="min-h-screen bg-[#F8FAFC]">
-            {/* HEADER */}
             <header className="bg-white border-b border-gray-300 relative z-30 shadow-sm">
                 <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-4">
@@ -165,7 +159,6 @@ export default function PesquisarStartupsPage() {
                         </div>
                     </div>
 
-                    {/* COMPONENTE DE FILTROS */}
                     <StartupFilters
                         isVisible={isFilterVisible}
                         onToggleVisibility={() => setIsFilterVisible(!isFilterVisible)}
@@ -174,6 +167,7 @@ export default function PesquisarStartupsPage() {
                         onClear={handleClearFilters}
                         onSubmit={handleSubmitFilters}
                         isLoading={isLoading}
+                        incubacoes={incubacoes}
                     />
                 </div>
             </header>
@@ -206,7 +200,6 @@ export default function PesquisarStartupsPage() {
                 )}
             </div>
 
-            {/* COMPONENTE DO MODAL DE EXCLUSÃO */}
             <ConfirmModal
                 isOpen={isDeleteModalOpen}
                 title="Confirmar Exclusão"

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Rocket, Briefcase, Calendar, Edit, Trash2 } from "lucide-react";
-import { Startup } from "@/types"; // Importando a tipagem que criamos na Fase 1
+import { Startup } from "@/types/entidades"; // Importando a tipagem que criamos na Fase 1
 
 interface StartupCardProps {
     startup: Startup;
@@ -30,13 +30,9 @@ export function StartupCard({ startup, userRole, onDelete }: StartupCardProps) {
                     {/* Badges e Título */}
                     <div className="flex-1">
                         <div className="flex flex-wrap gap-2 mb-2">
-                            {startup.status && (
-                                <span className={`inline-block px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter
-                                    ${startup.status === "INTEGRADA" ? "bg-green-100 text-green-600" :
-                                        startup.status === "ASSOCIADA" ? "bg-blue-100 text-blue-600" :
-                                            "bg-red-100 text-red-600"}`}
-                                >
-                                    {startup.status}
+                            {startup.incubacao && (
+                                <span className="inline-block px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter bg-red-100 text-red-600">
+                                    {startup.incubacao}
                                 </span>
                             )}
                         </div>

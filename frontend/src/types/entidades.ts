@@ -9,15 +9,16 @@ export interface Jogo {
 export interface Laboratorio {
     id: number; nome: string; descricao: string; coordenacao: string; area: string;
     email: string; site: string; telefone: string; naturezas: string[];
-    vinculado: string; horarioAbertura: string; horarioFechamento: string;
+    curso?: string; centro?: string; horarioAbertura: string; horarioFechamento: string;
     urlFoto: string | null; localizacao: string; parcerias: string;
-    infraestrutura: string; tags: string[]; pessoas: string[];
+    infraestrutura: string; tags: string[]; pessoas: string[]; status?: string;
 }
 
 export interface Startup {
     id: number; nome: string; descricao: string; area: string;
     dataFundacao: string; site: string; email: string; telefone: string;
-    logo: string; status: string; fotos: string[]; pessoas: string[];
+    logo: string; incubacao?: string; incubacaoId?: number;
+    fotos: string[]; pessoas: string[];
 }
 
 export interface Pessoa {
@@ -26,7 +27,7 @@ export interface Pessoa {
     papel: string; site: string; lattesURL: string; linkD: string;
     curso: string; descricao: string; anoFormacao: string;
     urlFoto: string | null; laboratorio: string; matricula: string;
-    protecoes: string[]; startups: string[]; servicos: string[];
+    protecoes: string[]; startups: string[];
 }
 
 export interface Protecao {
@@ -36,4 +37,9 @@ export interface Protecao {
     nivelMaturidade: string; aplicacao: string; status: string;
     jogoId: number | null; inventores: string[]; titular: string;
     diferencialTecnologico: string; numeroProtocolo: string;
+}
+
+export interface Incubacao {
+    id: number;
+    nome: string;
 }
