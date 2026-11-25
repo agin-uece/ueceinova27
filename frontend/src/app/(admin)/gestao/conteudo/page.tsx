@@ -12,10 +12,15 @@ export default function GerenciarConteudoPage() {
   const [userRole, setUserRole] = useState("");
 
   useEffect(() => {
+    const token = localStorage.getItem("userToken");
     const userDataStr = localStorage.getItem("userData");
-    if (userDataStr) {
-      const role = JSON.parse(userDataStr).role || "";
-      setUserRole(role.toUpperCase()); // Normalizando para evitar erro de caixa alta/baixa
+    if (token && userDataStr) {
+      try {
+        const role = JSON.parse(userDataStr).role || "";
+        setUserRole(role.toUpperCase());
+      } catch {
+        setUserRole("");
+      }
     }
   }, []);
 
@@ -60,8 +65,8 @@ export default function GerenciarConteudoPage() {
 
   // Lógica para verificar se o botão "Novo" deve aparecer
   const podeCadastrar = (modulo: typeof modulos[0]) => {
-    if (modulo.permitidoProfessor) return true; // logado ou não
     if (userRole === "ADMIN") return true;
+    if (userRole === "PROFESSOR" && modulo.permitidoProfessor) return true;
     return false;
   };
 
