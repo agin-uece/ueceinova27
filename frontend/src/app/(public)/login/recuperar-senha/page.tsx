@@ -4,22 +4,26 @@ import { useState, Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Mail, Lock, ArrowLeft, AlertCircle, KeyRound, CheckCircle2 } from "lucide-react";
+import {
+    Mail, Lock, ArrowLeft, AlertCircle, KeyRound,
+    CheckCircle2, Eye, EyeOff, Loader2, ArrowRight
+} from "lucide-react";
 
 function RecuperarSenhaForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const emailParam = searchParams.get("email") || "";
-    // CAPTURA O TOKEN DA URL (Se existir)
     const tokenParam = searchParams.get("token") || "";
 
     const [formData, setFormData] = useState({
         email: emailParam,
-        token: tokenParam, // Já inicia preenchido com o valor da URL!
+        token: tokenParam,
         novaSenha: "",
         confirmarSenha: "",
     });
 
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [error, setError] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
@@ -33,6 +37,16 @@ function RecuperarSenhaForm() {
         e.preventDefault();
         setError("");
 
+        const senhaOk =
+            formData.novaSenha.length >= 6 &&
+            /[a-zA-Z]/.test(formData.novaSenha) &&
+            /[0-9]/.test(formData.novaSenha);
+
+        if (!senhaOk) {
+            setError("A nova senha deve ter no mínimo 6 caracteres, incluindo letras e números.");
+            return;
+        }
+
         if (formData.novaSenha !== formData.confirmarSenha) {
             setError("As senhas não coincidem. Tente novamente.");
             return;
@@ -41,10 +55,9 @@ function RecuperarSenhaForm() {
         setIsLoading(true);
 
         try {
-            // Envia para o backend. O backend só precisa de token e novaSenha pelo DTO.
             const payload = {
-                token: formData.token,
-                novaSenha: formData.novaSenha
+                token: formData.token.trim(),
+                novaSenha: formData.novaSenha,
             };
 
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/reset-password`, {
@@ -59,8 +72,15 @@ function RecuperarSenhaForm() {
                     router.push("/login");
                 }, 3000);
             } else {
-                const errMsg = await res.text();
-                setError(errMsg || "Código inválido ou expirado.");
+                const body = await res.text();
+                let mensagem = "Código inválido ou expirado.";
+                try {
+                    const json = JSON.parse(body);
+                    mensagem = json.erro || json.message || json.mensagem || mensagem;
+                } catch {
+                    if (body && !body.startsWith("<")) mensagem = body;
+                }
+                setError(mensagem);
             }
         } catch (err) {
             console.error(err);
@@ -70,64 +90,90 @@ function RecuperarSenhaForm() {
         }
     };
 
+    const inputBaseClass =
+        "block w-full pl-11 pr-4 py-3.5 bg-slate-50/80 border border-slate-200/90 rounded-2xl text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all";
+
     if (isSuccess) {
         return (
-            <div className="text-center space-y-4 animate-in fade-in zoom-in duration-300">
-                <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="text-center space-y-5 py-4 animate-in fade-in zoom-in-95 duration-300">
+                <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-3xl flex items-center justify-center mx-auto border border-emerald-200/60">
                     <CheckCircle2 size={40} />
                 </div>
-                <h2 className="text-2xl font-extrabold text-gray-900">Senha Alterada!</h2>
-                <p className="text-gray-500">Sua nova senha foi cadastrada com sucesso.</p>
-                <p className="text-sm text-gray-400">Redirecionando para o login...</p>
+                <div className="space-y-1.5">
+                    <h2 className="text-2xl font-black text-slate-900 tracking-tight">Senha Alterada!</h2>
+                    <p className="text-sm text-slate-500">Sua nova senha foi cadastrada com sucesso.</p>
+                </div>
+                <div className="bg-slate-50 rounded-2xl p-3 border border-slate-200/70">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                        Redirecionando para o login...
+                    </p>
+                </div>
             </div>
         );
     }
 
     return (
-        <>
-            <div className="text-center">
-                <Image
-                    src="/imagens/Marca_aginhorizontal_fundoazul.png"
-                    alt="Marca da UECE"
-                    width={200}
-                    height={80}
-                    className="mx-auto mb-6 bg-gray-900 p-2 rounded-lg"
-                />
-                <h2 className="text-3xl font-extrabold text-gray-900">Redefinir Senha</h2>
-                <p className="text-sm text-gray-500 mt-2">Insira o código de validação enviado para o seu e-mail.</p>
+        <div className="space-y-7">
+            <div className="text-center space-y-4">
+                <div className="inline-flex items-center justify-center bg-slate-900 px-5 py-3 rounded-2xl shadow-md shadow-slate-900/10">
+                    <Image
+                        src="/imagens/Marca_aginhorizontal_fundoazul.png"
+                        alt="Marca da AGIN / UECE"
+                        width={185}
+                        height={70}
+                        className="h-auto w-auto object-contain"
+                        priority
+                    />
+                </div>
+                <div className="space-y-1">
+                    <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                        Redefinir Senha
+                    </h1>
+                    <p className="text-xs sm:text-sm text-slate-500">
+                        {tokenParam
+                            ? "Defina sua nova senha de acesso abaixo."
+                            : "Insira o código de validação enviado para o seu e-mail."}
+                    </p>
+                </div>
             </div>
 
             {error && (
-                <div className="bg-red-50 text-red-600 p-4 rounded-xl flex items-start gap-3 text-sm animate-in fade-in mt-6">
-                    <AlertCircle size={20} className="shrink-0 mt-0.5" />
-                    <p>{error}</p>
+                <div className="bg-red-50 text-red-700 p-4 rounded-2xl border border-red-100 flex items-start gap-3 text-xs sm:text-sm animate-in fade-in">
+                    <AlertCircle size={18} className="shrink-0 mt-0.5 text-red-500" />
+                    <p className="font-medium leading-relaxed">{error}</p>
                 </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-5 mt-8">
-                {/* E-mail (Apenas Leitura / Informativo) */}
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
-                    <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                            <Mail size={20} />
+            <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Exibe o E-mail apenas se vier preenchido na URL */}
+                {emailParam && (
+                    <div>
+                        <label className="block text-xs font-bold text-slate-600 mb-1.5 ml-1">
+                            Conta Institucional
+                        </label>
+                        <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                <Mail size={18} />
+                            </div>
+                            <input
+                                type="email"
+                                name="email"
+                                disabled
+                                value={formData.email}
+                                className="block w-full pl-11 pr-4 py-3.5 border border-slate-200/80 rounded-2xl bg-slate-100/80 text-sm text-slate-500 font-medium cursor-not-allowed outline-none"
+                            />
                         </div>
-                        <input
-                            type="email"
-                            name="email"
-                            disabled
-                            value={formData.email}
-                            className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl bg-gray-100 text-gray-500 cursor-not-allowed outline-none"
-                        />
                     </div>
-                </div>
+                )}
 
                 {/* Código Token */}
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Código de Segurança</label>
+                    <label className="block text-xs font-bold text-slate-600 mb-1.5 ml-1">
+                        Código de Segurança
+                    </label>
                     <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                            <KeyRound size={20} />
+                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                            <KeyRound size={18} />
                         </div>
                         <input
                             type="text"
@@ -135,7 +181,7 @@ function RecuperarSenhaForm() {
                             required
                             value={formData.token}
                             onChange={handleChange}
-                            className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl text-gray-900 focus:ring-2 focus:ring-orange-500 outline-none transition-all font-mono tracking-widest"
+                            className={`${inputBaseClass} font-mono font-bold tracking-widest`}
                             placeholder="EX: 123456"
                         />
                     </div>
@@ -143,67 +189,128 @@ function RecuperarSenhaForm() {
 
                 {/* Nova Senha */}
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Nova Senha</label>
+                    <label className="block text-xs font-bold text-slate-600 mb-1.5 ml-1">
+                        Nova Senha
+                    </label>
                     <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                            <Lock size={20} />
+                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                            <Lock size={18} />
                         </div>
                         <input
-                            type="password"
+                            type={showPassword ? "text" : "password"}
                             name="novaSenha"
                             required
                             value={formData.novaSenha}
                             onChange={handleChange}
-                            className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl text-gray-900 focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                            className={`${inputBaseClass} pr-11`}
                             placeholder="••••••••"
                         />
+                        <button
+                            type="button"
+                            onClick={() => setShowPassword((prev) => !prev)}
+                            className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                            tabIndex={-1}
+                        >
+                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
                     </div>
                 </div>
 
-                {/* Repetir Nova Senha */}
+                {/* Confirmar Nova Senha */}
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Confirmar Nova Senha</label>
+                    <label className="block text-xs font-bold text-slate-600 mb-1.5 ml-1">
+                        Confirmar Nova Senha
+                    </label>
                     <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                            <Lock size={20} />
+                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                            <Lock size={18} />
                         </div>
                         <input
-                            type="password"
+                            type={showConfirmPassword ? "text" : "password"}
                             name="confirmarSenha"
                             required
                             value={formData.confirmarSenha}
                             onChange={handleChange}
-                            className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl text-gray-900 focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                            className={`${inputBaseClass} pr-11`}
                             placeholder="••••••••"
                         />
+                        <button
+                            type="button"
+                            onClick={() => setShowConfirmPassword((prev) => !prev)}
+                            className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                            tabIndex={-1}
+                        >
+                            {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
                     </div>
                 </div>
 
-                <div className="pt-4">
+                {/* Checklist de requisitos de senha */}
+                {formData.novaSenha.length > 0 && (
+                    <ul className="space-y-1.5 bg-slate-50 rounded-2xl px-4 py-3 border border-slate-200/70">
+                        {[
+                            { label: "Mínimo de 6 caracteres", ok: formData.novaSenha.length >= 6 },
+                            {
+                                label: "Letras e números",
+                                ok: /[a-zA-Z]/.test(formData.novaSenha) && /[0-9]/.test(formData.novaSenha),
+                            },
+                            {
+                                label: "Senhas coincidem",
+                                ok:
+                                    formData.novaSenha === formData.confirmarSenha &&
+                                    formData.confirmarSenha.length > 0,
+                            },
+                        ].map((r) => (
+                            <li key={r.label} className="flex items-center gap-2 text-xs">
+                                <CheckCircle2
+                                    size={14}
+                                    className={r.ok ? "text-emerald-500" : "text-slate-300"}
+                                />
+                                <span className={r.ok ? "text-emerald-700 font-semibold" : "text-slate-400"}>
+                                    {r.label}
+                                </span>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+
+                <div className="pt-2">
                     <button
                         type="submit"
                         disabled={isLoading}
-                        className="w-full flex justify-center py-3.5 px-4 rounded-xl shadow-sm text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-70 transition-all uppercase tracking-wider"
+                        className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl shadow-lg shadow-orange-500/20 text-xs font-extrabold text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 disabled:opacity-60 disabled:shadow-none transition-all uppercase tracking-widest"
                     >
-                        {isLoading ? <span className="animate-pulse">Salvando...</span> : "Redefinir Senha"}
+                        {isLoading ? (
+                            <>
+                                <Loader2 size={16} className="animate-spin" /> Salvando...
+                            </>
+                        ) : (
+                            <>
+                                Redefinir Senha <ArrowRight size={16} />
+                            </>
+                        )}
                     </button>
                 </div>
             </form>
 
-            <div className="text-center mt-8">
-                <Link href="/login" className="text-sm font-medium text-gray-500 hover:text-orange-600 flex items-center justify-center gap-2">
-                    <ArrowLeft size={16} /> Voltar para o Login
+            <div className="pt-2 border-t border-slate-100 text-center">
+                <Link
+                    href="/login"
+                    className="text-xs font-bold text-slate-500 hover:text-slate-900 inline-flex items-center gap-1.5 transition-colors"
+                >
+                    <ArrowLeft size={14} /> Voltar para o Login
                 </Link>
             </div>
-        </>
+        </div>
     );
 }
 
 export default function RecuperarSenhaPage() {
     return (
-        <main className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-8">
-            <div className="w-full max-w-md bg-white p-8 sm:p-12 rounded-[32px] shadow-xl border border-gray-100">
-                <Suspense fallback={<div className="text-center py-10 text-gray-500">Carregando...</div>}>
+        <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 via-slate-50 to-orange-50/40 px-4 py-10 relative overflow-hidden">
+            <div className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 w-[620px] h-[320px] rounded-full bg-orange-500/5 blur-3xl" />
+            <div className="w-full max-w-[460px] bg-white/95 backdrop-blur-xs p-8 sm:p-10 rounded-[32px] shadow-xl shadow-slate-200/70 border border-slate-200/70 relative z-10">
+                <Suspense fallback={<div className="text-center py-10 text-sm text-slate-500">Carregando...</div>}>
                     <RecuperarSenhaForm />
                 </Suspense>
             </div>

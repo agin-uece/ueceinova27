@@ -1,19 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Mail, Lock, User, ArrowLeft, AlertCircle, Eye, CheckCircle2 } from "lucide-react";
+import {
+    Mail, Lock, User, ArrowLeft, AlertCircle, Eye, EyeOff,
+    CheckCircle2, ShieldCheck, X, Loader2, ArrowRight, KeyRound
+} from "lucide-react";
 
 const decodeJWT = (token: string) => {
     try {
-        const base64Url = token.split('.')[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const base64Url = token.split(".")[1];
+        const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
         const jsonPayload = decodeURIComponent(
-            window.atob(base64).split('').map(function (c) {
-                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-            }).join('')
+            window.atob(base64)
+                .split("")
+                .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+                .join("")
         );
         return JSON.parse(jsonPayload);
     } catch (e) {
@@ -36,15 +40,27 @@ export default function LoginPage() {
         confirmarSenha: ""
     });
 
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [error, setError] = useState("");
-    const [success, setSuccess] = useState(""); // 🔥 NOVO: Estado para mensagens de sucesso
+    const [success, setSuccess] = useState("");
     const [isLoading, setIsLoading] = useState(false);
-    const [mfaPendente, setMfaPendente] = useState(false); // login de ADMIN aguardando o código por e-mail
+
+    // Estados exclusivos do modal de MFA no login
+    const [mfaModalOpen, setMfaModalOpen] = useState(false);
+    const [mfaError, setMfaError] = useState("");
+    const mfaInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (mfaModalOpen) {
+            setTimeout(() => mfaInputRef.current?.focus(), 50);
+        }
+    }, [mfaModalOpen]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
         setError("");
-        setSuccess(""); // 🔥 Limpa o sucesso ao digitar
+        setSuccess("");
     };
 
     const handleGuestAccess = () => {
@@ -53,10 +69,99 @@ export default function LoginPage() {
         router.push("/gestao/conteudo");
     };
 
+    const fecharModalMfa = () => {
+        setMfaModalOpen(false);
+        setMfaError("");
+        setFormData((prev) => ({ ...prev, pin: "" }));
+    };
+
+    const executarLogin = async (codigoMfa?: string) => {
+        setError("");
+        setMfaError("");
+        setSuccess("");
+        setIsLoading(true);
+
+        try {
+            const payload = {
+                email: formData.email,
+                senha: formData.senha,
+                ...(codigoMfa ? { codigo: codigoMfa } : {})
+            };
+
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                const token = data.token;
+                const decodedToken = decodeJWT(token);
+
+                let userRole = decodedToken?.role || decodedToken?.roles || decodedToken?.authorities || "PROFESSOR";
+                if (Array.isArray(userRole)) userRole = userRole[0];
+                if (typeof userRole === "object" && userRole.authority) userRole = userRole.authority;
+
+                const finalRole = String(userRole).replace("ROLE_", "");
+
+                localStorage.setItem("userToken", token);
+                localStorage.setItem("userData", JSON.stringify({
+                    nome: data.nome || formData.email,
+                    email: formData.email,
+                    role: finalRole
+                }));
+
+                setMfaModalOpen(false);
+                router.push("/gestao");
+            } else if (res.status !== 401) {
+                const body = await res.json().catch(() => ({}));
+                if (body.erro === "MFA_REQUIRED") {
+                    setFormData((prev) => ({ ...prev, pin: "" }));
+                    setMfaError("");
+                    setMfaModalOpen(true);
+                } else if (body.erro === "MFA_INVALID") {
+                    setMfaError("Código inválido ou expirado. Verifique seu e-mail e tente novamente.");
+                } else if (mfaModalOpen) {
+                    setMfaError(body.erro || body.mensagem || "Não foi possível validar o código.");
+                } else {
+                    setError(body.erro || body.mensagem || "Acesso negado.");
+                }
+            } else {
+                setMfaModalOpen(false);
+                setError("E-mail ou senha incorretos.");
+            }
+        } catch (err) {
+            console.error(err);
+            if (mfaModalOpen) {
+                setMfaError("Ocorreu um erro ao se conectar com o servidor.");
+            } else {
+                setError("Ocorreu um erro ao se conectar com o servidor.");
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleConfirmMfa = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!formData.pin.trim()) {
+            setMfaError("Informe o código de 6 dígitos enviado ao seu e-mail.");
+            return;
+        }
+        await executarLogin(formData.pin.trim());
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError("");
-        setSuccess(""); // 🔥 Limpa mensagens antigas ao enviar
+        setSuccess("");
+
+        if (mode === "login") {
+            await executarLogin();
+            return;
+        }
+
         setIsLoading(true);
 
         try {
@@ -112,49 +217,6 @@ export default function LoginPage() {
                     setError(errorData.erro || "Código inválido ou erro ao atualizar.");
                 }
             }
-            // === FLUXO DE LOGIN ===
-            else if (mode === "login") {
-                const payload = { email: formData.email, senha: formData.senha, ...(mfaPendente && formData.pin ? { codigo: formData.pin } : {}) };
-                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(payload),
-                });
-
-                if (res.ok) {
-                    const data = await res.json();
-                    const token = data.token;
-                    const decodedToken = decodeJWT(token);
-
-                    let userRole = decodedToken?.role || decodedToken?.roles || decodedToken?.authorities || "PROFESSOR";
-                    if (Array.isArray(userRole)) userRole = userRole[0];
-                    if (typeof userRole === 'object' && userRole.authority) userRole = userRole.authority;
-
-                    const finalRole = String(userRole).replace("ROLE_", "");
-
-                    localStorage.setItem("userToken", token);
-                    localStorage.setItem("userData", JSON.stringify({
-                        nome: data.nome || formData.email,
-                        email: formData.email,
-                        role: finalRole
-                    }));
-
-                    router.push("/gestao");
-                } else if (res.status !== 401) {
-                    const body = await res.json().catch(() => ({}));
-                    if (body.erro === "MFA_REQUIRED") {
-                        setMfaPendente(true);
-                        setFormData({ ...formData, pin: "" });
-                        setSuccess("Enviamos um código de segurança para o seu e-mail. Informe-o para concluir o login.");
-                    } else if (body.erro === "MFA_INVALID") {
-                        setError("Código inválido ou expirado.");
-                    } else {
-                        setError(body.erro || body.mensagem || "Acesso negado.");
-                    }
-                } else {
-                    setError("E-mail ou senha incorretos.");
-                }
-            }
             // === FLUXO DE CADASTRO ===
             else if (mode === "register") {
                 if (!formData.email.toLowerCase().endsWith("@uece.br")) {
@@ -188,7 +250,7 @@ export default function LoginPage() {
 
                 if (res.ok) {
                     setMode("login");
-                    setFormData({ ...formData, senha: "" });
+                    setFormData({ ...formData, senha: "", confirmarSenha: "" });
                     setSuccess("Cadastro realizado com sucesso! Aguarde a aprovação de um administrador para continuar com o login.");
                 } else {
                     setError("Não foi possível realizar o cadastro. Verifique os dados ou se o e-mail já existe.");
@@ -202,200 +264,353 @@ export default function LoginPage() {
         }
     };
 
+    const trocarModo = (novoModo: string) => {
+        setMode(novoModo);
+        setError("");
+        setSuccess("");
+        setShowPassword(false);
+        setShowConfirmPassword(false);
+        fecharModalMfa();
+    };
+
+    const subtituloHeader = {
+        login: "Acesse o ecossistema de inovação da UECE",
+        register: "Preencha seus dados institucionais para solicitar acesso",
+        forgot: "Informe seu e-mail institucional para receber as instruções",
+        "forgot-email-step1": "Enviaremos um PIN de confirmação ao seu e-mail secundário",
+        "forgot-email-step2": "Insira o código recebido e defina o novo endereço de acesso",
+    }[mode] || "";
+
+    const inputBaseClass =
+        "block w-full pl-11 pr-4 py-3.5 bg-slate-50/80 border border-slate-200/90 rounded-2xl text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all";
+
     return (
-        <main className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-8">
-            <div className="w-full max-w-md bg-white p-8 sm:p-12 rounded-[32px] shadow-xl border border-gray-100 space-y-8">
+        <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 via-slate-50 to-orange-50/40 px-4 py-10 relative overflow-hidden">
+            {/* Elemento decorativo sutil no fundo */}
+            <div className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 w-[620px] h-[320px] rounded-full bg-orange-500/5 blur-3xl" />
 
-                <div className="text-center">
-                    <Image
-                        src="/imagens/Marca_aginhorizontal_fundoazul.png"
-                        alt="Marca da UECE"
-                        width={200}
-                        height={80}
-                        className="mx-auto mb-6 bg-gray-900 p-2 rounded-lg"
-                    />
-                    <h2 className="text-3xl font-extrabold text-gray-900">
-                        {mode === "login" ? "Bem-vindo de volta" :
-                            mode === "register" ? "Crie sua conta" :
-                                mode === "forgot" ? "Recuperar Senha" :
-                                    "Recuperar E-mail"}
-                    </h2>
-                    {(mode === "forgot" || mode === "forgot-email-step1") && (
-                        <p className="text-sm text-gray-500 mt-2">Enviaremos um código de segurança.</p>
-                    )}
-                </div>
-
-                <div className="flex flex-col gap-2">
-                    <div className="flex p-1 bg-gray-100 rounded-xl">
-                        <button
-                            onClick={() => { setMode("login"); setError(""); setSuccess(""); }}
-                            className={`flex-1 py-2.5 text-[11px] uppercase tracking-wider font-bold rounded-lg transition-all ${mode === "login" ? "bg-white text-orange-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
-                        >
-                            Entrar
-                        </button>
-                        <button
-                            onClick={() => { setMode("register"); setError(""); setSuccess(""); }}
-                            className={`flex-1 py-2.5 text-[11px] uppercase tracking-wider font-bold rounded-lg transition-all ${mode === "register" ? "bg-white text-orange-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
-                        >
-                            Cadastrar
-                        </button>
-                        <button
-                            onClick={() => { setMode("forgot"); setError(""); setSuccess(""); }}
-                            className={`flex-1 py-2.5 text-[11px] uppercase tracking-wider font-bold rounded-lg transition-all ${mode === "forgot" ? "bg-white text-orange-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
-                        >
-                            Esqueci a senha
-                        </button>
-                    </div>
-
-                    <div className="text-center">
+            {/* MODAL DE VERIFICAÇÃO MFA (CÓDIGO ENVIADO POR E-MAIL) */}
+            {mfaModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs px-4">
+                    <div className="bg-white rounded-[32px] max-w-md w-full p-8 sm:p-9 shadow-2xl border border-slate-100 space-y-6 relative animate-in fade-in zoom-in-95 duration-200">
                         <button
                             type="button"
-                            onClick={() => { setMode("forgot-email-step1"); setError(""); setSuccess(""); }}
-                            className="text-[10px] font-bold text-gray-400 hover:text-orange-600 transition-colors uppercase tracking-widest underline decoration-dotted underline-offset-4"
+                            onClick={fecharModalMfa}
+                            disabled={isLoading}
+                            className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
+                            title="Cancelar"
                         >
-                            Perdi acesso ao meu e-mail
+                            <X size={20} />
                         </button>
+
+                        <div className="text-center space-y-3">
+                            <div className="w-16 h-16 bg-gradient-to-br from-orange-100 to-amber-50 text-orange-600 rounded-2xl flex items-center justify-center mx-auto shadow-xs border border-orange-200/60">
+                                <ShieldCheck size={32} />
+                            </div>
+                            <div className="space-y-1">
+                                <h3 className="text-xl font-black text-slate-900 tracking-tight">
+                                    Verificação em Duas Etapas
+                                </h3>
+                                <p className="text-sm text-slate-500 leading-relaxed">
+                                    Enviamos um código de 6 dígitos para{" "}
+                                    <span className="font-semibold text-slate-800">{formData.email}</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        {mfaError && (
+                            <div className="bg-red-50 text-red-600 p-3.5 rounded-2xl flex items-start gap-2.5 text-xs border border-red-100">
+                                <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                                <p className="font-medium">{mfaError}</p>
+                            </div>
+                        )}
+
+                        <form onSubmit={handleConfirmMfa} className="space-y-5">
+                            <div>
+                                <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 text-center">
+                                    Código de Segurança
+                                </label>
+                                <input
+                                    ref={mfaInputRef}
+                                    type="text"
+                                    inputMode="numeric"
+                                    maxLength={6}
+                                    required
+                                    value={formData.pin}
+                                    onChange={(e) => {
+                                        const apenasDigitos = e.target.value.replace(/\D/g, "");
+                                        setFormData({ ...formData, pin: apenasDigitos });
+                                        setMfaError("");
+                                    }}
+                                    className="block w-full py-4 px-4 text-center text-2xl font-black tracking-[0.45em] bg-slate-50 border-2 border-slate-200 rounded-2xl text-slate-900 focus:bg-white focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all"
+                                    placeholder="000000"
+                                />
+                            </div>
+
+                            <div className="flex flex-col gap-2">
+                                <button
+                                    type="submit"
+                                    disabled={isLoading || formData.pin.length < 6}
+                                    className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl shadow-lg shadow-orange-500/20 text-xs font-bold text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 disabled:opacity-50 disabled:shadow-none transition-all uppercase tracking-widest"
+                                >
+                                    {isLoading ? (
+                                        <>
+                                            <Loader2 size={16} className="animate-spin" /> Validando...
+                                        </>
+                                    ) : (
+                                        "Confirmar e Entrar"
+                                    )}
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={fecharModalMfa}
+                                    disabled={isLoading}
+                                    className="w-full py-2.5 text-xs font-bold text-slate-400 hover:text-slate-600 uppercase tracking-wider transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* CARD PRINCIPAL */}
+            <div className="w-full max-w-[460px] bg-white/95 backdrop-blur-xs p-8 sm:p-10 rounded-[32px] shadow-xl shadow-slate-200/70 border border-slate-200/70 space-y-7 relative z-10">
+                {/* Cabeçalho */}
+                <div className="text-center space-y-4">
+                    <div className="inline-flex items-center justify-center bg-slate-900 px-5 py-3 rounded-2xl shadow-md shadow-slate-900/10">
+                        <Image
+                            src="/imagens/Marca_aginhorizontal_fundoazul.png"
+                            alt="Marca da AGIN / UECE"
+                            width={185}
+                            height={70}
+                            className="h-auto w-auto object-contain"
+                            priority
+                        />
+                    </div>
+
+                    <div className="space-y-1">
+                        <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                            {mode === "login"
+                                ? "Bem-vindo de volta"
+                                : mode === "register"
+                                ? "Crie sua conta"
+                                : mode === "forgot"
+                                ? "Recuperar Senha"
+                                : "Recuperar E-mail"}
+                        </h1>
+                        <p className="text-xs sm:text-sm text-slate-500">{subtituloHeader}</p>
                     </div>
                 </div>
 
-                {/* 🔥 NOVO: ALERTA DE ERRO */}
+                {/* Navegação por abas */}
+                <div className="flex p-1.5 bg-slate-100/90 rounded-2xl border border-slate-200/60">
+                    <button
+                        type="button"
+                        onClick={() => trocarModo("login")}
+                        className={`flex-1 py-2.5 text-[11px] uppercase tracking-wider font-extrabold rounded-xl transition-all ${
+                            mode === "login"
+                                ? "bg-white text-orange-600 shadow-xs"
+                                : "text-slate-500 hover:text-slate-800"
+                        }`}
+                    >
+                        Entrar
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => trocarModo("register")}
+                        className={`flex-1 py-2.5 text-[11px] uppercase tracking-wider font-extrabold rounded-xl transition-all ${
+                            mode === "register"
+                                ? "bg-white text-orange-600 shadow-xs"
+                                : "text-slate-500 hover:text-slate-800"
+                        }`}
+                    >
+                        Cadastrar
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => trocarModo("forgot")}
+                        className={`flex-1 py-2.5 text-[11px] uppercase tracking-wider font-extrabold rounded-xl transition-all ${
+                            mode === "forgot"
+                                ? "bg-white text-orange-600 shadow-xs"
+                                : "text-slate-500 hover:text-slate-800"
+                        }`}
+                    >
+                        Senha
+                    </button>
+                </div>
+
+                {/* Alertas */}
                 {error && (
-                    <div className="bg-red-50 text-red-600 p-4 rounded-xl flex items-start gap-3 text-sm animate-in fade-in">
-                        <AlertCircle size={20} className="shrink-0 mt-0.5" />
-                        <p>{error}</p>
+                    <div className="bg-red-50 text-red-700 p-4 rounded-2xl border border-red-100 flex items-start gap-3 text-xs sm:text-sm animate-in fade-in">
+                        <AlertCircle size={18} className="shrink-0 mt-0.5 text-red-500" />
+                        <p className="font-medium leading-relaxed">{error}</p>
                     </div>
                 )}
 
-                {/* 🔥 NOVO: ALERTA DE SUCESSO */}
                 {success && (
-                    <div className="bg-green-50 text-green-600 p-4 rounded-xl flex items-start gap-3 text-sm animate-in fade-in">
-                        <CheckCircle2 size={20} className="shrink-0 mt-0.5" />
-                        <p>{success}</p>
+                    <div className="bg-emerald-50 text-emerald-700 p-4 rounded-2xl border border-emerald-100 flex items-start gap-3 text-xs sm:text-sm animate-in fade-in">
+                        <CheckCircle2 size={18} className="shrink-0 mt-0.5 text-emerald-500" />
+                        <p className="font-medium leading-relaxed">{success}</p>
                     </div>
                 )}
 
-                <form onSubmit={handleSubmit} className="space-y-5 mt-8">
-
+                {/* Formulário */}
+                <form onSubmit={handleSubmit} className="space-y-4">
                     {mode !== "forgot-email-step2" && (
                         <>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label className="block text-xs font-bold text-slate-600 mb-1.5 ml-1">
                                     {mode === "forgot-email-step1" ? "E-mail Antigo (Atual)" : "E-mail Institucional"}
                                 </label>
                                 <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                                        <Mail size={20} />
+                                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                        <Mail size={18} />
                                     </div>
                                     <input
-                                        type="email" name="email" required
-                                        value={formData.email} onChange={handleChange}
-                                        className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl text-gray-900 focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                                        type="email"
+                                        name="email"
+                                        required
+                                        value={formData.email}
+                                        onChange={handleChange}
+                                        className={inputBaseClass}
                                         placeholder="seu.nome@uece.br"
                                     />
                                 </div>
+                                {mode === "register" &&
+                                    formData.email.length > 0 &&
+                                    !formData.email.toLowerCase().endsWith("@uece.br") && (
+                                        <p className="text-xs text-red-500 font-medium flex items-center gap-1.5 mt-1.5 ml-1">
+                                            <AlertCircle size={13} /> O e-mail deve terminar com @uece.br
+                                        </p>
+                                    )}
                             </div>
 
-                            {mode === "register" && formData.email.length > 0 && !formData.email.toLowerCase().endsWith("@uece.br") && (
-                                <p className="text-xs text-red-500 flex items-center gap-1.5 mt-1">
-                                    <AlertCircle size={13} /> O e-mail deve terminar com @uece.br
-                                </p>
-                            )}
-
                             {mode === "register" && (
-                                <div>
+                                <>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">E-mail Secundário (Recuperação)</label>
+                                        <label className="block text-xs font-bold text-slate-600 mb-1.5 ml-1">
+                                            Nome Completo
+                                        </label>
                                         <div className="relative">
-                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                                                <Mail size={20} />
+                                            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                                <User size={18} />
                                             </div>
                                             <input
-                                                type="email" name="emailSecundario"
-                                                value={formData.emailSecundario}
+                                                type="text"
+                                                name="nome"
+                                                required={mode === "register"}
+                                                value={formData.nome}
                                                 onChange={handleChange}
-                                                className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl text-gray-900 focus:ring-2 focus:ring-orange-500 outline-none transition-all"
-                                                placeholder="exemplo@uece.br"
+                                                className={inputBaseClass}
+                                                placeholder="João da Silva"
                                             />
                                         </div>
                                     </div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1 mt-5">Nome Completo</label>
-                                    <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                                            <User size={20} />
+
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-600 mb-1.5 ml-1">
+                                            E-mail Secundário <span className="text-slate-400 font-normal">(para recuperação)</span>
+                                        </label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                                <Mail size={18} />
+                                            </div>
+                                            <input
+                                                type="email"
+                                                name="emailSecundario"
+                                                value={formData.emailSecundario}
+                                                onChange={handleChange}
+                                                className={inputBaseClass}
+                                                placeholder="exemplo@gmail.com"
+                                            />
                                         </div>
-                                        <input
-                                            type="text" name="nome" required={mode === "register"}
-                                            value={formData.nome} onChange={handleChange}
-                                            className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl text-gray-900 focus:ring-2 focus:ring-orange-500 outline-none transition-all"
-                                            placeholder="João da Silva"
-                                        />
                                     </div>
-                                </div>
+                                </>
                             )}
 
                             {(mode === "login" || mode === "register") && (
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+                                    <label className="block text-xs font-bold text-slate-600 mb-1.5 ml-1">
+                                        Senha
+                                    </label>
                                     <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                                            <Lock size={20} />
+                                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                            <Lock size={18} />
                                         </div>
                                         <input
-                                            type="password" name="senha" required
-                                            value={formData.senha} onChange={handleChange}
-                                            className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl text-gray-900 focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                                            type={showPassword ? "text" : "password"}
+                                            name="senha"
+                                            required
+                                            value={formData.senha}
+                                            onChange={handleChange}
+                                            className={`${inputBaseClass} pr-11`}
                                             placeholder="••••••••"
                                         />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword((prev) => !prev)}
+                                            className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                                            tabIndex={-1}
+                                        >
+                                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                        </button>
                                     </div>
                                 </div>
                             )}
 
-                            {mode === "login" && mfaPendente && (
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Código de segurança</label>
-                                    <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                                            <Lock size={20} />
-                                        </div>
-                                        <input
-                                            type="text" name="pin" required maxLength={6} inputMode="numeric"
-                                            value={formData.pin} onChange={handleChange}
-                                            className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl text-gray-900 focus:ring-2 focus:ring-orange-500 outline-none transition-all tracking-[0.3em]"
-                                            placeholder="000000"
-                                        />
-                                    </div>
-                                </div>
-                            )}
                             {mode === "register" && (
                                 <>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Confirmar Senha</label>
+                                        <label className="block text-xs font-bold text-slate-600 mb-1.5 ml-1">
+                                            Confirmar Senha
+                                        </label>
                                         <div className="relative">
-                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                                                <Lock size={20} />
+                                            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                                <Lock size={18} />
                                             </div>
                                             <input
-                                                type="password" name="confirmarSenha"
-                                                value={formData.confirmarSenha} onChange={handleChange}
-                                                className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl text-gray-900 focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                                                type={showConfirmPassword ? "text" : "password"}
+                                                name="confirmarSenha"
+                                                value={formData.confirmarSenha}
+                                                onChange={handleChange}
+                                                className={`${inputBaseClass} pr-11`}
                                                 placeholder="••••••••"
                                             />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowConfirmPassword((prev) => !prev)}
+                                                className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                                                tabIndex={-1}
+                                            >
+                                                {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                            </button>
                                         </div>
                                     </div>
 
                                     {formData.senha.length > 0 && (
-                                        <ul className="space-y-1.5 bg-slate-50 rounded-xl px-4 py-3 border border-slate-100">
+                                        <ul className="space-y-1.5 bg-slate-50 rounded-2xl px-4 py-3 border border-slate-200/70">
                                             {[
                                                 { label: "Mínimo de 6 caracteres", ok: formData.senha.length >= 6 },
-                                                { label: "Letras e números", ok: /[a-zA-Z]/.test(formData.senha) && /[0-9]/.test(formData.senha) },
-                                                { label: "Senhas coincidem", ok: formData.senha === formData.confirmarSenha && formData.confirmarSenha.length > 0 },
+                                                {
+                                                    label: "Letras e números",
+                                                    ok: /[a-zA-Z]/.test(formData.senha) && /[0-9]/.test(formData.senha),
+                                                },
+                                                {
+                                                    label: "Senhas coincidem",
+                                                    ok:
+                                                        formData.senha === formData.confirmarSenha &&
+                                                        formData.confirmarSenha.length > 0,
+                                                },
                                             ].map((r) => (
                                                 <li key={r.label} className="flex items-center gap-2 text-xs">
                                                     <CheckCircle2
                                                         size={14}
-                                                        className={r.ok ? "text-green-500" : "text-slate-300"}
+                                                        className={r.ok ? "text-emerald-500" : "text-slate-300"}
                                                     />
-                                                    <span className={r.ok ? "text-green-700 font-medium" : "text-slate-400"}>
+                                                    <span className={r.ok ? "text-emerald-700 font-semibold" : "text-slate-400"}>
                                                         {r.label}
                                                     </span>
                                                 </li>
@@ -410,43 +625,59 @@ export default function LoginPage() {
                     {mode === "forgot-email-step2" && (
                         <>
                             <div>
-                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">Código de Segurança (PIN) *</label>
+                                <label className="block text-xs font-bold text-slate-600 mb-1.5 ml-1">
+                                    Código de Segurança (PIN) *
+                                </label>
                                 <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
-                                        <Lock size={18} />
+                                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                        <KeyRound size={18} />
                                     </div>
                                     <input
-                                        type="text" name="pin" required
-                                        value={formData.pin} onChange={handleChange}
-                                        className="block w-full pl-12 pr-4 py-4 rounded-2xl bg-gray-50 border-none text-gray-900 font-bold focus:bg-white focus:ring-2 focus:ring-orange-500 outline-none transition-all tracking-[0.3em]"
-                                        placeholder="000000" maxLength={6}
+                                        type="text"
+                                        name="pin"
+                                        required
+                                        maxLength={6}
+                                        inputMode="numeric"
+                                        value={formData.pin}
+                                        onChange={handleChange}
+                                        className={`${inputBaseClass} font-bold tracking-[0.3em]`}
+                                        placeholder="000000"
                                     />
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">Novo E-mail Principal *</label>
+                                <label className="block text-xs font-bold text-slate-600 mb-1.5 ml-1">
+                                    Novo E-mail Principal *
+                                </label>
                                 <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
+                                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                                         <Mail size={18} />
                                     </div>
                                     <input
-                                        type="email" name="novoEmail" required
-                                        value={formData.novoEmail} onChange={handleChange}
-                                        className="block w-full pl-12 pr-4 py-4 rounded-2xl bg-gray-50 border-none text-gray-900 font-medium focus:bg-white focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                                        type="email"
+                                        name="novoEmail"
+                                        required
+                                        value={formData.novoEmail}
+                                        onChange={handleChange}
+                                        className={inputBaseClass}
                                         placeholder="novo@uece.br"
                                     />
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">Novo E-mail Secundário</label>
+                                <label className="block text-xs font-bold text-slate-600 mb-1.5 ml-1">
+                                    Novo E-mail Secundário
+                                </label>
                                 <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
+                                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                                         <Mail size={18} />
                                     </div>
                                     <input
-                                        type="email" name="novoEmailSecundario"
-                                        value={formData.novoEmailSecundario} onChange={handleChange}
-                                        className="block w-full pl-12 pr-4 py-4 rounded-2xl bg-gray-50 border-none text-gray-900 font-medium focus:bg-white focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                                        type="email"
+                                        name="novoEmailSecundario"
+                                        value={formData.novoEmailSecundario}
+                                        onChange={handleChange}
+                                        className={inputBaseClass}
                                         placeholder="opcional@gmail.com"
                                     />
                                 </div>
@@ -458,13 +689,23 @@ export default function LoginPage() {
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="w-full flex justify-center py-3.5 px-4 rounded-xl shadow-sm text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-70 transition-all uppercase tracking-wider"
+                            className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl shadow-lg shadow-orange-500/20 text-xs font-extrabold text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 disabled:opacity-60 disabled:shadow-none transition-all uppercase tracking-widest"
                         >
-                            {isLoading ? <span className="animate-pulse">Processando...</span> : (
-                                mode === "login" ? "Entrar na plataforma" :
-                                    mode === "register" ? "Criar conta" :
-                                        mode === "forgot-email-step2" ? "Confirmar Alteração" :
-                                            "Enviar Código"
+                            {isLoading ? (
+                                <>
+                                    <Loader2 size={16} className="animate-spin" /> Processando...
+                                </>
+                            ) : (
+                                <>
+                                    {mode === "login"
+                                        ? "Entrar na plataforma"
+                                        : mode === "register"
+                                        ? "Criar conta"
+                                        : mode === "forgot-email-step2"
+                                        ? "Confirmar Alteração"
+                                        : "Enviar Código"}
+                                    <ArrowRight size={16} />
+                                </>
                             )}
                         </button>
 
@@ -472,17 +713,31 @@ export default function LoginPage() {
                             <button
                                 type="button"
                                 onClick={handleGuestAccess}
-                                className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl border-2 border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-all"
+                                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl border border-slate-200 bg-slate-50/60 text-xs font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:border-slate-300 transition-all uppercase tracking-wider"
                             >
-                                <Eye size={18} /> Explorar como visitante
+                                <Eye size={16} /> Explorar como visitante
                             </button>
                         )}
                     </div>
                 </form>
 
-                <div className="text-center">
-                    <Link href="/" className="text-sm font-medium text-gray-500 hover:text-orange-600 flex items-center justify-center gap-2">
-                        <ArrowLeft size={16} /> Voltar para o portal
+                {/* Links auxiliares do rodapé */}
+                <div className="pt-2 border-t border-slate-100 flex flex-col items-center gap-2.5 text-center">
+                    {mode !== "forgot-email-step1" && mode !== "forgot-email-step2" && (
+                        <button
+                            type="button"
+                            onClick={() => trocarModo("forgot-email-step1")}
+                            className="text-xs font-semibold text-slate-400 hover:text-orange-600 transition-colors"
+                        >
+                            Perdi acesso ao meu e-mail institucional
+                        </button>
+                    )}
+
+                    <Link
+                        href="/"
+                        className="text-xs font-bold text-slate-500 hover:text-slate-900 inline-flex items-center gap-1.5 transition-colors"
+                    >
+                        <ArrowLeft size={14} /> Voltar para o portal
                     </Link>
                 </div>
             </div>
