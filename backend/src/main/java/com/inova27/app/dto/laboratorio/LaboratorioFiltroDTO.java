@@ -9,7 +9,8 @@ public record LaboratorioFiltroDTO(
         String coordenacao,
         String area,
         Set<NaturezaLaboratorio> naturezas,
-        String vinculado,
+        String curso,
+        String centro,
         String tag,
         Long pessoaId
 ) {}

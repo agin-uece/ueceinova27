@@ -15,7 +15,8 @@ public record LaboratorioResponseDTO(
         String site,//
         String telefone,//
         Set<NaturezaLaboratorio> naturezas,
-        String vinculado,//
+        String curso,
+        String centro,
         LocalTime horarioAbertura,//
         LocalTime horarioFechamento,//
         String urlFoto,//

@@ -54,8 +54,12 @@ public class Laboratorio {
     @Column(name = "natureza")
     private Set<NaturezaLaboratorio> naturezas = new HashSet<>();//CRIAR//OK//EDITAR//
 
+    // Antes era um único campo "vinculado" (curso/centro); o valor antigo foi migrado para "centro"
     @Column(length = 150)
-    private String vinculado;//CRIAR//OK//EDITAR//
+    private String curso;
+
+    @Column(length = 150)
+    private String centro;
 
     private LocalTime horarioAbertura;//CRIAR//OK//EDITAR//
 

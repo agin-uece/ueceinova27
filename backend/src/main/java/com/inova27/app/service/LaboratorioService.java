@@ -100,7 +100,8 @@ public class LaboratorioService {
         lab.setSite(dto.site());
         lab.setTelefone(dto.telefone());
         if (dto.naturezas() != null) lab.setNaturezas(new HashSet<>(dto.naturezas()));
-        lab.setVinculado(dto.vinculado());
+        lab.setCurso(dto.curso());
+        lab.setCentro(dto.centro());
         lab.setHorarioAbertura(dto.horarioAbertura());
         lab.setHorarioFechamento(dto.horarioFechamento());
         lab.setUrlFoto(dto.urlFoto());
@@ -214,7 +215,8 @@ public class LaboratorioService {
         if (dto.descricao() != null) lab.setDescricao(dto.descricao());
         if (dto.coordenacao() != null) lab.setCoordenacao(dto.coordenacao());
         if (dto.area() != null) lab.setArea(dto.area());
-        if (dto.vinculado() != null) lab.setVinculado(dto.vinculado());
+        if (dto.curso() != null) lab.setCurso(dto.curso());
+        if (dto.centro() != null) lab.setCentro(dto.centro());
         if (dto.horarioAbertura() != null) lab.setHorarioAbertura(dto.horarioAbertura());
         if (dto.horarioFechamento() != null) lab.setHorarioFechamento(dto.horarioFechamento());
         if (dto.urlFoto() != null) lab.setUrlFoto(dto.urlFoto());
@@ -296,7 +298,7 @@ public class LaboratorioService {
 
         return new LaboratorioResponseDTO(
                 lab.getId(), lab.getNome(), lab.getDescricao(), lab.getCoordenacao(), lab.getArea(),
-                lab.getEmail(), lab.getSite(), lab.getTelefone(), lab.getNaturezas(), lab.getVinculado(),
+                lab.getEmail(), lab.getSite(), lab.getTelefone(), lab.getNaturezas(), lab.getCurso(), lab.getCentro(),
                 lab.getHorarioAbertura(), lab.getHorarioFechamento(), lab.getUrlFoto(), lab.getLocalizacao(),
                 lab.getParcerias(), lab.getInfraestrutura(), lab.getTags(), nomesPessoas, lab.getUserInclusaoId(),
                 lab.getInstagram(),lab.getResolucao(),lab.getQtdPessoas(),lab.getQtdMestrando(),lab.getQtdDoutorandos(),lab.getQtdPosDoc()

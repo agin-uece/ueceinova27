@@ -19,7 +19,7 @@ class StartupCnpjValidacaoTest {
     private static final Validator VALIDATOR = Validation.buildDefaultValidatorFactory().getValidator();
 
     private static StartupCreateDTO criar(String cnpj) {
-        return new StartupCreateDTO("Startup", null, null, null, null, null, null, null, null, null, cnpj, null, null);
+        return new StartupCreateDTO("Startup", null, null, null, null, null, null, null, 1L, null, cnpj, null, null);
     }
 
     private static StartupUpdateDTO atualizar(String cnpj) {
@@ -28,6 +28,13 @@ class StartupCnpjValidacaoTest {
 
     private static Set<String> erros(Object dto) {
         return VALIDATOR.validate(dto).stream().map(ConstraintViolation::getMessage).collect(Collectors.toSet());
+    }
+
+    @Test
+    @DisplayName("Cadastro sem incubação é recusado")
+    void cadastroSemIncubacao() {
+        var dto = new StartupCreateDTO("Startup", null, null, null, null, null, null, null, null, null, "11222333000181", null, null);
+        assertThat(erros(dto)).containsExactly("A incubação é obrigatória.");
     }
 
     @ParameterizedTest(name = "válido: \"{0}\"")
