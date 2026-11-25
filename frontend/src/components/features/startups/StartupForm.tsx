@@ -1,13 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
     Save, Info, Globe, Mail, Phone, AtSign,
     Image as ImageIcon, Check, Layers, Loader2, AlertCircle
 } from "lucide-react";
 import { FormGroup } from "@/components/ui/FormGroup";
-
-const STATUS_OPCOES = ["INCUBADA", "ASSOCIADA", "PRE_INCUBADA"];
+import { Incubacao } from "@/types/entidades";
 
 interface StartupFormProps {
     initialData?: any;
@@ -15,7 +14,6 @@ interface StartupFormProps {
     isLoading: boolean;
 }
 
-// Formata apenas números no padrão 00.000.000/0000-00 (máx. 14 dígitos / 18 chars)
 const formatarCNPJ = (valor: string) => {
     const apenasNumeros = valor.replace(/\D/g, "").slice(0, 14);
     return apenasNumeros
@@ -25,7 +23,6 @@ const formatarCNPJ = (valor: string) => {
         .replace(/(\d{4})(\d)/, "$1-$2");
 };
 
-// Valida tamanho, sequências inválidas e dígitos verificadores
 const validarCNPJ = (cnpj: string) => {
     const numeros = cnpj.replace(/\D/g, "");
     if (numeros.length !== 14) return false;
@@ -56,7 +53,6 @@ const validarCNPJ = (cnpj: string) => {
     return resultado === Number(digitos.charAt(1));
 };
 
-// Retorna a data local atual no formato YYYY-MM-DD (evitando problemas de fuso horário UTC)
 const obterDataHojeLocal = () => {
     const hoje = new Date();
     const ano = hoje.getFullYear();
@@ -66,6 +62,9 @@ const obterDataHojeLocal = () => {
 };
 
 export function StartupForm({ initialData, onSubmit, isLoading }: StartupFormProps) {
+    const [incubacoes, setIncubacoes] = useState<Incubacao[]>([]);
+    const [loadingIncubacoes, setLoadingIncubacoes] = useState(true);
+
     const [formData, setFormData] = useState({
         nome: initialData?.nome || "",
         descricao: initialData?.descricao || "",
@@ -75,7 +74,7 @@ export function StartupForm({ initialData, onSubmit, isLoading }: StartupFormPro
         email: initialData?.email || "",
         telefone: initialData?.telefone || "",
         logo: initialData?.logo || "",
-        status: initialData?.status || "INCUBADA",
+        incubacaoId: (initialData?.incubacaoId ?? null) as number | null,
         fotosInput: initialData?.fotos ? initialData.fotos.join(", ") : "",
         cnpj: initialData?.cnpj ? formatarCNPJ(initialData.cnpj) : "",
         instagram: initialData?.instagram || "",
@@ -84,8 +83,27 @@ export function StartupForm({ initialData, onSubmit, isLoading }: StartupFormPro
 
     const [cnpjErro, setCnpjErro] = useState<string | null>(null);
     const [dataErro, setDataErro] = useState<string | null>(null);
+    const [incubacaoErro, setIncubacaoErro] = useState<string | null>(null);
 
     const dataHoje = obterDataHojeLocal();
+
+    useEffect(() => {
+        const carregarIncubacoes = async () => {
+            try {
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/incubacoes`);
+                if (res.ok) {
+                    const data: Incubacao[] = await res.json();
+                    setIncubacoes(Array.isArray(data) ? data : []);
+                }
+            } catch (error) {
+                console.error("Erro ao carregar opções de incubação:", error);
+            } finally {
+                setLoadingIncubacoes(false);
+            }
+        };
+
+        carregarIncubacoes();
+    }, []);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -137,9 +155,13 @@ export function StartupForm({ initialData, onSubmit, isLoading }: StartupFormPro
             temErro = true;
         }
 
+        if (formData.incubacaoId === null) {
+            setIncubacaoErro("Selecione uma opção de incubação.");
+            temErro = true;
+        }
+
         if (temErro) return;
 
-        // Converte a string de fotos em Array
         const fotosArray = formData.fotosInput
             .split(",")
             .map((f: string) => f.trim())
@@ -150,6 +172,7 @@ export function StartupForm({ initialData, onSubmit, isLoading }: StartupFormPro
             cnpj: formData.cnpj.replace(/\D/g, ""),
             fotos: fotosArray,
             dataFundacao: formData.dataFundacao || null,
+            incubacaoId: formData.incubacaoId,
         };
 
         onSubmit(payload);
@@ -242,17 +265,44 @@ export function StartupForm({ initialData, onSubmit, isLoading }: StartupFormPro
                         <h2 className="font-black uppercase text-xs tracking-widest text-slate-800">Vínculo com o Ecossistema</h2>
                     </div>
                     <div>
-                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Status de Incubação</label>
-                        <div className="flex flex-wrap gap-3">
-                            {STATUS_OPCOES.map((st) => (
-                                <button
-                                    key={st} type="button" onClick={() => setFormData(p => ({ ...p, status: st }))}
-                                    className={`px-6 py-2.5 rounded-full text-[10px] font-black transition-all border flex items-center gap-2 uppercase tracking-tighter ${formData.status === st ? "bg-red-600 border-red-600 text-white shadow-md shadow-red-100" : "bg-white border-slate-200 text-slate-400 hover:border-red-400"}`}
-                                >
-                                    {formData.status === st && <Check size={14} />} {st}
-                                </button>
-                            ))}
-                        </div>
+                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">
+                            Incubação *
+                        </label>
+                        {loadingIncubacoes ? (
+                            <div className="flex items-center gap-2 text-xs text-slate-400 py-2">
+                                <Loader2 size={15} className="animate-spin" /> Carregando opções...
+                            </div>
+                        ) : incubacoes.length > 0 ? (
+                            <div className="flex flex-wrap gap-3">
+                                {incubacoes.map((inc) => {
+                                    const selected = formData.incubacaoId === inc.id;
+                                    return (
+                                        <button
+                                            key={inc.id}
+                                            type="button"
+                                            onClick={() => {
+                                                setFormData(p => ({ ...p, incubacaoId: inc.id }));
+                                                if (incubacaoErro) setIncubacaoErro(null);
+                                            }}
+                                            className={`px-6 py-2.5 rounded-full text-[10px] font-black transition-all border flex items-center gap-2 uppercase tracking-tighter ${
+                                                selected
+                                                    ? "bg-red-600 border-red-600 text-white shadow-md shadow-red-100"
+                                                    : "bg-white border-slate-200 text-slate-400 hover:border-red-400"
+                                            }`}
+                                        >
+                                            {selected && <Check size={14} />} {inc.nome}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <p className="text-xs text-slate-400 italic">Nenhuma opção de incubação disponível.</p>
+                        )}
+                        {incubacaoErro && (
+                            <p className="mt-2 text-xs font-semibold text-red-600 flex items-center gap-1.5">
+                                <AlertCircle size={14} /> {incubacaoErro}
+                            </p>
+                        )}
                     </div>
                 </section>
             </div>

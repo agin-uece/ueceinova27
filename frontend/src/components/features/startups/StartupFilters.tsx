@@ -1,16 +1,15 @@
 import { Filter, ChevronUp, ChevronDown, RotateCcw, Search, Loader2 } from "lucide-react";
-
-// Enum importado ou declarado aqui se for específico desta tela
-const STATUS_OPCOES = ["INCUBADA", "ASSOCIADA", "PRE_INCUBADA"];
+import { Incubacao } from "@/types/entidades";
 
 interface StartupFiltersProps {
     isVisible: boolean;
     onToggleVisibility: () => void;
-    filtros: { nome: string; area: string; status: string; dataFundacao: string };
+    filtros: { nome: string; area: string; incubacaoId: string; dataFundacao: string };
     onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
     onClear: () => void;
     onSubmit: (e: React.FormEvent) => void;
     isLoading: boolean;
+    incubacoes: Incubacao[];
 }
 
 export function StartupFilters({
@@ -20,7 +19,8 @@ export function StartupFilters({
     onInputChange,
     onClear,
     onSubmit,
-    isLoading
+    isLoading,
+    incubacoes
 }: StartupFiltersProps) {
     return (
         <>
@@ -61,10 +61,10 @@ export function StartupFilters({
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-tighter mb-2 block">Status na Inova27</label>
-                                    <select name="status" value={filtros.status} onChange={onInputChange} className="w-full px-4 py-3 rounded-xl bg-gray-50 border-none text-sm outline-none cursor-pointer">
-                                        <option value="">Todos os Status</option>
-                                        {STATUS_OPCOES.map(op => <option key={op} value={op}>{op}</option>)}
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-tighter mb-2 block">Incubação</label>
+                                    <select name="incubacaoId" value={filtros.incubacaoId} onChange={onInputChange} className="w-full px-4 py-3 rounded-xl bg-gray-50 border-none text-sm outline-none cursor-pointer">
+                                        <option value="">Todas as opções</option>
+                                        {incubacoes.map(op => <option key={op.id} value={op.id}>{op.nome}</option>)}
                                     </select>
                                 </div>
                                 <div>

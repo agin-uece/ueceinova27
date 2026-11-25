@@ -72,13 +72,21 @@ export function LaboratorioFilters({
                                         {NATUREZA_OPCOES.map((op) => <option key={op} value={op}>{op}</option>)}
                                     </select>
                                 </div>
-                                {/* Vinculado */}
+                                {/* Curso */}
                                 <div>
                                     <div className="flex justify-between items-center mb-2">
-                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">Vinculado a (Centro/Curso)</label>
-                                        {filtros.vinculado && <button type="button" onClick={() => clearField('vinculado')} className="text-[9px] font-bold text-blue-400 hover:text-blue-600 uppercase">Limpar</button>}
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">Curso</label>
+                                        {filtros.curso && <button type="button" onClick={() => clearField('curso')} className="text-[9px] font-bold text-blue-400 hover:text-blue-600 uppercase">Limpar</button>}
                                     </div>
-                                    <input type="text" name="vinculado" value={filtros.vinculado} onChange={onInputChange} className="w-full px-4 py-3 rounded-xl bg-gray-50 border-none text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="Ex: CCT" />
+                                    <input type="text" name="curso" value={filtros.curso} onChange={onInputChange} className="w-full px-4 py-3 rounded-xl bg-gray-50 border-none text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="Ex: Computação" />
+                                </div>
+                                {/* Centro */}
+                                <div>
+                                    <div className="flex justify-between items-center mb-2">
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">Centro</label>
+                                        {filtros.centro && <button type="button" onClick={() => clearField('centro')} className="text-[9px] font-bold text-blue-400 hover:text-blue-600 uppercase">Limpar</button>}
+                                    </div>
+                                    <input type="text" name="centro" value={filtros.centro} onChange={onInputChange} className="w-full px-4 py-3 rounded-xl bg-gray-50 border-none text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="Ex: CCT" />
                                 </div>
                                 {/* Tag */}
                                 <div>

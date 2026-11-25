@@ -43,9 +43,12 @@ export default function PesquisarLaboratoriosPage() {
     const [labToValidate, setLabToValidate] = useState<number | null>(null);
     const [isValidating, setIsValidating] = useState(false);
 
-    const [filtros, setFiltros] = useState({
-        nome: "", coordenacao: "", area: "", vinculado: "", tag: "", naturezas: "", status: ""
-    });
+    const FILTROS_INICIAIS = {
+        nome: "", coordenacao: "", area: "", curso: "", centro: "", tag: "", naturezas: "", status: ""
+    };
+    
+    // dentro do componente:
+    const [filtros, setFiltros] = useState(FILTROS_INICIAIS);
 
     // --- EFEITOS ---
     useEffect(() => {
@@ -87,18 +90,17 @@ export default function PesquisarLaboratoriosPage() {
         }
     };
 
-    const handleBuscar = (page: number = 0) => {
+    const handleBuscar = (page: number = 0, filtrosAtivos = filtros) => {
         setIsViewingMyLabs(false);
         setAdminStatusFilter("");
         const params = new URLSearchParams();
-        Object.entries(filtros).forEach(([key, value]) => {
+        Object.entries(filtrosAtivos).forEach(([key, value]) => {
             if (value !== "" && key !== "status") params.append(key, value.toString());
         });
         params.append("page", page.toString());
         params.append("size", "8");
         performFetch(`${process.env.NEXT_PUBLIC_API_URL}/laboratorios/buscar?${params.toString()}`);
     };
-
     const handleMeusLaboratorios = (page: number = 0) => {
         setIsViewingMyLabs(true);
         setAdminStatusFilter("");
@@ -247,7 +249,10 @@ export default function PesquisarLaboratoriosPage() {
                             onToggleVisibility={() => setIsFilterVisible(!isFilterVisible)}
                             filtros={filtros}
                             onInputChange={(e) => setFiltros(prev => ({ ...prev, [e.target.name]: e.target.value }))}
-                            onClear={() => { setFiltros({ nome: "", coordenacao: "", area: "", vinculado: "", tag: "", naturezas: "", status: "" }); handleBuscar(0); }}
+                            onClear={() => {
+                                setFiltros(FILTROS_INICIAIS);
+                                handleBuscar(0, FILTROS_INICIAIS);
+                            }}
                             onSubmit={(e) => { e.preventDefault(); setIsFilterVisible(false); isViewingMyLabs ? handleMeusLaboratorios(0) : handleBuscar(0); }}
                             isLoading={isLoading}
                         />

@@ -106,7 +106,14 @@ export const SecaoPessoas = ({ data }: { data: any }) => {
 };
 
 export const SecaoStartups = ({ data }: { data: any }) => {
-    const temDadosNegocio = temValor(data.area) || temValor(data.dataFundacao) || temValor(data.email) || temValor(data.telefone) || temValor(data.cnpj) || temValor(data.instagram);
+    const temDadosNegocio =
+        temValor(data.incubacao) ||
+        temValor(data.area) ||
+        temValor(data.dataFundacao) ||
+        temValor(data.email) ||
+        temValor(data.telefone) ||
+        temValor(data.cnpj) ||
+        temValor(data.instagram);
 
     return (
         <div className="space-y-10">
@@ -114,6 +121,7 @@ export const SecaoStartups = ({ data }: { data: any }) => {
                 <section className="bg-white p-8 rounded-[32px] shadow-sm border-2 border-gray-200">
                     <SectionHeader title="Dados do Negócio" icon={Rocket} colorClass={COR.startups.header} />
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {temValor(data.incubacao) && <InfoItem icon={Layers3} label="Incubação" value={data.incubacao} colorClass={COR.startups.icone} />}
                         {temValor(data.cnpj) && <InfoItem icon={Hash} label="CNPJ" value={data.cnpj} colorClass={COR.startups.icone} />}
                         {temValor(data.area) && <InfoItem icon={Briefcase} label="Setor / Área" value={data.area} colorClass={COR.startups.icone} />}
                         {temValor(data.dataFundacao) && <InfoItem icon={CalendarDays} label="Data de Fundação" value={new Date(data.dataFundacao).toLocaleDateString('pt-BR')} colorClass={COR.startups.icone} />}
@@ -123,7 +131,7 @@ export const SecaoStartups = ({ data }: { data: any }) => {
                     </div>
                 </section>
             )}
-
+            
             {data.pessoas?.length > 0 && (
                 <section className="bg-white p-8 rounded-[32px] shadow-sm border-2 border-gray-200">
                     <SectionHeader title="Equipe Responsável" icon={Users} colorClass={COR.startups.header} />
@@ -292,7 +300,8 @@ export const SecaoJogos = ({ data }: { data: any }) => {
 export const SecaoLaboratorios = ({ data, servicos = [] }: { data: any; servicos?: any[] }) => {
     const temClassificacao =
         temValor(data.area) ||
-        temValor(data.vinculado) ||
+        temValor(data.curso) ||
+        temValor(data.centro) ||
         data.qtdPessoas > 0 ||
         data.qtdMestrando > 0 ||
         data.qtdDoutorando > 0 ||
@@ -305,7 +314,8 @@ export const SecaoLaboratorios = ({ data, servicos = [] }: { data: any; servicos
                     <SectionHeader title="Classificação Institucional" icon={TestTube} colorClass={COR.laboratorios.header} />
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {temValor(data.area) && <InfoItem icon={TestTube} label="Área de Atuação" value={data.area} colorClass={COR.laboratorios.icone} />}
-                        {temValor(data.vinculado) && <InfoItem icon={Building2} label="Unidade Vinculada" value={data.vinculado} colorClass={COR.laboratorios.icone} />}
+                        {temValor(data.curso) && <InfoItem icon={GraduationCap} label="Curso" value={data.curso} colorClass={COR.laboratorios.icone} />}
+                        {temValor(data.centro) && <InfoItem icon={Building2} label="Centro" value={data.centro} colorClass={COR.laboratorios.icone} />}
                         {data.qtdPessoas > 0 && (
                             <InfoItem
                                 icon={Users}

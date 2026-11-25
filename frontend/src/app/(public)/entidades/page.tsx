@@ -74,8 +74,8 @@ export default async function EntidadeDetailsPage({ searchParams }: { searchPara
                         </Link>
                         <Tag>{entidade}</Tag>
                         {data.status && <Tag color="bg-red-50 text-red-600 border-red-100">{data.status}</Tag>}
+                        {data.incubacao && <Tag color="bg-red-50 text-red-600 border-red-100">{data.incubacao}</Tag>}
                         {data.papel && <Tag color="bg-indigo-50 text-indigo-600 border-indigo-100">{data.papel.replace('_', ' ')}</Tag>}
-                        {data.natureza && typeof data.natureza === 'string' && <Tag color="bg-purple-50 text-purple-700 border-purple-200">{data.natureza.replace(/_/g, ' ')}</Tag>}
                         
                         {/* RESTAURADO: Array de naturezas de laboratório */}
                         {data.naturezas?.map((nat: string) => <Tag key={nat} color="bg-blue-50 text-blue-700 border-blue-200">{nat.replace(/_/g, ' ')}</Tag>)}

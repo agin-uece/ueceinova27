@@ -57,7 +57,8 @@ export function LaboratorioForm({ initialData, onSubmit, isLoading }: Laboratori
         resolucao: initialData?.resolucao || "",
         telefone: initialData?.telefone || "",
         naturezas: initialData?.naturezas || [] as string[],
-        vinculado: initialData?.vinculado || "",
+        curso: initialData?.curso || "",
+        centro: initialData?.centro || "",
         horarioAbertura: formatTimeForInput(initialData?.horarioAbertura),
         horarioFechamento: formatTimeForInput(initialData?.horarioFechamento),
         urlFoto: initialData?.urlFoto || "",
@@ -163,9 +164,28 @@ export function LaboratorioForm({ initialData, onSubmit, isLoading }: Laboratori
                             </FormGroup>
                         </div>
 
-                        <FormGroup label="Vinculação (Curso/Centro)">
-                            <input type="text" name="vinculado" value={formData.vinculado} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Ex: CCT - Centro de Ciências e Tecnologia" />
-                        </FormGroup>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormGroup label="Curso">
+                                <input
+                                    type="text"
+                                    name="curso"
+                                    value={formData.curso}
+                                    onChange={handleChange}
+                                    className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none"
+                                    placeholder="Ex: Ciência da Computação"
+                                />
+                            </FormGroup>
+                            <FormGroup label="Centro">
+                                <input
+                                    type="text"
+                                    name="centro"
+                                    value={formData.centro}
+                                    onChange={handleChange}
+                                    className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none"
+                                    placeholder="Ex: CCT - Centro de Ciências e Tecnologia"
+                                />
+                            </FormGroup>
+                        </div>
 
                         <FormGroup label="Descrição / Sobre">
                             <textarea name="descricao" rows={4} maxLength={1000} value={formData.descricao} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none" placeholder="Descreva o propósito, estudos e atividades do laboratório..." />
