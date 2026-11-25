@@ -1,8 +1,8 @@
 package com.inova27.app.dto.startup;
 
-import com.inova27.app.model.StatusStartup;
 import com.inova27.app.utils.CnpjUtils;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import org.hibernate.validator.constraints.br.CNPJ;
 
 import java.time.LocalDate;
@@ -19,7 +19,8 @@ public record StartupCreateDTO(
         String telefone,
         String logo,
 
-        StatusStartup status,
+        @NotNull(message = "A incubação é obrigatória.")
+        Long incubacaoId,
 
         Set<String> fotos,
         @NotBlank(message = "O CNPJ é obrigatório.")

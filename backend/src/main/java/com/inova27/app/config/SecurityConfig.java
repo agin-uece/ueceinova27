@@ -43,6 +43,9 @@ public class SecurityConfig {
     @Value("${api.paths.servicos-id}")
     private String pathServicosId;
 
+    @Value("${api.paths.incubacoes-id}")
+    private String pathIncubacoesId;
+
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity httpSecurity,
@@ -111,6 +114,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/servicos").hasRole(ROLE_ADMIN)
                         .requestMatchers(HttpMethod.PUT, pathServicosId).hasRole(ROLE_ADMIN)
                         .requestMatchers(HttpMethod.DELETE, pathServicosId).hasRole(ROLE_ADMIN)
+                        // Leitura pública: o filtro da pesquisa pública de startups precisa da lista
+                        .requestMatchers(HttpMethod.GET, "/incubacoes").permitAll()
+                        .requestMatchers(HttpMethod.GET, pathIncubacoesId).permitAll()
+                        .requestMatchers(HttpMethod.POST, "/incubacoes").hasRole(ROLE_ADMIN)
+                        .requestMatchers(HttpMethod.PUT, pathIncubacoesId).hasRole(ROLE_ADMIN)
+                        .requestMatchers(HttpMethod.DELETE, pathIncubacoesId).hasRole(ROLE_ADMIN)
                         .anyRequest().hasRole(ROLE_ADMIN)
                 )
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)
