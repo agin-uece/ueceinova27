@@ -251,6 +251,17 @@ export function PessoaForm({ initialData, onSubmit, isLoading }: PessoaFormProps
                         <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100">
                             <LinkIcon size={16} className="text-slate-400" /><input type="text" name="site" placeholder="Website / Portfolio" className="bg-transparent outline-none text-xs w-full" value={formData.site} onChange={handleChange} />
                         </div>
+                        <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                            <LinkIcon size={16} className="text-slate-400" />
+                            <input
+                                type="url"
+                                name="linkD"
+                                placeholder="LinkedIn (https://linkedin.com/in/...)"
+                                className="bg-transparent outline-none text-xs w-full"
+                                value={formData.linkD}
+                                onChange={handleChange}
+                            />
+                        </div>
                     </div>
                 </section>
 
