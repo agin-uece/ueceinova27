@@ -28,11 +28,11 @@ public class Servico {
 
     @ManyToMany
     @JoinTable(
-            name = "servico_prestador",
+            name = "servico_laboratorio",
             joinColumns = @JoinColumn(name = "servico_id"),
-            inverseJoinColumns = @JoinColumn(name = "pessoa_id")
+            inverseJoinColumns = @JoinColumn(name = "laboratorio_id")
     )
-    private Set<Pessoa> prestadores = new HashSet<>();
+    private Set<Laboratorio> prestadores = new HashSet<>();
 
     // 🔹 Área de atuação
     @Column(name = "area_atuacao", length = 150)

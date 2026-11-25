@@ -1,7 +1,7 @@
 package com.inova27.app.specification.servico;
 
 import com.inova27.app.dto.servico.ServicoFiltroDTO;
-import com.inova27.app.model.Pessoa;
+import com.inova27.app.model.Laboratorio;
 import com.inova27.app.model.Servico;
 import com.inova27.app.utils.TextoBuscaUtils;
 import org.springframework.data.jpa.domain.Specification;
@@ -21,13 +21,13 @@ public class ServicoSpecification {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            // 🔹 Filtro Relacional: Prestador (ID da Pessoa)
-            if (filtro.pessoaId() != null) {
-                Join<Servico, Pessoa> joinPessoas = root.join("prestadores");
-                predicates.add(cb.equal(joinPessoas.get("id"), filtro.pessoaId()));
+            // Filtro Relacional: Prestador (ID do Laboratório)
+            if (filtro.laboratorioId() != null) {
+                Join<Servico, Laboratorio> joinLaboratorios = root.join("prestadores");
+                predicates.add(cb.equal(joinLaboratorios.get("id"), filtro.laboratorioId()));
             }
 
-            // 🔹 Filtro de Texto: Área de Atuação (Busca parcial, ignorando maiúsculas e acentos)
+            // Filtro de Texto: Área de Atuação (Busca parcial, ignorando maiúsculas e acentos)
             if (filtro.areaAtuacao() != null && !filtro.areaAtuacao().isBlank()) {
                 predicates.add(TextoBuscaUtils.contem(cb, root.get("areaAtuacao"), filtro.areaAtuacao()));
             }

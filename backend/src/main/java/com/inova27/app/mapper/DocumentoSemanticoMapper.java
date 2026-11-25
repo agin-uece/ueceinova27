@@ -248,7 +248,7 @@ public class DocumentoSemanticoMapper {
     public DocumentoSemantico fromServico(Servico s) {
 
         String prestadorNome = (s.getPrestadores() != null && !s.getPrestadores().isEmpty())
-                ? s.getPrestadores().stream().map(Pessoa::getNome).collect(Collectors.joining(", "))
+                ? s.getPrestadores().stream().map(Laboratorio::getNome).collect(Collectors.joining(", "))
                 : "Não especificado";
 
         String descricao = "Serviço na área de " + safe(s.getAreaAtuacao()) +

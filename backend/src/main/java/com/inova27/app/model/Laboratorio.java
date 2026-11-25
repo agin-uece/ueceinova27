@@ -86,6 +86,9 @@ public class Laboratorio {
     @OneToMany(mappedBy = "laboratorio")
     private Set<Pessoa> pessoas = new HashSet<>();//CRIAR//NAOO!!
 
+    @ManyToMany(mappedBy = "prestadores")
+    private Set<Servico> servicos = new HashSet<>();
+
     private String instagram;
 
     private String resolucao;

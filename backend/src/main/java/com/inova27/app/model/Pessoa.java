@@ -89,10 +89,6 @@ public class Pessoa {
     )
     private Set<Protecao> protecoes = new HashSet<>();
 
-    // 🔹 NOVO: Relacionamento N:N (Pessoa <-> Servico) mapeado pela tabela servicos
-    @ManyToMany(mappedBy = "prestadores")
-    private Set<Servico> servicos = new HashSet<>();
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "laboratorio_id")
     private Laboratorio laboratorio;
