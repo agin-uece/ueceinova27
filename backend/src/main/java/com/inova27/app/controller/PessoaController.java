@@ -74,11 +74,6 @@ public class PessoaController {
         return ResponseEntity.ok(resultados);
     }
 
-    @GetMapping("/prestadores")
-    public ResponseEntity<Object> listarPrestadoresAprovados() {
-        return ResponseEntity.ok(service.listarAprovadosComServicos());
-    }
-
     @GetMapping("/pendentes")
     public ResponseEntity<Object> listarPendentes() {
         return ResponseEntity.ok(service.listarPendentes());

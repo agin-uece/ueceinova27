@@ -329,17 +329,13 @@ public class PessoaService {
                 pessoa.getStartups().stream().map(Startup::getNome).collect(Collectors.toSet()) :
                 new HashSet<>();
 
-        Set<String> nomesServicos = pessoa.getServicos() != null ?
-                pessoa.getServicos().stream().map(Servico::getAreaAtuacao).collect(Collectors.toSet()) :
-                new HashSet<>();
-
         return new PessoaResponseDTO(
                 pessoa.getId(), pessoa.getNome(), pessoa.getEmail(), pessoa.getTelefone(),
                 pessoa.getAreaPesquisa(), pessoa.getTitulacao(), pessoa.getInstituicao(),
                 pessoa.getPapel(), pessoa.getSite(), pessoa.getLattesURL(), pessoa.getLinkD(),
                 pessoa.getCurso(), pessoa.getDescricao(), pessoa.getAnoFormacao(), pessoa.getUrlFoto(),
                 nomeLaboratorio, nomesProtecoes, nomesStartups, pessoa.getMatricula(),
-                nomesServicos, pessoa.getUserInclusaoId()
+                pessoa.getUserInclusaoId()
         );
     }
 
@@ -416,14 +412,6 @@ public class PessoaService {
         repository.save(pessoa);
         Long auditUserId = (usuario != null) ? usuario.getId() : null;
         auditoriaService.registrarLog(ENTIDADE_PESSOA, pessoaId, AcaoAuditoria.VINCULO, auditUserId, "Proteção ID " + protecaoId + " vinculada à pessoa.");
-    }
-
-    @Transactional(readOnly = true)
-    public List<PessoaResponseDTO> listarAprovadosComServicos() {
-        return repository.findByStatusAndServicosIsNotEmpty(StatusValidacao.APROVADO)
-                .stream()
-                .map(this::toResponseDTO)
-                .toList();
     }
 
     @Transactional

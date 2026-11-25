@@ -289,7 +289,7 @@ export const SecaoJogos = ({ data }: { data: any }) => {
     );
 };
 
-export const SecaoLaboratorios = ({ data }: { data: any }) => {
+export const SecaoLaboratorios = ({ data, servicos = [] }: { data: any; servicos?: any[] }) => {
     const temClassificacao =
         temValor(data.area) ||
         temValor(data.vinculado) ||
@@ -387,6 +387,19 @@ export const SecaoLaboratorios = ({ data }: { data: any }) => {
                     </div>
                 </section>
             )}
+
+            {servicos.length > 0 && (
+                <section className="bg-white p-8 rounded-[32px] shadow-sm border-2 border-gray-200">
+                    <SectionHeader title="Serviços Oferecidos" icon={Wrench} colorClass={COR.laboratorios.header} />
+                    <div className="flex flex-wrap gap-2">
+                        {servicos.map((s: any) => (
+                            <Tag key={s.id} color={COR.servicos.tag}>
+                                <Wrench size={12} className="inline mr-1" />{s.areaAtuacao}
+                            </Tag>
+                        ))}
+                    </div>
+                </section>
+            )}
         </div>
     );
 };
@@ -395,10 +408,10 @@ export const SecaoServicos = ({ data }: { data: any }) => (
     <div className="space-y-10">
         {data.prestadoresNomes?.length > 0 && (
             <section className="bg-white p-8 rounded-[32px] shadow-sm border-2 border-gray-200">
-                <SectionHeader title="Responsáveis pelo Serviço" icon={Users} colorClass={COR.servicos.header} />
+                <SectionHeader title="Laboratórios Prestadores" icon={Building2} colorClass={COR.servicos.header} />
                 <div className="flex flex-wrap gap-2">
                     {data.prestadoresNomes.map((nome: string) => (
-                        <Tag key={nome} color={COR.servicos.tag}><User size={12} className="inline mr-1" />{nome}</Tag>
+                        <Tag key={nome} color={COR.servicos.tag}><Building2 size={12} className="inline mr-1" />{nome}</Tag>
                     ))}
                 </div>
             </section>

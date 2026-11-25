@@ -27,6 +27,5 @@ public record PessoaResponseDTO(
         Set<String> protecoes,
         Set<String> startups,
         String matricula,
-        Set<String> servicos,
         Long userInclusaoId
 ) {}

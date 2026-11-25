@@ -4,20 +4,21 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeft, Target, Wrench } from "lucide-react";
 
-// 1. Tipagens globais
-import { Servico, SpringPageResponse, PessoaPrestador } from "@/types";
-
-// 2. Componentes Genéricos
+import { Servico, SpringPageResponse } from "@/types";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Pagination } from "@/components/ui/Pagination";
-
-// 3. Componentes da Feature de Serviços
 import { ServicoCard } from "@/components/features/servicos/ServicoCard";
 import { ServicoFilters } from "@/components/features/servicos/ServicoFilters";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SkeletonGrid } from "@/components/ui/SkeletonGrid";
 import { ResultsHeader } from "@/components/ui/ResultsHeader";
 import { useSecureAction } from "@/hooks/useSecureAction";
+import { getAuthSession } from "@/lib/auth";
+
+export interface LaboratorioOption {
+    id: number;
+    nome: string;
+}
 
 export default function PesquisarServicosPage() {
     // --- ESTADOS ---
@@ -26,47 +27,53 @@ export default function PesquisarServicosPage() {
     const [isFilterVisible, setIsFilterVisible] = useState(false);
     const [meta, setMeta] = useState({ total: 0, pages: 0, current: 0 });
 
-    const [pessoas, setPessoas] = useState<PessoaPrestador[]>([]);
+    const [laboratorios, setLaboratorios] = useState<LaboratorioOption[]>([]);
     const [userRole, setUserRole] = useState("");
 
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [servicoToDelete, setServicoToDelete] = useState<number | null>(null);
 
-    // 🔐 Hook MFA para exclusão
     const { execute: executeDelete, isProcessing: isDeleting } = useSecureAction();
 
     const [filtros, setFiltros] = useState({
-        areaAtuacao: "", pessoaId: ""
+        areaAtuacao: "",
+        laboratorioId: ""
     });
 
     // --- EFEITOS ---
     useEffect(() => {
-        const userDataStr = localStorage.getItem("userData");
-        if (userDataStr) {
-            try { setUserRole(JSON.parse(userDataStr).role || ""); } catch (e) { }
+        const session = getAuthSession();
+        if (session.role) {
+            setUserRole(session.role);
         }
 
-        const carregarPessoas = async () => {
+        const carregarLaboratorios = async () => {
             try {
-                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/pessoas/prestadores`);
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/laboratorios`);
                 if (res.ok) {
                     const data = await res.json();
-                    setPessoas(data);
+                    const lista = Array.isArray(data) ? data : data?.content || [];
+                    setLaboratorios(lista.map((lab: any) => ({ id: lab.id, nome: lab.nome })));
                 }
-            } catch (error) { console.error("Erro ao buscar pessoas:", error); }
+            } catch (error) {
+                console.error("Erro ao buscar laboratórios:", error);
+            }
         };
 
-        carregarPessoas();
+        carregarLaboratorios();
         handleBuscar(0);
     }, []);
 
     // --- LÓGICA DA API ---
-    const handleBuscar = async (page: number = 0) => {
+    const handleBuscar = async (
+        page: number = 0,
+        filtrosAtivos = filtros
+    ) => {
         setIsLoading(true);
         try {
             const params = new URLSearchParams();
-            if (filtros.areaAtuacao) params.append("areaAtuacao", filtros.areaAtuacao);
-            if (filtros.pessoaId) params.append("pessoaId", filtros.pessoaId);
+            if (filtrosAtivos.areaAtuacao) params.append("areaAtuacao", filtrosAtivos.areaAtuacao);
+            if (filtrosAtivos.laboratorioId) params.append("laboratorioId", filtrosAtivos.laboratorioId);
             params.append("page", page.toString());
             params.append("size", "8");
 
@@ -91,7 +98,6 @@ export default function PesquisarServicosPage() {
     const confirmarExclusao = async () => {
         if (!servicoToDelete) return;
 
-        // 1. Função fetch que aceita PIN opcional para MFA
         const fetchDelete = async (pin?: string) => {
             const token = localStorage.getItem("userToken");
             const headers: HeadersInit = {};
@@ -104,19 +110,13 @@ export default function PesquisarServicosPage() {
             });
         };
 
-        // 2. Callback de sucesso
         const onSucesso = () => {
             setServicos(prev => prev.filter(s => s.id !== servicoToDelete));
-            setMeta(prev => ({ ...prev, total: prev.total - 1 }));
+            setMeta(prev => ({ ...prev, total: Math.max(0, prev.total - 1) }));
             closeDeleteModal();
         };
 
-        // 3. Executa via useSecureAction (gerencia MFA se necessário)
-        const result = await executeDelete(fetchDelete, onSucesso);
-
-        // 4. Tratamento de erro (sucesso já disparou onSucesso)
-        if (!result.success && result.error) {
-        }
+        await executeDelete(fetchDelete, onSucesso);
     };
 
     // --- HANDLERS E FUNÇÕES AUXILIARES ---
@@ -125,13 +125,14 @@ export default function PesquisarServicosPage() {
         setFiltros(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleSelectPessoa = (id: string) => {
-        setFiltros(prev => ({ ...prev, pessoaId: id }));
+    const handleSelectLaboratorio = (id: string) => {
+        setFiltros(prev => ({ ...prev, laboratorioId: id }));
     };
 
     const handleClearFilters = () => {
-        setFiltros({ areaAtuacao: "", pessoaId: "" });
-        handleBuscar(0);
+        const limpos = { areaAtuacao: "", laboratorioId: "" };
+        setFiltros(limpos);
+        handleBuscar(0, limpos);
     };
 
     const handleSubmitFilters = (e: React.FormEvent) => {
@@ -150,9 +151,6 @@ export default function PesquisarServicosPage() {
         setServicoToDelete(null);
     };
 
-    // ==========================================
-    // RENDERIZAÇÃO
-    // ==========================================
     return (
         <main className="min-h-screen bg-[#F8FAFC]">
             {/* HEADER */}
@@ -172,17 +170,16 @@ export default function PesquisarServicosPage() {
                         </div>
                     </div>
 
-                    {/* COMPONENTE DE FILTROS COM AUTOCOMPLETE ENCAPSULADO */}
                     <ServicoFilters
                         isVisible={isFilterVisible}
                         onToggleVisibility={() => setIsFilterVisible(!isFilterVisible)}
                         filtros={filtros}
                         onInputChange={handleInputChange}
-                        onSelectPessoa={handleSelectPessoa}
+                        onSelectLaboratorio={handleSelectLaboratorio}
                         onClear={handleClearFilters}
                         onSubmit={handleSubmitFilters}
                         isLoading={isLoading}
-                        pessoas={pessoas}
+                        laboratorios={laboratorios}
                     />
                 </div>
             </header>
@@ -215,7 +212,6 @@ export default function PesquisarServicosPage() {
                 )}
             </div>
 
-            {/* COMPONENTE DO MODAL DE EXCLUSÃO */}
             <ConfirmModal
                 isOpen={isDeleteModalOpen}
                 title="Confirmar Exclusão"

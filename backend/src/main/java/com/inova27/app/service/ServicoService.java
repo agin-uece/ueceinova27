@@ -4,9 +4,9 @@ import com.inova27.app.exception.ResourceNotFoundException;
 import com.inova27.app.dto.servico.*;
 import com.inova27.app.mapper.DocumentoSemanticoMapper;
 import com.inova27.app.model.AcaoAuditoria;
-import com.inova27.app.model.Pessoa;
+import com.inova27.app.model.Laboratorio;
 import com.inova27.app.model.Servico;
-import com.inova27.app.repository.PessoaRepository;
+import com.inova27.app.repository.LaboratorioRepository;
 import com.inova27.app.repository.ServicoRepository;
 import com.inova27.app.specification.servico.ServicoSpecification;
 import lombok.RequiredArgsConstructor;
@@ -16,19 +16,21 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class ServicoService {
 
-    // 🔥 CONSTANTES CRIADAS PARA RESOLVER OS AVISOS DO SONARQUBE
     private static final String ENTIDADE_SERVICO = "Servico";
     private static final String MSG_SERVICO_NAO_ENCONTRADO = "Serviço não encontrado";
 
     private final ServicoRepository repository;
-    private final PessoaRepository pessoaRepository;
+    private final LaboratorioRepository laboratorioRepository;
     private final AuditoriaService auditoriaService;
     private final DocumentoSemanticoMapper mapper;
     private final IndexadorSemanticoService indexador;
@@ -36,10 +38,9 @@ public class ServicoService {
     // 🔹 CREATE
     @Transactional
     public ServicoResponseDTO criar(ServicoCreateDTO dto, Long usuarioId) {
-
-        java.util.Set<Long> prestadoresIds = dto.prestadoresIds() != null
-                ? new java.util.HashSet<>(dto.prestadoresIds())
-                : java.util.Collections.emptySet();
+        Set<Long> prestadoresIds = dto.prestadoresIds() != null
+                ? new HashSet<>(dto.prestadoresIds())
+                : Collections.emptySet();
 
         validarDuplicidade(
                 null,
@@ -54,8 +55,8 @@ public class ServicoService {
         Servico servico = new Servico();
 
         if (dto.prestadoresIds() != null && !dto.prestadoresIds().isEmpty()) {
-            List<Pessoa> prestadoresEncontrados = pessoaRepository.findAllById(dto.prestadoresIds());
-            servico.setPrestadores(new java.util.HashSet<>(prestadoresEncontrados));
+            List<Laboratorio> prestadoresEncontrados = laboratorioRepository.findAllById(dto.prestadoresIds());
+            servico.setPrestadores(new HashSet<>(prestadoresEncontrados));
         }
 
         servico.setAreaAtuacao(dto.areaAtuacao());
@@ -67,10 +68,8 @@ public class ServicoService {
         Servico salvo = repository.save(servico);
         ServicoResponseDTO responseDTO = toResponseDTO(salvo);
 
-        // 🛡️ AUDITORIA: Registro de Criação utilizando a constante
         auditoriaService.registrarLog(ENTIDADE_SERVICO, salvo.getId(), AcaoAuditoria.CRIACAO, usuarioId, responseDTO);
 
-        // 🔥 Indexação Semântica
         var doc = mapper.fromServico(salvo);
         indexador.indexar(doc);
 
@@ -98,7 +97,6 @@ public class ServicoService {
     // 🔹 UPDATE
     @Transactional
     public ServicoResponseDTO atualizar(Long id, ServicoUpdateDTO dto, Long usuarioId) {
-
         Servico servico = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(MSG_SERVICO_NAO_ENCONTRADO));
 
@@ -108,15 +106,15 @@ public class ServicoService {
         String novoEmail = dto.email() != null ? dto.email() : servico.getEmail();
         String novoTelefone = dto.telefone() != null ? dto.telefone() : servico.getTelefone();
 
-        java.util.Set<Long> novosPrestadoresIds = dto.prestadoresIds() != null
-                ? new java.util.HashSet<>(dto.prestadoresIds())
-                : servico.getPrestadores().stream().map(Pessoa::getId).collect(Collectors.toSet());
+        Set<Long> novosPrestadoresIds = dto.prestadoresIds() != null
+                ? new HashSet<>(dto.prestadoresIds())
+                : servico.getPrestadores().stream().map(Laboratorio::getId).collect(Collectors.toSet());
 
         validarDuplicidade(id, novaArea, novaDescricao, novoContato, novoEmail, novoTelefone, novosPrestadoresIds);
 
         if (dto.prestadoresIds() != null) {
-            List<Pessoa> prestadoresEncontrados = pessoaRepository.findAllById(dto.prestadoresIds());
-            servico.setPrestadores(new java.util.HashSet<>(prestadoresEncontrados));
+            List<Laboratorio> prestadoresEncontrados = laboratorioRepository.findAllById(dto.prestadoresIds());
+            servico.setPrestadores(new HashSet<>(prestadoresEncontrados));
         }
 
         if (dto.areaAtuacao() != null) servico.setAreaAtuacao(dto.areaAtuacao());
@@ -130,7 +128,6 @@ public class ServicoService {
         var doc = mapper.fromServico(atualizado);
         indexador.indexar(doc);
 
-        // 🛡️ AUDITORIA: Registro de Edição utilizando a constante
         auditoriaService.registrarLog(ENTIDADE_SERVICO, atualizado.getId(), AcaoAuditoria.EDICAO, usuarioId, dto);
 
         return toResponseDTO(atualizado);
@@ -142,23 +139,17 @@ public class ServicoService {
         Servico servico = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(MSG_SERVICO_NAO_ENCONTRADO));
 
-        // 🛡️ AUDITORIA: "Tira a foto" do registro antes de apagá-lo
         ServicoResponseDTO retrato = toResponseDTO(servico);
 
         repository.delete(servico);
 
-        // 🛡️ AUDITORIA: Salva o log de deleção utilizando a constante
         auditoriaService.registrarLog(ENTIDADE_SERVICO, id, AcaoAuditoria.DELECAO, usuarioId, retrato);
-
         indexador.removerIndex("servicos", id);
-
     }
 
     // 🔹 BUSCA COM FILTROS PAGINADA
     public Page<ServicoResponseDTO> buscarComFiltrosPaginado(ServicoFiltroDTO filtro, Pageable pageable) {
-
         Specification<Servico> specFinal = ServicoSpecification.comFiltros(filtro);
-
         return repository.findAll(specFinal, pageable).map(this::toResponseDTO);
     }
 
@@ -169,21 +160,21 @@ public class ServicoService {
             String contato,
             String email,
             String telefone,
-            java.util.Set<Long> prestadoresIdsNovo) {
+            Set<Long> prestadoresIdsNovo) {
 
         List<Servico> candidatos = repository.findCandidatosDuplicados(
                 areaAtuacao, descricao, contato, email, telefone
         );
 
-        java.util.Set<Long> idsNovo = prestadoresIdsNovo != null
+        Set<Long> idsNovo = prestadoresIdsNovo != null
                 ? prestadoresIdsNovo
-                : java.util.Collections.emptySet();
+                : Collections.emptySet();
 
         boolean existeDuplicado = candidatos.stream()
                 .filter(s -> idIgnorado == null || !s.getId().equals(idIgnorado))
                 .anyMatch(s -> {
-                    java.util.Set<Long> idsExistente = s.getPrestadores().stream()
-                            .map(Pessoa::getId)
+                    Set<Long> idsExistente = s.getPrestadores().stream()
+                            .map(Laboratorio::getId)
                             .collect(Collectors.toSet());
                     return idsExistente.equals(idsNovo);
                 });
@@ -195,8 +186,8 @@ public class ServicoService {
 
     // 🔹 MAPPER
     private ServicoResponseDTO toResponseDTO(Servico servico) {
-        java.util.Set<String> nomesPrestadores = servico.getPrestadores().stream()
-                .map(Pessoa::getNome)
+        Set<String> nomesPrestadores = servico.getPrestadores().stream()
+                .map(Laboratorio::getNome)
                 .collect(Collectors.toSet());
 
         return new ServicoResponseDTO(

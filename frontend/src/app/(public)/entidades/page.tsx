@@ -21,7 +21,6 @@ export default async function EntidadeDetailsPage({ searchParams }: { searchPara
     if (!entidade || !id) return null;
 
     const data = await getDetalhes(entidade, id);
-    console.log("=== DADOS DA STARTUP RETORNADOS PELA API ===", JSON.stringify(data, null, 2));
     if (!data) return <div className="p-20 text-center font-bold text-red-500 uppercase tracking-widest">Item não encontrado no Inova27.</div>;
 
     // Busca específica para nome de jogo em Proteções
@@ -30,6 +29,24 @@ export default async function EntidadeDetailsPage({ searchParams }: { searchPara
         try {
             const resJogo = await fetch(`${API_INTERNA}/jogos/${data.jogoId}`, { cache: "no-store" });
             if (resJogo.ok) nomeJogoVinculado = (await resJogo.json()).nome;
+        } catch (e) { console.error(e); }
+    }
+
+    // Busca específica para serviços prestados pelo Laboratório
+    let servicosDoLaboratorio: any[] = [];
+    if (entidade === 'laboratorios' && data.nome) {
+        try {
+            const resServicos = await fetch(`${API_INTERNA}/servicos`, { cache: "no-store" });
+            if (resServicos.ok) {
+                const todosServicos = await resServicos.json();
+                const lista = Array.isArray(todosServicos) ? todosServicos : (todosServicos.content || []);
+                servicosDoLaboratorio = lista.filter((s: any) =>
+                    Array.isArray(s.prestadoresNomes) &&
+                    s.prestadoresNomes.some(
+                        (prestador: string) => prestador.trim().toLowerCase() === data.nome.trim().toLowerCase()
+                    )
+                );
+            }
         } catch (e) { console.error(e); }
     }
 
@@ -91,7 +108,7 @@ export default async function EntidadeDetailsPage({ searchParams }: { searchPara
                     {entidade === 'startups' && <SecaoStartups data={data} />}
                     {entidade === 'protecoes' && <SecaoProtecoes data={data} />}
                     {entidade === 'jogos' && <SecaoJogos data={data} />}
-                    {entidade === 'laboratorios' && <SecaoLaboratorios data={data} />}
+                    {entidade === 'laboratorios' && <SecaoLaboratorios data={data} servicos={servicosDoLaboratorio} />}
                     {entidade === 'servicos' && <SecaoServicos data={data} />}
                 </div>
 

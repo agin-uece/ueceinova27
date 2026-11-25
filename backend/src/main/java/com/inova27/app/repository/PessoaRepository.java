@@ -15,5 +15,4 @@ public interface PessoaRepository extends JpaRepository<Pessoa, Long>, JpaSpecif
     boolean existsByEmail(String email);
     List<Pessoa> findByStatus(StatusValidacao status);
     List<Pessoa> findByUserInclusaoId(Long userInclusaoId);
-    List<Pessoa> findByStatusAndServicosIsNotEmpty(StatusValidacao status);
 }
