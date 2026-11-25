@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Gamepad2, CheckCircle2, AlertCircle } from "lucide-react";
+import { ArrowLeft, Gamepad2, CheckCircle2, AlertCircle, Clock } from "lucide-react";
 import { JogoForm } from "@/components/features/jogos/JogoForm";
 import { useSecureAction } from "@/hooks/useSecureAction";
 
@@ -13,6 +13,7 @@ export default function CadastroJogoPage() {
     // Estados para banner de erro no topo e modal de sucesso de 5s
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [isPendingApproval, setIsPendingApproval] = useState(false);
     const [countdown, setCountdown] = useState(5);
 
     const handleCreate = async (formData: any) => {
@@ -33,6 +34,7 @@ export default function CadastroJogoPage() {
         });
 
         if (result.success) {
+            setIsPendingApproval(Boolean(result.isPendingApproval));
             setCountdown(5);
             setShowSuccessModal(true);
         } else if (result.error) {
@@ -69,32 +71,45 @@ export default function CadastroJogoPage() {
 
     return (
         <main className="min-h-screen bg-[#F8FAFC] pb-20 relative">
-            {/* MODAL DE SUCESSO (5 SEGUNDOS) */}
+            {/* MODAL DE SUCESSO / ANÁLISE (5 SEGUNDOS) */}
             {showSuccessModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs px-4">
                     <div className="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl border border-gray-100 text-center space-y-5 animate-in fade-in zoom-in-95 duration-200">
-                        <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto">
-                            <CheckCircle2 size={36} />
+                        <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto ${
+                            isPendingApproval
+                                ? "bg-amber-100 text-amber-600"
+                                : "bg-emerald-100 text-emerald-600"
+                        }`}>
+                            {isPendingApproval ? <Clock size={36} /> : <CheckCircle2 size={36} />}
                         </div>
                         
                         <div className="space-y-2">
                             <h2 className="text-xl font-black text-gray-900 uppercase italic tracking-tight">
-                                Jogo Cadastrado!
+                                {isPendingApproval ? "Aguarde a análise do Administrador" : "Jogo Cadastrado!"}
                             </h2>
                             <p className="text-sm text-gray-500">
-                                O jogo foi registrado com sucesso e já está disponível na plataforma.
+                                {isPendingApproval
+                                    ? "Seu cadastro foi enviado e ficará disponível na plataforma após a aprovação do administrador."
+                                    : "O jogo foi registrado com sucesso e já está disponível na plataforma."}
                             </p>
                         </div>
 
                         <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
                             <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                                Redirecionando em <span className="text-emerald-600 text-sm">{countdown}s</span>...
+                                Redirecionando em{" "}
+                                <span className={`text-sm ${isPendingApproval ? "text-amber-600" : "text-emerald-600"}`}>
+                                    {countdown}s
+                                </span>...
                             </p>
                         </div>
 
                         <button
                             onClick={() => router.push("/jogos/pesquisar")}
-                            className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase tracking-widest rounded-xl transition-colors"
+                            className={`w-full py-3 text-white font-bold text-xs uppercase tracking-widest rounded-xl transition-colors ${
+                                isPendingApproval
+                                    ? "bg-amber-600 hover:bg-amber-700"
+                                    : "bg-emerald-600 hover:bg-emerald-700"
+                            }`}
                         >
                             Ir para listagem agora
                         </button>

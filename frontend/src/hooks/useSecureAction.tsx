@@ -1,6 +1,7 @@
 "use client";
 
 import { useMfa } from "@/components/providers/MfaProvider";
+import { isAdminUser } from "@/lib/auth";
 import { useState } from "react";
 
 export interface SecureActionResult {
@@ -8,6 +9,8 @@ export interface SecureActionResult {
     data?: any;
     error?: string;
     mfaRequired?: boolean;
+    isAdmin?: boolean;
+    isPendingApproval?: boolean;
 }
 
 export function useSecureAction() {
@@ -46,7 +49,6 @@ export function useSecureAction() {
 
                                     const retryErro = retryJson?.erro || retryJson?.error;
 
-                                    // 3. Mensagem específica para PIN errado ou expirado
                                     if (retryErro === "MFA_INVALID") {
                                         throw new Error("Código inválido ou expirado");
                                     }
@@ -60,12 +62,12 @@ export function useSecureAction() {
                                 }
 
                                 const data = await retry.json().catch(() => null);
+                                const isAdmin = isAdminUser();
                                 onSuccess?.();
-                                resolve({ success: true, data });
+                                resolve({ success: true, data, isAdmin, isPendingApproval: !isAdmin });
                             } catch (err: any) {
-                                // Propaga o erro para o modal exibir (e resolve caso necessário)
                                 resolve({ success: false, error: err.message });
-                                throw err; 
+                                throw err;
                             } finally {
                                 setIsProcessing(false);
                             }
@@ -73,7 +75,7 @@ export function useSecureAction() {
                     });
                 }
 
-                // 2. Demais erros 403 (sem permissão) ou outros status HTTP (400, 404, 500...)
+                // 2. Demais erros 403 (sem permissão) ou outros status HTTP
                 const defaultForbiddenMsg =
                     res.status === 403
                         ? "Você não tem permissão para realizar esta ação."
@@ -90,9 +92,10 @@ export function useSecureAction() {
             }
 
             const data = await res.json().catch(() => null);
+            const isAdmin = isAdminUser();
             onSuccess?.();
             setIsProcessing(false);
-            return { success: true, data };
+            return { success: true, data, isAdmin, isPendingApproval: !isAdmin };
         } catch (err: any) {
             setIsProcessing(false);
             return { success: false, error: err.message || "Erro de conexão com o servidor." };

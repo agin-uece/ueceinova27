@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, AlertCircle, Clock } from "lucide-react";
 import { PessoaForm } from "@/components/features/pessoas/PessoaForm";
 import { useSecureAction } from "@/hooks/useSecureAction";
 
@@ -13,13 +13,13 @@ export default function CadastrarPessoaPage() {
     // Estados para banner de erro no topo e modal de sucesso de 5s
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [isPendingApproval, setIsPendingApproval] = useState(false);
     const [countdown, setCountdown] = useState(5);
 
     const handleCreate = async (payload: any) => {
         setErrorMessage(null);
 
-        // 1. Função fetch pura que será executada pelo hook (com possível PIN)
-        const fetchCriar = async (pin?: string) => {
+        const result = await execute(async (pin?: string) => {
             const token = localStorage.getItem("userToken");
             const headers = new Headers();
             headers.append("Content-Type", "application/json");
@@ -31,19 +31,13 @@ export default function CadastrarPessoaPage() {
                 headers: headers,
                 body: JSON.stringify(payload)
             });
-        };
+        });
 
-        // 2. Ação de sucesso centralizada
-        const onSucesso = () => {
+        if (result.success) {
+            setIsPendingApproval(Boolean(result.isPendingApproval));
             setCountdown(5);
             setShowSuccessModal(true);
-        };
-
-        // 3. Executa a requisição
-        const result = await execute(fetchCriar, onSucesso);
-
-        // 4. Tratamento de erro (se o hook retornar sucesso, onSucesso já foi chamado!)
-        if (!result.success && result.error) {
+        } else if (result.error) {
             let mensagem = result.error;
             try {
                 const erroJson = JSON.parse(result.error);
@@ -77,32 +71,45 @@ export default function CadastrarPessoaPage() {
 
     return (
         <main className="min-h-screen bg-slate-50 pb-20 relative">
-            {/* MODAL DE SUCESSO (5 SEGUNDOS) */}
+            {/* MODAL DE SUCESSO / ANÁLISE (5 SEGUNDOS) */}
             {showSuccessModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs px-4">
                     <div className="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl border border-gray-100 text-center space-y-5 animate-in fade-in zoom-in-95 duration-200">
-                        <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto">
-                            <CheckCircle2 size={36} />
+                        <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto ${
+                            isPendingApproval
+                                ? "bg-amber-100 text-amber-600"
+                                : "bg-emerald-100 text-emerald-600"
+                        }`}>
+                            {isPendingApproval ? <Clock size={36} /> : <CheckCircle2 size={36} />}
                         </div>
                         
                         <div className="space-y-2">
                             <h2 className="text-xl font-black text-gray-900 uppercase italic tracking-tight">
-                                Talento Cadastrado!
+                                {isPendingApproval ? "Aguarde a análise do Administrador" : "Talento Cadastrado!"}
                             </h2>
                             <p className="text-sm text-gray-500">
-                                O cadastro foi realizado com sucesso e já está disponível na plataforma.
+                                {isPendingApproval
+                                    ? "Seu cadastro foi enviado e ficará disponível na plataforma após a aprovação do administrador."
+                                    : "O cadastro foi realizado com sucesso e já está disponível na plataforma."}
                             </p>
                         </div>
 
                         <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
                             <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                                Redirecionando em <span className="text-emerald-600 text-sm">{countdown}s</span>...
+                                Redirecionando em{" "}
+                                <span className={`text-sm ${isPendingApproval ? "text-amber-600" : "text-emerald-600"}`}>
+                                    {countdown}s
+                                </span>...
                             </p>
                         </div>
 
                         <button
                             onClick={() => router.push("/pessoas/pesquisar")}
-                            className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase tracking-widest rounded-xl transition-colors"
+                            className={`w-full py-3 text-white font-bold text-xs uppercase tracking-widest rounded-xl transition-colors ${
+                                isPendingApproval
+                                    ? "bg-amber-600 hover:bg-amber-700"
+                                    : "bg-emerald-600 hover:bg-emerald-700"
+                            }`}
                         >
                             Ir para listagem agora
                         </button>
