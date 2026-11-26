@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { User, ArrowLeft } from 'lucide-react';
 
@@ -9,6 +10,10 @@ export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userName, setUserName] = useState("");
+  const pathname = usePathname();
+
+  // Na tela de login (entrar, cadastrar, esqueci minha senha e redefinição) o botão não faz sentido
+  const isTelaLogin = pathname === '/login' || pathname?.startsWith('/login/');
 
   const toggleMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
   const closeMenu = () => setIsMobileMenuOpen(false);
@@ -73,14 +78,15 @@ export function Header() {
                 {userName ? userName.charAt(0) : <User size={18} />}
               </div>
             </Link>
-          ) : (
+          ) : !isTelaLogin && (
             <Link href="/login" className="px-5 py-2 bg-purple-700 hover:bg-purple-600 rounded-full transition-colors font-bold">
               Acessar Plataforma
             </Link>
           )}
         </nav>
 
-        {/* Botão hambúrguer (mobile) */}
+        {/* Botão hambúrguer (mobile) — oculto quando o menu ficaria vazio (deslogado na tela de login) */}
+        {(isLoggedIn || !isTelaLogin) && (
         <button
           onClick={toggleMenu}
           className="md:hidden inline-flex items-center justify-center p-2 rounded-md text-white focus:outline-none"
@@ -95,6 +101,7 @@ export function Header() {
             </svg>
           )}
         </button>
+        )}
       </div>
 
       {/* Menu mobile — apenas lógica de autenticação */}
@@ -108,7 +115,7 @@ export function Header() {
                 </div>
                 <span className="text-sm font-bold text-white capitalize">Meu Painel ({userName})</span>
               </Link>
-            ) : (
+            ) : !isTelaLogin && (
               <Link href="/login" onClick={closeMenu} className="block px-3 py-3 rounded bg-purple-700 hover:bg-purple-600 text-sm font-bold text-center">
                 Acessar Plataforma
               </Link>
