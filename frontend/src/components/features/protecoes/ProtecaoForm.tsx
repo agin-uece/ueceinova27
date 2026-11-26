@@ -160,6 +160,26 @@ export function ProtecaoForm({ initialData, onSubmit, isLoading }: ProtecaoFormP
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
+                    {/* Jogo vinculado (SOFTWARE e DESENHO_INDUSTRIAL) */}
+                    {(formData.natureza === "SOFTWARE" || formData.natureza === "DESENHO_INDUSTRIAL") && (
+                        <div className="col-span-2">
+                            <FormGroup label="Jogo Vinculado">
+                                <select
+                                    value={jogoId ?? ""}
+                                    onChange={(e) => setJogoId(e.target.value ? Number(e.target.value) : null)}
+                                    className={inputClass}
+                                >
+                                    <option value="">Selecione um jogo (opcional)</option>
+                                    {jogos.map(jogo => (
+                                        <option key={jogo.id} value={jogo.id}>
+                                            {jogo.nome}
+                                        </option>
+                                    ))}
+                                </select>
+                            </FormGroup>
+                        </div>
+                    )}
+
                     {/* Título */}
                     <div className="col-span-2">
                         <FormGroup label="Título *">
@@ -269,26 +289,6 @@ export function ProtecaoForm({ initialData, onSubmit, isLoading }: ProtecaoFormP
                                 className={inputClass}
                             />
                         </FormGroup>
-                    )}
-
-                    {/* Jogo vinculado (SOFTWARE e DESENHO_INDUSTRIAL) */}
-                    {(formData.natureza === "SOFTWARE" || formData.natureza === "DESENHO_INDUSTRIAL") && (
-                        <div className="col-span-2">
-                            <FormGroup label="Jogo Vinculado">
-                                <select
-                                    value={jogoId ?? ""}
-                                    onChange={(e) => setJogoId(e.target.value ? Number(e.target.value) : null)}
-                                    className={inputClass}
-                                >
-                                    <option value="">Selecione um jogo (opcional)</option>
-                                    {jogos.map(jogo => (
-                                        <option key={jogo.id} value={jogo.id}>
-                                            {jogo.nome}
-                                        </option>
-                                    ))}
-                                </select>
-                            </FormGroup>
-                        </div>
                     )}
 
                     {/* Nº do Processo */}
