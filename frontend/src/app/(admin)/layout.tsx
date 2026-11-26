@@ -18,9 +18,62 @@ import {
   ChevronRight   // Ícone mais intuitivo
 } from 'lucide-react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
+import type { LucideIcon } from 'lucide-react';
 
 const inter = Inter({ subsets: ['latin'] });
+
+const comecaCom = (pathname: string, base: string) => pathname === base || pathname.startsWith(`${base}/`);
+
+// Define qual item da sidebar representa a página atual
+function itemAtivo(pathname: string): string | null {
+  if (pathname === '/gestao') return 'painel';
+  if (comecaCom(pathname, '/contato')) return 'contato';
+  if (comecaCom(pathname, '/gestao/administracao') || comecaCom(pathname, '/gestao/usuarios')) return 'administracao';
+  if (comecaCom(pathname, '/admin/incubacoes')) return 'incubacoes';
+  // Cadastro/edição dos módulos (/admin/jogos/cadastrar etc.) pertencem a "Módulos - Conteúdo"
+  if (comecaCom(pathname, '/gestao/conteudo') || comecaCom(pathname, '/admin')) return 'conteudo';
+  if (comecaCom(pathname, '/gestao/perfil')) return 'perfil';
+  return null;
+}
+
+interface SidebarLinkProps {
+  href: string;
+  icon: LucideIcon;
+  label: string;
+  ativo: boolean;
+  collapsed: boolean;
+}
+
+function SidebarLink({ href, icon: Icon, label, ativo, collapsed }: SidebarLinkProps) {
+  return (
+    <Link
+      href={href}
+      aria-current={ativo ? 'page' : undefined}
+      title={collapsed ? label : undefined}
+      className={`relative flex items-center gap-3 px-4 py-3 rounded-md transition-colors group ${collapsed ? 'justify-center' : ''} ${
+        ativo ? 'bg-white/15 shadow-inner' : 'hover:bg-white/10'
+      }`}
+    >
+      {/* Indicador da página atual */}
+      <span
+        aria-hidden="true"
+        className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 rounded-r-full bg-orange-400 transition-all duration-300 ${
+          ativo ? 'h-7 opacity-100' : 'h-0 opacity-0'
+        }`}
+      />
+      <Icon
+        size={20}
+        className={`shrink-0 transition-colors ${ativo ? 'text-orange-400' : 'text-gray-400 group-hover:text-white'}`}
+      />
+      {!collapsed && (
+        <span className={`transition-colors ${ativo ? 'font-bold text-white' : 'font-medium text-gray-300 group-hover:text-white'}`}>
+          {label}
+        </span>
+      )}
+    </Link>
+  );
+}
 
 export default function AdminRootLayout({
   children,
@@ -28,6 +81,8 @@ export default function AdminRootLayout({
   children: React.ReactNode;
 }>) {
   const router = useRouter();
+  const pathname = usePathname() ?? '';
+  const ativo = itemAtivo(pathname);
   const [hasToken, setHasToken] = useState(false);
   const [userRole, setUserRole] = useState("");
   const [userName, setUserName] = useState("");
@@ -105,43 +160,21 @@ export default function AdminRootLayout({
             {!sidebarCollapsed && <p className="px-4 text-[10px] font-bold text-purple-300 uppercase tracking-widest opacity-70">Menu Principal</p>}
           </div>
 
-          {/* Painel Principal */}
-
-          <Link href="/gestao" className={`flex items-center gap-3 px-4 py-3 rounded-md hover:bg-slate-800 transition-colors ${sidebarCollapsed ? 'justify-center' : ''}`}>
-            <Compass size={20} className="text-orange-400" />
-            {!sidebarCollapsed && <span className="font-medium text-white">Painel Principal</span>}
-          </Link>
-
-
-          {/* Contato */}
-          <Link href="/contato" className={`flex items-center gap-3 px-4 py-3 rounded-md hover:bg-slate-800 transition-colors group ${sidebarCollapsed ? 'justify-center' : ''}`}>
-            <Headset size={20} className="text-gray-400 group-hover:text-white transition-colors" />
-            {!sidebarCollapsed && <span className="font-medium text-gray-300 group-hover:text-white transition-colors">Contato e Suporte</span>}
-          </Link>
+          <SidebarLink href="/gestao" icon={Compass} label="Painel Principal" ativo={ativo === 'painel'} collapsed={sidebarCollapsed} />
+          <SidebarLink href="/contato" icon={Headset} label="Contato e Suporte" ativo={ativo === 'contato'} collapsed={sidebarCollapsed} />
 
           <div className="pt-4 pb-2">
             {!sidebarCollapsed && <p className="px-4 text-[10px] font-bold text-purple-300 uppercase tracking-widest opacity-70">Gestão</p>}
           </div>
 
-          {/* Administração */}
           {hasToken && userRole === "ADMIN" && (
             <>
-              <Link href="/gestao/administracao" className={`flex items-center gap-3 px-4 py-3 rounded-md hover:bg-slate-800 transition-colors group ${sidebarCollapsed ? 'justify-center' : ''}`}>
-                <Shield size={20} className="text-gray-400 group-hover:text-white transition-colors" />
-                {!sidebarCollapsed && <span className="font-medium text-gray-300 group-hover:text-white transition-colors">Administração</span>}
-              </Link>
-
-              <Link href="/admin/incubacoes" className={`flex items-center gap-3 px-4 py-3 rounded-md hover:bg-slate-800 transition-colors group ${sidebarCollapsed ? 'justify-center' : ''}`}>
-                <Layers size={20} className="text-gray-400 group-hover:text-white transition-colors" />
-                {!sidebarCollapsed && <span className="font-medium text-gray-300 group-hover:text-white transition-colors">Incubações</span>}
-              </Link>
+              <SidebarLink href="/gestao/administracao" icon={Shield} label="Administração" ativo={ativo === 'administracao'} collapsed={sidebarCollapsed} />
+              <SidebarLink href="/admin/incubacoes" icon={Layers} label="Incubações" ativo={ativo === 'incubacoes'} collapsed={sidebarCollapsed} />
             </>
           )}
 
-          <Link href="/gestao/conteudo" className={`flex items-center gap-3 px-4 py-3 rounded-md hover:bg-slate-800 transition-colors group ${sidebarCollapsed ? 'justify-center' : ''}`}>
-            <Layers size={20} className="text-gray-400 group-hover:text-white transition-colors" />
-            {!sidebarCollapsed && <span className="font-medium text-gray-300 group-hover:text-white transition-colors">Módulos - Conteúdo</span>}
-          </Link>
+          <SidebarLink href="/gestao/conteudo" icon={LayoutDashboard} label="Módulos - Conteúdo" ativo={ativo === 'conteudo'} collapsed={sidebarCollapsed} />
         </nav>
 
         {/* Rodapé */}
@@ -161,13 +194,7 @@ export default function AdminRootLayout({
           )}
 
           {hasToken && (
-            <Link
-              href="/gestao/perfil"
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-md text-slate-300 hover:bg-slate-800 hover:text-white transition-all border border-transparent hover:border-slate-700 ${sidebarCollapsed ? 'justify-center' : ''}`}
-            >
-              <UserCog size={20} />
-              {!sidebarCollapsed && <span className="font-medium">Meu Perfil</span>}
-            </Link>
+            <SidebarLink href="/gestao/perfil" icon={UserCog} label="Meu Perfil" ativo={ativo === 'perfil'} collapsed={sidebarCollapsed} />
           )}
 
           {hasToken && (
