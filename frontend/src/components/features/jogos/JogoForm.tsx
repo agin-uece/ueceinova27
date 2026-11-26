@@ -3,12 +3,12 @@
 import { useState } from "react";
 import { Info, ImageIcon, Layers, Globe, Save, Loader2, Plus, X } from "lucide-react";
 import { FormGroup } from "@/components/ui/FormGroup";
+import { FaixaEtariaSelect } from "./FaixaEtariaSelect";
 
-const GENERO_OPCOES = ["ACAO", "AVENTURA", "RPG", "ESTRATEGIA", "ESPORTE", "SIMULACAO"];
-const PLATAFORMA_OPCOES = ["PC", "MOBILE", "CONSOLE", "WEB", "JOGO_FISICO"];
-const TIPO_JOGO_OPCOES = ["ELETRONICO", "FISICO", "HIBRIDO", "MECANICO", "REALIDADE_VIRTUAL", "REALIDADE_AUMENTADA"];
-const ESTAGIO_OPCOES = ["EM_DESENVOLVIMENTO", "FINALIZADO", "INTERROMPIDO"];
-const FAIXA_ETARIA_OPCOES = ["LIVRE", "DEZ", "DOZE", "QUATORZE", "DEZESSEIS", "DEZOITO"];
+const GENERO_OPCOES = ["Ação", "Aventura", "RPG", "Estratégia", "Esporte", "Simulação"];
+const PLATAFORMA_OPCOES = ["PC", "Mobile", "Console", "Web", "Jogo Físico"];
+const TIPO_JOGO_OPCOES = ["Eletrônico", "Físico", "Híbrido", "Mecânico", "Realidade Virtual", "Realidade Aumentada"];
+const ESTAGIO_OPCOES = ["Em Desenvolvimento", "Finalizado", "Interrompido"];
 
 interface JogoFormProps {
     initialData?: any;
@@ -167,10 +167,10 @@ export function JogoForm({ initialData, onSubmit, isLoading }: JogoFormProps) {
                             </select>
                         </FormGroup>
                         <FormGroup label="Faixa Etária">
-                            <select name="faixaEtaria" value={formData.faixaEtaria} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 outline-none">
-                                <option value="">Selecione...</option>
-                                {FAIXA_ETARIA_OPCOES.map(op => <option key={op} value={op}>{op}</option>)}
-                            </select>
+                            <FaixaEtariaSelect
+                                value={formData.faixaEtaria}
+                                onChange={(valor) => setFormData({ ...formData, faixaEtaria: valor })}
+                            />
                         </FormGroup>
                     </div>
                 </section>
