@@ -10,6 +10,40 @@ const TIPO_JOGO_OPCOES = ["ELETRONICO", "FISICO", "HIBRIDO", "MECANICO", "REALID
 const ESTAGIO_OPCOES = ["EM_DESENVOLVIMENTO", "FINALIZADO", "INTERROMPIDO"];
 const FAIXA_ETARIA_OPCOES = ["LIVRE", "DEZ", "DOZE", "QUATORZE", "DEZESSEIS", "DEZOITO"];
 
+const DATA_ISO = /^\d{4}-\d{2}-\d{2}$/;
+
+// Data de hoje no fuso local (toISOString usa UTC e adiantaria o dia à noite no Brasil)
+function hojeLocal(): string {
+    const d = new Date();
+    const mes = String(d.getMonth() + 1).padStart(2, "0");
+    const dia = String(d.getDate()).padStart(2, "0");
+    return `${d.getFullYear()}-${mes}-${dia}`;
+}
+
+function formatarData(iso: string): string {
+    const [ano, mes, dia] = iso.split("-");
+    return `${dia}/${mes}/${ano}`;
+}
+
+type ErrosDatas = { anoDesenvolvimento?: string; dataLancamento?: string };
+
+// Strings YYYY-MM-DD podem ser comparadas diretamente em ordem lexicográfica
+function validarDatas(inicio: string, lancamento: string, hoje: string): ErrosDatas {
+    const erros: ErrosDatas = {};
+    const inicioValido = DATA_ISO.test(inicio);
+
+    if (inicioValido && inicio > hoje) {
+        erros.anoDesenvolvimento =
+            "O início do desenvolvimento não pode ser uma data futura. Informe uma data até hoje.";
+    }
+    if (inicioValido && DATA_ISO.test(lancamento) && lancamento < inicio) {
+        erros.dataLancamento =
+            `A data de lançamento não pode ser anterior ao início do desenvolvimento (${formatarData(inicio)}). ` +
+            "Ajuste uma das datas.";
+    }
+    return erros;
+}
+
 interface JogoFormProps {
     initialData?: any;
     onSubmit: (data: any) => void;
@@ -41,6 +75,12 @@ export function JogoForm({ initialData, onSubmit, isLoading }: JogoFormProps) {
         urlFoto: initialData?.urlFoto || "",
         faixaEtaria: initialData?.faixaEtaria || "",
     });
+
+    const hoje = hojeLocal();
+    const errosDatas = validarDatas(formData.anoDesenvolvimento, formData.dataLancamento, hoje);
+    const inicioDesenvolvimentoMin = DATA_ISO.test(formData.anoDesenvolvimento)
+        ? formData.anoDesenvolvimento
+        : undefined;
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -76,6 +116,17 @@ export function JogoForm({ initialData, onSubmit, isLoading }: JogoFormProps) {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Datas inválidas não seguem para o backend; a mensagem já aparece abaixo do campo
+        if (errosDatas.anoDesenvolvimento || errosDatas.dataLancamento) {
+            const campo = errosDatas.anoDesenvolvimento ? "anoDesenvolvimento" : "dataLancamento";
+            const input = e.currentTarget instanceof HTMLFormElement
+                ? e.currentTarget.querySelector<HTMLInputElement>(`[name="${campo}"]`)
+                : null;
+            input?.scrollIntoView({ behavior: "smooth", block: "center" });
+            input?.focus();
+            return;
+        }
 
         // Caso o usuário tenha digitado algo no input de linguagem e clicado direto em Salvar sem dar Enter
         const pendentes = linguagemInput
@@ -183,11 +234,27 @@ export function JogoForm({ initialData, onSubmit, isLoading }: JogoFormProps) {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FormGroup label="Início do Desenvolvimento">
-                            <input type="date" name="anoDesenvolvimento" value={formData.anoDesenvolvimento} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 outline-none" />
+                        <FormGroup label="Início do Desenvolvimento" error={errosDatas.anoDesenvolvimento}>
+                            <input
+                                type="date"
+                                name="anoDesenvolvimento"
+                                value={formData.anoDesenvolvimento}
+                                onChange={handleChange}
+                                max={hoje}
+                                aria-invalid={Boolean(errosDatas.anoDesenvolvimento)}
+                                className={`w-full px-4 py-3 rounded-xl border bg-gray-50 outline-none ${errosDatas.anoDesenvolvimento ? "border-red-400 bg-red-50" : "border-gray-100"}`}
+                            />
                         </FormGroup>
-                        <FormGroup label="Data de Lançamento">
-                            <input type="date" name="dataLancamento" value={formData.dataLancamento} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 outline-none" />
+                        <FormGroup label="Data de Lançamento" error={errosDatas.dataLancamento}>
+                            <input
+                                type="date"
+                                name="dataLancamento"
+                                value={formData.dataLancamento}
+                                onChange={handleChange}
+                                min={inicioDesenvolvimentoMin}
+                                aria-invalid={Boolean(errosDatas.dataLancamento)}
+                                className={`w-full px-4 py-3 rounded-xl border bg-gray-50 outline-none ${errosDatas.dataLancamento ? "border-red-400 bg-red-50" : "border-gray-100"}`}
+                            />
                         </FormGroup>
                         <FormGroup label="Estágio Atual">
                             <select name="estagioDesenvolvimento" value={formData.estagioDesenvolvimento} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 outline-none">
