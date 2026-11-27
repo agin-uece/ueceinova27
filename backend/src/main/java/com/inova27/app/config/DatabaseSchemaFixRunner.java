@@ -42,6 +42,16 @@ public class DatabaseSchemaFixRunner implements ApplicationRunner {
         } catch (Exception e) {
             log.error("Falha na migração de incubações e curso/centro; nada foi alterado: {}", e.getMessage());
         }
+
+        try {
+            jdbcTemplate.execute("""
+                ALTER TABLE IF EXISTS busca_semantica
+                    ADD COLUMN IF NOT EXISTS indexado BOOLEAN NOT NULL DEFAULT TRUE;
+            """);
+            log.info("Verificação/ajuste da coluna 'indexado' em 'busca_semantica' concluída.");
+        } catch (Exception e) {
+            log.warn("Aviso ao verificar coluna 'indexado' em 'busca_semantica': {}", e.getMessage());
+        }
     }
 
     /*

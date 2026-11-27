@@ -68,7 +68,7 @@ class LaboratorioServiceTest {
             laboratorioService.criar(dto, pesquisador);
 
             verify(solicitacaoService).enviarEmailNotificacaoCriacao(TipoEntidade.LABORATORIO, labPadrao.getNome());
-            verify(indexador, never()).indexar(any());
+            verify(indexador, never()).agendarIndexacao(any());
         }
 
         @Test
@@ -83,7 +83,7 @@ class LaboratorioServiceTest {
 
             laboratorioService.criar(dto, admin);
 
-            verify(indexador).indexar(any());
+            verify(indexador).agendarIndexacao(any());
             verify(solicitacaoService, never()).enviarEmailNotificacaoCriacao(any(), any());
         }
     }
@@ -97,7 +97,7 @@ class LaboratorioServiceTest {
             when(repository.findById(10L)).thenReturn(Optional.of(labPadrao));
             laboratorioService.validarLaboratorio(10L, true, admin);
             assertThat(labPadrao.getStatus()).isEqualTo(StatusValidacao.APROVADO);
-            verify(indexador).indexar(any());
+            verify(indexador).agendarIndexacao(any());
         }
 
         @Test
@@ -106,7 +106,7 @@ class LaboratorioServiceTest {
             when(repository.findById(10L)).thenReturn(Optional.of(labPadrao));
             laboratorioService.validarLaboratorio(10L, false, admin);
             assertThat(labPadrao.getStatus()).isEqualTo(StatusValidacao.REJEITADO);
-            verify(indexador, never()).indexar(any());
+            verify(indexador, never()).agendarIndexacao(any());
         }
     }
 

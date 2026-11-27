@@ -43,7 +43,7 @@ public class BuscaService {
                         ((Number) r[1]).longValue(),
                         (String) r[2],
                         (String) r[3],
-                        ((Number) r[4]).doubleValue()
+                        r[4] != null ? ((Number) r[4]).doubleValue() : 0.0
                 ))
                 .toList();
     }

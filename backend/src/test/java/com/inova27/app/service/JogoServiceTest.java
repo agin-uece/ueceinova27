@@ -90,7 +90,7 @@ class JogoServiceTest {
 
             assertThat(resultado.status()).isEqualTo(StatusValidacao.PENDENTE);
             verify(solicitacaoService).enviarEmailNotificacaoCriacao(TipoEntidade.JOGO, "Novo Jogo");
-            verify(indexador, never()).indexar(any()); // Pendente não vai pro motor de busca
+            verify(indexador, never()).agendarIndexacao(any()); // Pendente não vai pro motor de busca
             verify(auditoriaService).registrarLog(eq("Jogo"), eq(11L), eq(AcaoAuditoria.CRIACAO), eq(2L), any());
         }
 
@@ -111,7 +111,7 @@ class JogoServiceTest {
             assertThat(resultado.status()).isEqualTo(StatusValidacao.APROVADO);
             verify(solicitacaoService, never()).enviarEmailNotificacaoCriacao(any(), any());
             verify(mapper).fromJogo(any(Jogo.class));
-            verify(indexador).indexar(any());
+            verify(indexador).agendarIndexacao(any());
         }
 
         @Test
@@ -163,7 +163,7 @@ class JogoServiceTest {
 
             assertThat(jogoPadrao.getStatus()).isEqualTo(StatusValidacao.APROVADO);
             verify(repository).save(jogoPadrao);
-            verify(indexador).indexar(any());
+            verify(indexador).agendarIndexacao(any());
             verify(auditoriaService).registrarLog(eq("Jogo"), eq(10L), eq(AcaoAuditoria.VALIDACAO), eq(1L), contains("APROVADO"));
         }
 
@@ -176,7 +176,7 @@ class JogoServiceTest {
 
             assertThat(jogoPadrao.getStatus()).isEqualTo(StatusValidacao.REJEITADO);
             verify(repository).save(jogoPadrao);
-            verify(indexador, never()).indexar(any());
+            verify(indexador, never()).agendarIndexacao(any());
             verify(indexador).removerIndex("jogos", 10L); // se já estava na busca, sai
             verify(auditoriaService).registrarLog(eq("Jogo"), eq(10L), eq(AcaoAuditoria.VALIDACAO), eq(1L), contains("REJEITADO"));
         }
@@ -221,7 +221,7 @@ class JogoServiceTest {
             assertThat(resultado.engine()).isEqualTo("Unity");
             assertThat(resultado.linguagens()).containsExactlyInAnyOrder("C#", "HLSL");
             verify(repository).save(jogoPadrao);
-            verify(indexador).indexar(any());
+            verify(indexador).agendarIndexacao(any());
             verify(auditoriaService).registrarLog(eq("Jogo"), eq(10L), eq(AcaoAuditoria.EDICAO), eq(1L), eq(dto));
         }
 

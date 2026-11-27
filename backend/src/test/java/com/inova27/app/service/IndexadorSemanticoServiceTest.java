@@ -1,6 +1,7 @@
 package com.inova27.app.service;
 
 import com.inova27.app.dto.buscasemantica.DocumentoSemantico;
+import com.inova27.app.dto.buscasemantica.IndexacaoSemanticaEvent;
 import com.inova27.app.exception.OllamaIntegrationException;
 import com.inova27.app.repository.BuscaSemanticaRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -10,6 +11,7 @@ import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.Collections;
 import java.util.List;
@@ -27,6 +29,9 @@ class IndexadorSemanticoServiceTest {
 
     @Mock
     private BuscaSemanticaRepository repository;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private IndexadorSemanticoService indexador;
@@ -61,5 +66,39 @@ class IndexadorSemanticoServiceTest {
 
         assertThatThrownBy(() -> indexador.indexar(doc)).isInstanceOf(OllamaIntegrationException.class);
         verifyNoInteractions(repository);
+    }
+
+    @Test
+    @DisplayName("agendarIndexacao publica evento sem chamar o Ollama diretamente")
+    void agendarIndexacaoPublicaEvento() {
+        indexador.agendarIndexacao(doc);
+
+        verify(eventPublisher).publishEvent(new IndexacaoSemanticaEvent(doc));
+        verifyNoInteractions(embeddingService, repository);
+    }
+
+    @Test
+    @DisplayName("agendarIndexacao ignora documento nulo")
+    void agendarIndexacaoIgnoraNulo() {
+        indexador.agendarIndexacao(null);
+
+        verifyNoInteractions(eventPublisher, embeddingService, repository);
+    }
+
+    @Test
+    @DisplayName("marcarNaoIndexado delega ao repositório sem chamar o Ollama")
+    void marcarNaoIndexadoDelegaAoRepositorio() {
+        indexador.marcarNaoIndexado(doc);
+
+        verify(repository).marcarNaoIndexado("jogos", 10L, "Xadrez", "desc", "texto");
+        verifyNoInteractions(embeddingService, eventPublisher);
+    }
+
+    @Test
+    @DisplayName("marcarNaoIndexado ignora documento nulo")
+    void marcarNaoIndexadoIgnoraNulo() {
+        indexador.marcarNaoIndexado(null);
+
+        verifyNoInteractions(repository, embeddingService, eventPublisher);
     }
 }

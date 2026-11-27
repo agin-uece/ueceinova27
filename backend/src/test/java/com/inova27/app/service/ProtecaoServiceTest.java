@@ -90,7 +90,7 @@ class ProtecaoServiceTest {
             assertThat(resultado.nome()).isEqualTo("Algoritmo de Busca Semântica");
 
             verify(mapper).fromProtecao(any(Protecao.class));
-            verify(indexador).indexar(any());
+            verify(indexador).agendarIndexacao(any());
             verify(auditoriaService).registrarLog(eq("Protecao"), eq(10L), eq(AcaoAuditoria.CRIACAO), eq(1L), any(ProtecaoResponseDTO.class));
         }
 
@@ -193,7 +193,7 @@ class ProtecaoServiceTest {
             ProtecaoResponseDTO resultado = protecaoService.atualizar(10L, dto, 2L);
 
             assertThat(resultado.nome()).isEqualTo("Nome Atualizado");
-            verify(indexador).indexar(any());
+            verify(indexador).agendarIndexacao(any());
             verify(auditoriaService).registrarLog(eq("Protecao"), eq(10L), eq(AcaoAuditoria.EDICAO), eq(2L), eq(dto));
         }
 

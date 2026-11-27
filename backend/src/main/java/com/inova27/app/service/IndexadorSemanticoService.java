@@ -2,8 +2,10 @@ package com.inova27.app.service;
 
 import com.inova27.app.exception.OllamaIntegrationException;
 import com.inova27.app.dto.buscasemantica.DocumentoSemantico;
+import com.inova27.app.dto.buscasemantica.IndexacaoSemanticaEvent;
 import com.inova27.app.repository.BuscaSemanticaRepository;
 import com.inova27.app.utils.EmbeddingUtils;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -13,13 +15,44 @@ public class IndexadorSemanticoService {
 
     private final EmbeddingService embeddingService;
     private final BuscaSemanticaRepository repository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public IndexadorSemanticoService(
             EmbeddingService embeddingService,
-            BuscaSemanticaRepository repository
+            BuscaSemanticaRepository repository,
+            ApplicationEventPublisher eventPublisher
     ) {
         this.embeddingService = embeddingService;
         this.repository = repository;
+        this.eventPublisher = eventPublisher;
+    }
+
+    /**
+     * Agenda a geração de embedding (Ollama) e atualização do índice semântico para execução
+     * assíncrona após o commit da transação atual, sem bloquear a resposta ao usuário.
+     */
+    public void agendarIndexacao(DocumentoSemantico doc) {
+        if (doc == null) {
+            return;
+        }
+        eventPublisher.publishEvent(new IndexacaoSemanticaEvent(doc));
+    }
+
+    /**
+     * Marca o documento como não indexado (indexado = false) para que o job periódico
+     * tente gerar o embedding novamente quando o Ollama estiver disponível.
+     */
+    public void marcarNaoIndexado(DocumentoSemantico doc) {
+        if (doc == null) {
+            return;
+        }
+        repository.marcarNaoIndexado(
+                doc.entidade(),
+                doc.idOrigem(),
+                doc.titulo(),
+                doc.descricao(),
+                doc.textoCompleto()
+        );
     }
 
     public void removerIndex(String tipoDocumento, Long id) {

@@ -11,5 +11,6 @@ CREATE TABLE IF NOT EXISTS busca_semantica (
     descricao TEXT,
     texto_completo TEXT,
     embedding vector(1024),
+    indexado BOOLEAN NOT NULL DEFAULT TRUE,
     CONSTRAINT uk_busca_semantica_entidade_origem UNIQUE (entidade, id_origem)
 );

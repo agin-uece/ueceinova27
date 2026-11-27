@@ -94,7 +94,7 @@ class PessoaServiceTest {
 
             assertThat(resultado).isNotNull();
             verify(solicitacaoService).enviarEmailNotificacaoCriacao(TipoEntidade.PESSOA, "Novo");
-            verify(indexador, never()).indexar(any());
+            verify(indexador, never()).agendarIndexacao(any());
             verify(auditoriaService).registrarLog(eq("Pessoa"), eq(15L), eq(AcaoAuditoria.CRIACAO), eq(2L), any());
         }
 
@@ -115,7 +115,7 @@ class PessoaServiceTest {
             assertThat(resultado).isNotNull();
             verify(solicitacaoService, never()).enviarEmailNotificacaoCriacao(any(), any());
             verify(mapper).fromPessoa(any(Pessoa.class));
-            verify(indexador).indexar(any());
+            verify(indexador).agendarIndexacao(any());
         }
 
         @Test
@@ -217,7 +217,7 @@ class PessoaServiceTest {
             PessoaResponseDTO resultado = pessoaService.atualizar(10L, dto, admin);
 
             assertThat(resultado.nome()).isEqualTo("Nome Editado");
-            verify(indexador).indexar(any());
+            verify(indexador).agendarIndexacao(any());
         }
 
         @Test
