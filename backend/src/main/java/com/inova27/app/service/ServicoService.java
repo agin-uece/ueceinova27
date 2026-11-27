@@ -71,7 +71,7 @@ public class ServicoService {
         auditoriaService.registrarLog(ENTIDADE_SERVICO, salvo.getId(), AcaoAuditoria.CRIACAO, usuarioId, responseDTO);
 
         var doc = mapper.fromServico(salvo);
-        indexador.indexar(doc);
+        indexador.agendarIndexacao(doc);
 
         return responseDTO;
     }
@@ -126,7 +126,7 @@ public class ServicoService {
         Servico atualizado = repository.save(servico);
 
         var doc = mapper.fromServico(atualizado);
-        indexador.indexar(doc);
+        indexador.agendarIndexacao(doc);
 
         auditoriaService.registrarLog(ENTIDADE_SERVICO, atualizado.getId(), AcaoAuditoria.EDICAO, usuarioId, dto);
 

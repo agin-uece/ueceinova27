@@ -79,7 +79,7 @@ class ServicoServiceTest {
 
             assertThat(resultado).isNotNull();
             verify(repository).save(any(Servico.class));
-            verify(indexador).indexar(any());
+            verify(indexador).agendarIndexacao(any());
             verify(auditoriaService).registrarLog(eq("Servico"), eq(1L), eq(AcaoAuditoria.CRIACAO), eq(1L), any());
         }
 
@@ -166,7 +166,7 @@ class ServicoServiceTest {
             ServicoResponseDTO resultado = servicoService.atualizar(1L, dto, 1L);
 
             assertThat(resultado).isNotNull();
-            verify(indexador).indexar(any());
+            verify(indexador).agendarIndexacao(any());
             verify(auditoriaService).registrarLog(eq("Servico"), eq(1L), eq(AcaoAuditoria.EDICAO), eq(1L), eq(dto));
         }
 

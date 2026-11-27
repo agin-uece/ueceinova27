@@ -86,9 +86,9 @@ public class StartupService {
 
         Startup salvo = repository.save(startup);
 
-        // Indexação semântica
+        // Indexação semântica assíncrona após o commit
         var doc = mapper.fromStartup(salvo);
-        indexador.indexar(doc);
+        indexador.agendarIndexacao(doc);
 
         StartupResponseDTO responseDTO = toResponseDTO(salvo);
 
@@ -149,7 +149,7 @@ public class StartupService {
 
         Startup atualizada = repository.save(startup);
         var doc = mapper.fromStartup(atualizada);
-        indexador.indexar(doc);
+        indexador.agendarIndexacao(doc);
         // 🛡️ AUDITORIA: Registro de Edição utilizando a constante
         auditoriaService.registrarLog(ENTIDADE_STARTUP, atualizada.getId(), AcaoAuditoria.EDICAO, usuarioId, dto);
         return toResponseDTO(atualizada);

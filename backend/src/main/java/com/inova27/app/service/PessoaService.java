@@ -107,7 +107,7 @@ public class PessoaService {
 
         if (salva.getStatus() == StatusValidacao.APROVADO) {
             var doc = mapper.fromPessoa(salva);
-            indexador.indexar(doc);
+            indexador.agendarIndexacao(doc);
         }
 
         PessoaResponseDTO responseDTO = toResponseDTO(salva);
@@ -182,9 +182,9 @@ public class PessoaService {
 
         if (aprovado) {
             pessoa.setStatus(StatusValidacao.APROVADO);
-            var doc = mapper.fromPessoa(pessoa);
-            indexador.indexar(doc);
             repository.save(pessoa);
+            var doc = mapper.fromPessoa(pessoa);
+            indexador.agendarIndexacao(doc);
         } else {
             pessoa.setStatus(StatusValidacao.REJEITADO);
             repository.save(pessoa);
@@ -259,7 +259,7 @@ public class PessoaService {
         Pessoa updated = repository.save(pessoa);
 
         var doc = mapper.fromPessoa(updated);
-        indexador.indexar(doc);
+        indexador.agendarIndexacao(doc);
 
         auditoriaService.registrarLog(ENTIDADE_PESSOA, updated.getId(), AcaoAuditoria.EDICAO, usuario.getId(), dto);
 

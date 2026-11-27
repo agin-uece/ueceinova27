@@ -45,9 +45,9 @@ public class LaboratorioService {
 
         if (aprovado) {
             lab.setStatus(StatusValidacao.APROVADO);
-            var doc = mapper.fromLaboratorio(lab);
-            indexador.indexar(doc);
             repository.save(lab);
+            var doc = mapper.fromLaboratorio(lab);
+            indexador.agendarIndexacao(doc);
         } else {
             lab.setStatus(StatusValidacao.REJEITADO);
             repository.save(lab);
@@ -133,7 +133,7 @@ public class LaboratorioService {
 
         if (salvo.getStatus() == StatusValidacao.APROVADO) {
             var doc = mapper.fromLaboratorio(salvo);
-            indexador.indexar(doc);
+            indexador.agendarIndexacao(doc);
         }
 
         LaboratorioResponseDTO responseDTO = toResponse(salvo);
@@ -195,7 +195,7 @@ public class LaboratorioService {
 
         if (atualizado.getStatus() == StatusValidacao.APROVADO) {
             var doc = mapper.fromLaboratorio(atualizado);
-            indexador.indexar(doc);
+            indexador.agendarIndexacao(doc);
         }
 
         auditoriaService.registrarLog(ENTIDADE_LABORATORIO, atualizado.getId(), AcaoAuditoria.EDICAO, usuario.getId(), dto);

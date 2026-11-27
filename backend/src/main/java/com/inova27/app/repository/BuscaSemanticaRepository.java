@@ -13,8 +13,8 @@ public interface BuscaSemanticaRepository extends JpaRepository<BuscaSemantica, 
     @org.springframework.data.jpa.repository.Modifying
     @Query(value = """
                 INSERT INTO busca_semantica 
-                (entidade, id_origem, titulo, descricao, texto_completo, embedding)
-                VALUES (:entidade, :idOrigem, :titulo, :descricao, :textoCompleto, CAST(:embedding AS vector))
+                (entidade, id_origem, titulo, descricao, texto_completo, embedding, indexado)
+                VALUES (:entidade, :idOrigem, :titulo, :descricao, :textoCompleto, CAST(:embedding AS vector), TRUE)
             """, nativeQuery = true)
     void salvar(
             @Param("entidade") String entidade,
@@ -24,6 +24,28 @@ public interface BuscaSemanticaRepository extends JpaRepository<BuscaSemantica, 
             @Param("textoCompleto") String textoCompleto,
             @Param("embedding") String  embedding
     );
+
+    @org.springframework.transaction.annotation.Transactional
+    @org.springframework.data.jpa.repository.Modifying
+    @Query(value = """
+                INSERT INTO busca_semantica
+                (entidade, id_origem, titulo, descricao, texto_completo, embedding, indexado)
+                VALUES (:entidade, :idOrigem, :titulo, :descricao, :textoCompleto, NULL, FALSE)
+                ON CONFLICT (entidade, id_origem) DO UPDATE SET
+                    titulo = EXCLUDED.titulo,
+                    descricao = EXCLUDED.descricao,
+                    texto_completo = EXCLUDED.texto_completo,
+                    indexado = FALSE
+            """, nativeQuery = true)
+    void marcarNaoIndexado(
+            @Param("entidade") String entidade,
+            @Param("idOrigem") Long idOrigem,
+            @Param("titulo") String titulo,
+            @Param("descricao") String descricao,
+            @Param("textoCompleto") String textoCompleto
+    );
+
+    List<BuscaSemantica> findByIndexadoFalse();
 
     @org.springframework.transaction.annotation.Transactional
     @org.springframework.data.jpa.repository.Modifying
@@ -75,13 +97,13 @@ public interface BuscaSemanticaRepository extends JpaRepository<BuscaSemantica, 
                     a.id_origem,
                     a.titulo,
                     a.descricao,
-                    1 - (a.embedding <=> a.query_vetor) AS similaridade
+                    COALESCE(1 - (a.embedding <=> a.query_vetor), 0.0) AS similaridade
                 FROM avaliados a
                 WHERE
                     a.titulo_igual
                     OR a.texto_contem
                     OR a.fts
-                    OR 1 - (a.embedding <=> a.query_vetor) > 0.70
+                    OR (a.embedding IS NOT NULL AND 1 - (a.embedding <=> a.query_vetor) > 0.70)
                 ORDER BY
                     CASE
                         WHEN a.titulo_igual THEN 0
@@ -91,7 +113,7 @@ public interface BuscaSemanticaRepository extends JpaRepository<BuscaSemantica, 
                         WHEN a.texto_contem THEN 4
                         ELSE 5
                     END,
-                    a.embedding <=> a.query_vetor ASC
+                    a.embedding <=> a.query_vetor ASC NULLS LAST
                 LIMIT 10
             """, nativeQuery = true)
     List<Object[]> buscarCompleto(@Param("embedding") String embedding, @Param("texto") String texto);

@@ -95,7 +95,7 @@ public class JogoService {
 
         if (salvo.getStatus() == StatusValidacao.APROVADO) {
             var doc = mapper.fromJogo(salvo);
-            indexador.indexar(doc);
+            indexador.agendarIndexacao(doc);
         }
 
         JogoResponseDTO responseDTO = toResponseDTO(salvo);
@@ -113,9 +113,9 @@ public class JogoService {
 
         if (aprovado) {
             jogo.setStatus(StatusValidacao.APROVADO);
-            var doc = mapper.fromJogo(jogo);
-            indexador.indexar(doc);
             repository.save(jogo);
+            var doc = mapper.fromJogo(jogo);
+            indexador.agendarIndexacao(doc);
         } else {
             jogo.setStatus(StatusValidacao.REJEITADO);
             repository.save(jogo);
@@ -199,7 +199,7 @@ public class JogoService {
 
         if (atualizado.getStatus() == StatusValidacao.APROVADO) {
             var doc = mapper.fromJogo(atualizado);
-            indexador.indexar(doc);
+            indexador.agendarIndexacao(doc);
         }
 
         auditoriaService.registrarLog(ENTIDADE_JOGO, atualizado.getId(), AcaoAuditoria.EDICAO, usuario.getId(), dto);

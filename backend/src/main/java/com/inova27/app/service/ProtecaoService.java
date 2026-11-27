@@ -79,7 +79,7 @@ public class ProtecaoService {
 
         Protecao salva = repository.save(protecao);
         var doc = mapper.fromProtecao(salva);
-        indexador.indexar(doc);
+        indexador.agendarIndexacao(doc);
         ProtecaoResponseDTO responseDTO = toResponseDTO(salva);
 
         auditoriaService.registrarLog(
@@ -121,7 +121,7 @@ public class ProtecaoService {
         Protecao atualizada = repository.save(protecao);
 
         var doc = mapper.fromProtecao(atualizada);
-        indexador.indexar(doc);
+        indexador.agendarIndexacao(doc);
 
         auditoriaService.registrarLog(
                 ENTIDADE_PROTECAO,

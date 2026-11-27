@@ -34,4 +34,7 @@ public class BuscaSemantica {
     @Column(columnDefinition = "vector(1024)")
     private PGvector embedding;
 
+    @Column(nullable = false)
+    private boolean indexado = true;
+
 }
