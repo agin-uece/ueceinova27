@@ -46,6 +46,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
             new Regra("esqueci-senha", "POST", Set.of("/auth/forgot-password"), false, 5),
             new Regra("redefinir-senha", "POST", Set.of("/auth/reset-password", "/auth/primeiro-acesso"), false, 10),
             new Regra("cadastro-usuario", "POST", Set.of("/auth/register"), false, 10),
+            new Regra("codigo-cadastro", "POST", Set.of("/auth/register/solicitar-codigo"), false, 5),
             new Regra("recuperar-email", "POST", Set.of("/usuarios/recuperar-email/"), true, 10),
             new Regra("contato", "POST", Set.of("/contato"), false, 5),
             new Regra("cadastro-conteudo", "POST", Set.of("/pessoas", "/jogos", "/laboratorios"), false, 20),

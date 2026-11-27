@@ -19,6 +19,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 
 
 @RestController
@@ -52,6 +54,12 @@ public class AuthenticationController {
     public ResponseEntity<Object> login(@RequestBody @Valid AuthenticationDTO data) {
         LoginResponseDTO response = authenticationService.login(data);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/register/solicitar-codigo")
+    public ResponseEntity<Map<String, String>> solicitarCodigoCadastro(@RequestBody @Valid RegisterDTO data) {
+        authenticationService.solicitarCodigoConfirmacaoCadastro(data);
+        return ResponseEntity.ok(Map.of("mensagem", "Código de confirmação enviado para o seu e-mail institucional."));
     }
 
     @PostMapping("/register")

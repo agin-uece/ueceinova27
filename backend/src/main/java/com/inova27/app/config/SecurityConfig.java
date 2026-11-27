@@ -68,6 +68,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/auth/primeiro-acesso").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/register").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/auth/register/solicitar-codigo").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/forgot-password").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/reset-password").permitAll()
                         .requestMatchers(HttpMethod.GET, "/busca").permitAll()

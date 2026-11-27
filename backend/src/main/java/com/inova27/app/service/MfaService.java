@@ -22,6 +22,7 @@ public class MfaService {
     public static final String FINALIDADE_MFA = "MFA";
     public static final String FINALIDADE_RECUPERACAO_EMAIL = "RECUPERACAO_EMAIL";
     public static final String FINALIDADE_CONFIRMACAO_NOVO_EMAIL = "CONFIRMACAO_NOVO_EMAIL";
+    public static final String FINALIDADE_CONFIRMACAO_CADASTRO = "CONFIRMACAO_CADASTRO";
 
     static final Duration VALIDADE = Duration.ofMinutes(10);
     static final Duration INTERVALO_REENVIO = Duration.ofSeconds(60);
