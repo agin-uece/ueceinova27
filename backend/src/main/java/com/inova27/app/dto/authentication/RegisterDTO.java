@@ -18,6 +18,12 @@ public record RegisterDTO(
         UserRole role,
 
         @NotBlank(message = "O email secundário não pode estar vazio")
-        String emailSecundario
+        String emailSecundario,
 
-) {}
+        String codigoConfirmacao
+
+) {
+    public RegisterDTO(String email, String senha, String nome, UserRole role, String emailSecundario) {
+        this(email, senha, nome, role, emailSecundario, null);
+    }
+}

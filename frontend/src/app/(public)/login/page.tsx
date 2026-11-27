@@ -51,11 +51,25 @@ export default function LoginPage() {
     const [mfaError, setMfaError] = useState("");
     const mfaInputRef = useRef<HTMLInputElement>(null);
 
+    // Estados exclusivos do modal de confirmação de e-mail no cadastro
+    const [registerCodeModalOpen, setRegisterCodeModalOpen] = useState(false);
+    const [registerCode, setRegisterCode] = useState("");
+    const [registerCodeError, setRegisterCodeError] = useState("");
+    const [registerCodeInfo, setRegisterCodeInfo] = useState("");
+    const [isResendingCode, setIsResendingCode] = useState(false);
+    const registerCodeInputRef = useRef<HTMLInputElement>(null);
+
     useEffect(() => {
         if (mfaModalOpen) {
             setTimeout(() => mfaInputRef.current?.focus(), 50);
         }
     }, [mfaModalOpen]);
+
+    useEffect(() => {
+        if (registerCodeModalOpen) {
+            setTimeout(() => registerCodeInputRef.current?.focus(), 50);
+        }
+    }, [registerCodeModalOpen]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -73,6 +87,13 @@ export default function LoginPage() {
         setMfaModalOpen(false);
         setMfaError("");
         setFormData((prev) => ({ ...prev, pin: "" }));
+    };
+
+    const fecharModalConfirmacaoCadastro = () => {
+        setRegisterCodeModalOpen(false);
+        setRegisterCode("");
+        setRegisterCodeError("");
+        setRegisterCodeInfo("");
     };
 
     const executarLogin = async (codigoMfa?: string) => {
@@ -150,6 +171,85 @@ export default function LoginPage() {
             return;
         }
         await executarLogin(formData.pin.trim());
+    };
+
+    const handleConfirmRegisterCode = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (registerCode.trim().length < 6) {
+            setRegisterCodeError("Informe o código de 6 dígitos enviado ao seu e-mail institucional.");
+            return;
+        }
+
+        setRegisterCodeError("");
+        setRegisterCodeInfo("");
+        setIsLoading(true);
+
+        try {
+            const payload = {
+                nome: formData.nome,
+                email: formData.email,
+                senha: formData.senha,
+                role: "PROFESSOR",
+                emailSecundario: formData.emailSecundario,
+                codigoConfirmacao: registerCode.trim(),
+            };
+
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/register`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+
+            if (res.ok) {
+                fecharModalConfirmacaoCadastro();
+                setMode("login");
+                setFormData({ ...formData, senha: "", confirmarSenha: "" });
+                setSuccess("Cadastro confirmado e realizado com sucesso! Aguarde a aprovação de um administrador para continuar com o login.");
+            } else {
+                const errorData = await res.json().catch(() => ({}));
+                setRegisterCodeError(errorData.erro || errorData.mensagem || "Código inválido ou expirado. Verifique seu e-mail e tente novamente.");
+            }
+        } catch (err) {
+            console.error(err);
+            setRegisterCodeError("Ocorreu um erro ao se conectar com o servidor.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleResendRegisterCode = async () => {
+        setRegisterCodeError("");
+        setRegisterCodeInfo("");
+        setIsResendingCode(true);
+
+        try {
+            const payload = {
+                nome: formData.nome,
+                email: formData.email,
+                senha: formData.senha,
+                role: "PROFESSOR",
+                emailSecundario: formData.emailSecundario,
+            };
+
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/register/solicitar-codigo`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+
+            if (res.ok) {
+                setRegisterCode("");
+                setRegisterCodeInfo("Novo código de confirmação enviado para o seu e-mail institucional.");
+            } else {
+                const errorData = await res.json().catch(() => ({}));
+                setRegisterCodeError(errorData.erro || errorData.mensagem || "Não foi possível reenviar o código no momento.");
+            }
+        } catch (err) {
+            console.error(err);
+            setRegisterCodeError("Ocorreu um erro ao se conectar com o servidor.");
+        } finally {
+            setIsResendingCode(false);
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -242,18 +342,20 @@ export default function LoginPage() {
                     emailSecundario: formData.emailSecundario,
                 };
 
-                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/register`, {
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/register/solicitar-codigo`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(payload),
                 });
 
                 if (res.ok) {
-                    setMode("login");
-                    setFormData({ ...formData, senha: "", confirmarSenha: "" });
-                    setSuccess("Cadastro realizado com sucesso! Aguarde a aprovação de um administrador para continuar com o login.");
+                    setRegisterCode("");
+                    setRegisterCodeError("");
+                    setRegisterCodeInfo("");
+                    setRegisterCodeModalOpen(true);
                 } else {
-                    setError("Não foi possível realizar o cadastro. Verifique os dados ou se o e-mail já existe.");
+                    const errorData = await res.json().catch(() => ({}));
+                    setError(errorData.erro || errorData.mensagem || "Não foi possível iniciar o cadastro. Verifique os dados ou se o e-mail já existe.");
                 }
             }
         } catch (err) {
@@ -271,6 +373,7 @@ export default function LoginPage() {
         setShowPassword(false);
         setShowConfirmPassword(false);
         fecharModalMfa();
+        fecharModalConfirmacaoCadastro();
     };
 
     const subtituloHeader = {
@@ -367,6 +470,109 @@ export default function LoginPage() {
                                     onClick={fecharModalMfa}
                                     disabled={isLoading}
                                     className="w-full py-2.5 text-xs font-bold text-slate-400 hover:text-slate-600 uppercase tracking-wider transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL DE CONFIRMAÇÃO DE E-MAIL NO CADASTRO */}
+            {registerCodeModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs px-4">
+                    <div className="bg-white rounded-[32px] max-w-md w-full p-8 sm:p-9 shadow-2xl border border-slate-100 space-y-6 relative animate-in fade-in zoom-in-95 duration-200">
+                        <button
+                            type="button"
+                            onClick={fecharModalConfirmacaoCadastro}
+                            disabled={isLoading || isResendingCode}
+                            className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
+                            title="Cancelar"
+                        >
+                            <X size={20} />
+                        </button>
+
+                        <div className="text-center space-y-3">
+                            <div className="w-16 h-16 bg-gradient-to-br from-orange-100 to-amber-50 text-orange-600 rounded-2xl flex items-center justify-center mx-auto shadow-xs border border-orange-200/60">
+                                <Mail size={32} />
+                            </div>
+                            <div className="space-y-1">
+                                <h3 className="text-xl font-black text-slate-900 tracking-tight">
+                                    Confirme seu E-mail
+                                </h3>
+                                <p className="text-sm text-slate-500 leading-relaxed">
+                                    Enviamos um código de confirmação de 6 dígitos para{" "}
+                                    <span className="font-semibold text-slate-800">{formData.email}</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        {registerCodeError && (
+                            <div className="bg-red-50 text-red-600 p-3.5 rounded-2xl flex items-start gap-2.5 text-xs border border-red-100">
+                                <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                                <p className="font-medium">{registerCodeError}</p>
+                            </div>
+                        )}
+
+                        {registerCodeInfo && (
+                            <div className="bg-emerald-50 text-emerald-700 p-3.5 rounded-2xl flex items-start gap-2.5 text-xs border border-emerald-100">
+                                <CheckCircle2 size={16} className="shrink-0 mt-0.5" />
+                                <p className="font-medium">{registerCodeInfo}</p>
+                            </div>
+                        )}
+
+                        <form onSubmit={handleConfirmRegisterCode} className="space-y-5">
+                            <div>
+                                <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 text-center">
+                                    Código de Confirmação
+                                </label>
+                                <input
+                                    ref={registerCodeInputRef}
+                                    type="text"
+                                    inputMode="numeric"
+                                    maxLength={6}
+                                    required
+                                    value={registerCode}
+                                    onChange={(e) => {
+                                        const apenasDigitos = e.target.value.replace(/\D/g, "");
+                                        setRegisterCode(apenasDigitos);
+                                        setRegisterCodeError("");
+                                    }}
+                                    className="block w-full py-4 px-4 text-center text-2xl font-black tracking-[0.45em] bg-slate-50 border-2 border-slate-200 rounded-2xl text-slate-900 focus:bg-white focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all"
+                                    placeholder="000000"
+                                />
+                            </div>
+
+                            <div className="flex flex-col gap-2">
+                                <button
+                                    type="submit"
+                                    disabled={isLoading || isResendingCode || registerCode.length < 6}
+                                    className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl shadow-lg shadow-orange-500/20 text-xs font-bold text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 disabled:opacity-50 disabled:shadow-none transition-all uppercase tracking-widest"
+                                >
+                                    {isLoading ? (
+                                        <>
+                                            <Loader2 size={16} className="animate-spin" /> Confirmando...
+                                        </>
+                                    ) : (
+                                        "Confirmar e Concluir Cadastro"
+                                    )}
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={handleResendRegisterCode}
+                                    disabled={isLoading || isResendingCode}
+                                    className="w-full py-2 text-xs font-bold text-orange-600 hover:text-orange-700 disabled:opacity-50 uppercase tracking-wider transition-colors"
+                                >
+                                    {isResendingCode ? "Reenviando..." : "Reenviar código"}
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={fecharModalConfirmacaoCadastro}
+                                    disabled={isLoading || isResendingCode}
+                                    className="w-full py-2 text-xs font-bold text-slate-400 hover:text-slate-600 uppercase tracking-wider transition-colors"
                                 >
                                     Cancelar
                                 </button>
@@ -521,6 +727,7 @@ export default function LoginPage() {
                                             <input
                                                 type="email"
                                                 name="emailSecundario"
+                                                required={mode === "register"}
                                                 value={formData.emailSecundario}
                                                 onChange={handleChange}
                                                 className={inputBaseClass}

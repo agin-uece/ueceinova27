@@ -6,9 +6,9 @@ import com.inova27.app.dto.servico.ServicoResponseDTO;
 import com.inova27.app.dto.servico.ServicoUpdateDTO;
 import com.inova27.app.mapper.DocumentoSemanticoMapper;
 import com.inova27.app.model.AcaoAuditoria;
-import com.inova27.app.model.Pessoa;
+import com.inova27.app.model.Laboratorio;
 import com.inova27.app.model.Servico;
-import com.inova27.app.repository.PessoaRepository;
+import com.inova27.app.repository.LaboratorioRepository;
 import com.inova27.app.repository.ServicoRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -33,7 +33,7 @@ import static org.mockito.Mockito.*;
 class ServicoServiceTest {
 
     @Mock private ServicoRepository repository;
-    @Mock private PessoaRepository pessoaRepository;
+    @Mock private LaboratorioRepository laboratorioRepository;
     @Mock private AuditoriaService auditoriaService;
     @Mock private DocumentoSemanticoMapper mapper;
     @Mock private IndexadorSemanticoService indexador;
@@ -86,17 +86,17 @@ class ServicoServiceTest {
         @Test
         @DisplayName("Deve criar serviço com prestadores com sucesso")
         void deveCriarServicoComPrestadores() {
-            Pessoa pessoa = new Pessoa();
-            pessoa.setId(10L);
-            pessoa.setNome("Prestador A");
+            Laboratorio laboratorio = new Laboratorio();
+            laboratorio.setId(10L);
+            laboratorio.setNome("Laboratório A");
 
-            when(pessoaRepository.findAllById(Set.of(10L))).thenReturn(List.of(pessoa));
+            when(laboratorioRepository.findAllById(Set.of(10L))).thenReturn(List.of(laboratorio));
             when(repository.save(any(Servico.class))).thenReturn(servicoPadrao);
             when(mapper.fromServico(any())).thenReturn(null);
 
             servicoService.criar(dtoCreate(Set.of(10L)), 1L);
 
-            verify(pessoaRepository).findAllById(Set.of(10L));
+            verify(laboratorioRepository).findAllById(Set.of(10L));
         }
     }
 
@@ -173,17 +173,17 @@ class ServicoServiceTest {
         @Test
         @DisplayName("Deve atualizar prestadores quando fornecidos")
         void deveAtualizarPrestadoresQuandoFornecidos() {
-            Pessoa pessoa = new Pessoa();
-            pessoa.setId(10L);
+            Laboratorio laboratorio = new Laboratorio();
+            laboratorio.setId(10L);
 
             when(repository.findById(1L)).thenReturn(Optional.of(servicoPadrao));
-            when(pessoaRepository.findAllById(Set.of(10L))).thenReturn(List.of(pessoa));
+            when(laboratorioRepository.findAllById(Set.of(10L))).thenReturn(List.of(laboratorio));
             when(repository.save(any())).thenReturn(servicoPadrao);
             when(mapper.fromServico(any())).thenReturn(null);
 
             servicoService.atualizar(1L, dtoUpdate(Set.of(10L)), 1L);
 
-            verify(pessoaRepository).findAllById(Set.of(10L));
+            verify(laboratorioRepository).findAllById(Set.of(10L));
         }
 
         @Test

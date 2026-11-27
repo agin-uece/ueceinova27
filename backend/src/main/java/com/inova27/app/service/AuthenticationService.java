@@ -5,6 +5,7 @@ import com.inova27.app.dto.authentication.AuthenticationDTO;
 import com.inova27.app.dto.authentication.LoginResponseDTO;
 import com.inova27.app.dto.authentication.RegisterDTO;
 import com.inova27.app.dto.usuarios.UsuarioResponseDTO;
+import com.inova27.app.exception.BusinessException;
 import com.inova27.app.exception.PermissaoNegadaException;
 import com.inova27.app.exception.TokenExpiradoException;
 import com.inova27.app.exception.TokenInvalidoException;
@@ -42,6 +43,8 @@ public class AuthenticationService {
 
     private final MfaGuard mfaGuard;
 
+    private final MfaService mfaService;
+
     private final EmailService emailService;
 
     @Value("${app.frontend.url}")
@@ -63,6 +66,27 @@ public class AuthenticationService {
         return new LoginResponseDTO(token, usuario.getNome());
     }
 
+    public void solicitarCodigoConfirmacaoCadastro(RegisterDTO data) {
+        validarEmailPrincipal(data.email());
+        validarEmailSecundario(data.emailSecundario());
+
+        if (data.role() == UserRole.ADMIN) {
+            throw new AccessDeniedException("Apenas administradores podem cadastrar novos administradores.");
+        }
+
+        if (data.senha() == null || data.senha().isBlank()) {
+            throw new IllegalArgumentException("A senha não pode estar vazia para auto-cadastro.");
+        }
+
+        String chave = normalizarChaveEmail(data.email());
+        if (!mfaService.podeReenviar(MfaService.FINALIDADE_CONFIRMACAO_CADASTRO, chave)) {
+            throw new BusinessException("Aguarde 60 segundos antes de solicitar um novo código de confirmação.");
+        }
+
+        String codigo = mfaService.gerarCodigo(MfaService.FINALIDADE_CONFIRMACAO_CADASTRO, chave);
+        enviarEmailCodigoConfirmacaoCadastro(data.email(), data.nome(), codigo);
+    }
+
     @Transactional
     public UsuarioResponseDTO registrar(RegisterDTO data, Authentication authentication, String pin) {
 
@@ -79,6 +103,10 @@ public class AuthenticationService {
         }
 
         UserRole roleFinal = resolverRole(data, usuarioLogado);
+
+        if (!criadoPorAdmin) {
+            validarCodigoConfirmacaoCadastro(data.email(), data.codigoConfirmacao());
+        }
 
         Usuario novoUsuario = new Usuario();
         novoUsuario.setEmail(data.email());
@@ -110,6 +138,8 @@ public class AuthenticationService {
 
         if (criadoPorAdmin) {
             enviarEmailPrimeiroAcesso(novoUsuario, novoUsuario.getTokenPrimeiroAcesso());
+        } else {
+            enviarEmailConfirmacaoCadastro(novoUsuario);
         }
 
         return new UsuarioResponseDTO(novoUsuario);
@@ -214,6 +244,75 @@ public class AuthenticationService {
                     EmailType.WELCOME
             );
         }
+    }
+
+    private void validarCodigoConfirmacaoCadastro(String email, String codigo) {
+        if (codigo == null || codigo.isBlank()) {
+            throw new BusinessException("Código de confirmação de e-mail é obrigatório.");
+        }
+        if (!mfaService.validarCodigo(MfaService.FINALIDADE_CONFIRMACAO_CADASTRO,
+                normalizarChaveEmail(email), codigo.trim())) {
+            throw new BusinessException("Código de confirmação inválido ou expirado.");
+        }
+    }
+
+    private static String normalizarChaveEmail(String email) {
+        return email.trim().toLowerCase();
+    }
+
+    private void enviarEmailCodigoConfirmacaoCadastro(String email, String nome, String codigo) {
+        String htmlMessage = "<div style=\"font-family: Arial, sans-serif; background-color: #f4f7f6; padding: 40px 20px; color: #333;\">"
+                + "<div style=\"max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); text-align: center;\">"
+                + "<h2 style=\"color: #1e3a8a; font-size: 24px; margin-bottom: 10px;\">Confirme seu cadastro no Inova27</h2>"
+                + "<p style=\"font-size: 16px; color: #555; line-height: 1.6; margin-bottom: 25px;\">"
+                + "Olá, <strong>" + HtmlUtils.htmlEscape(nome, "UTF-8") + "</strong>! "
+                + "Use o código abaixo para confirmar seu e-mail e concluir o cadastro da sua conta:"
+                + "</p>"
+                + "<div style=\"font-size: 32px; font-weight: bold; letter-spacing: 10px; color: #f97316; margin-bottom: 25px;\">"
+                + codigo
+                + "</div>"
+                + "<p style=\"font-size: 13px; color: #f97316; font-weight: bold; margin-bottom: 20px;\">"
+                + "Este código é válido por 10 minutos."
+                + "</p>"
+                + "<hr style=\"border: none; border-top: 1px solid #eee; margin: 30px 0;\" />"
+                + "<p style=\"font-size: 12px; color: #999;\">"
+                + "Se você não solicitou este cadastro, ignore este e-mail com segurança."
+                + "</p>"
+                + "</div>"
+                + "</div>";
+
+        emailService.sendEmail(
+                email,
+                "Código de confirmação de cadastro - Inova27",
+                htmlMessage,
+                EmailType.WELCOME
+        );
+    }
+
+    private void enviarEmailConfirmacaoCadastro(Usuario usuario) {
+        String htmlMessage = "<div style=\"font-family: Arial, sans-serif; background-color: #f4f7f6; padding: 40px 20px; color: #333;\">"
+                + "<div style=\"max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); text-align: center;\">"
+                + "<h2 style=\"color: #1e3a8a; font-size: 24px; margin-bottom: 10px;\">Cadastro confirmado no Inova27!</h2>"
+                + "<p style=\"font-size: 16px; color: #555; line-height: 1.6; margin-bottom: 20px;\">"
+                + "Olá, <strong>" + HtmlUtils.htmlEscape(usuario.getNome(), "UTF-8") + "</strong>! "
+                + "Seu cadastro foi realizado e confirmado com sucesso."
+                + "</p>"
+                + "<p style=\"font-size: 15px; color: #555; line-height: 1.6; margin-bottom: 25px;\">"
+                + "Sua conta agora aguarda a aprovação de um administrador para que você possa acessar a plataforma."
+                + "</p>"
+                + "<hr style=\"border: none; border-top: 1px solid #eee; margin: 30px 0;\" />"
+                + "<p style=\"font-size: 12px; color: #999;\">"
+                + "Se você não realizou este cadastro, entre em contato com a equipe AGIN / UECE."
+                + "</p>"
+                + "</div>"
+                + "</div>";
+
+        emailService.sendEmail(
+                usuario.getEmail(),
+                "Cadastro confirmado no Inova27",
+                htmlMessage,
+                EmailType.WELCOME
+        );
     }
 
     private void verificarMfaAdmin(Usuario usuarioLogado, String pin) {

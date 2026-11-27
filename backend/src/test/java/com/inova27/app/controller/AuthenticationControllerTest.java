@@ -25,6 +25,8 @@ import org.springframework.security.authentication.AccountExpiredException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 
+import java.util.Map;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -160,6 +162,18 @@ class AuthenticationControllerTest {
     // ==========================================
     // REGISTER
     // ==========================================
+    @Test
+    @DisplayName("Deve solicitar código de confirmação de cadastro com sucesso")
+    void testSolicitarCodigoCadastro_Sucesso() {
+        RegisterDTO dto = mock(RegisterDTO.class);
+
+        ResponseEntity<Map<String, String>> response = controller.solicitarCodigoCadastro(dto);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).containsEntry("mensagem", "Código de confirmação enviado para o seu e-mail institucional.");
+        verify(authenticationService, times(1)).solicitarCodigoConfirmacaoCadastro(dto);
+    }
+
     @Test
     @DisplayName("Deve registrar usuário com sucesso")
     void testRegistrar_Sucesso() {

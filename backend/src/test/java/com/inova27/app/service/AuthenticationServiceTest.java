@@ -1,5 +1,6 @@
 package com.inova27.app.service;
 
+import com.inova27.app.exception.BusinessException;
 import com.inova27.app.exception.PermissaoNegadaException;
 import com.inova27.app.dto.authentication.AuthenticationDTO;
 import com.inova27.app.dto.authentication.LoginResponseDTO;
@@ -49,6 +50,7 @@ class AuthenticationServiceTest {
     @Mock private TokenService tokenService;
     @Mock private AuditoriaService auditoriaService;
     @Mock private MfaGuard mfaGuard;
+    @Mock private MfaService mfaService;
     @Mock private EmailService emailService;
     @Mock private Authentication authentication;
 
@@ -130,12 +132,13 @@ class AuthenticationServiceTest {
     class Registrar {
 
         @Test
-        @DisplayName("Deve registrar usuário com sucesso via Auto-Cadastro (Sem autenticação)")
+        @DisplayName("Deve registrar usuário com sucesso via Auto-Cadastro com código válido e enviar e-mail de confirmação")
         void deveRegistrarUsuarioViaAutoCadastro() {
-            // Ordem: email, senha, nome, role, emailSecundario
-            RegisterDTO dto = new RegisterDTO("novo@uece.br", "senha123", "Novo Usuário", UserRole.PROFESSOR, "secundario@email.com");
+            // Ordem: email, senha, nome, role, emailSecundario, codigoConfirmacao
+            RegisterDTO dto = new RegisterDTO("novo@uece.br", "senha123", "Novo Usuário", UserRole.PROFESSOR, "secundario@email.com", "654321");
 
             when(repository.findByEmail(dto.email())).thenReturn(Optional.empty());
+            when(mfaService.validarCodigo(MfaService.FINALIDADE_CONFIRMACAO_CADASTRO, "novo@uece.br", "654321")).thenReturn(true);
             when(passwordEncoder.encode(dto.senha())).thenReturn("senha-hash");
             when(repository.save(any(Usuario.class))).thenAnswer(i -> {
                 Usuario u = i.getArgument(0);
@@ -146,9 +149,39 @@ class AuthenticationServiceTest {
             UsuarioResponseDTO resposta = authenticationService.registrar(dto, null, null);
 
             assertThat(resposta).isNotNull();
+            assertThat(resposta.validado()).isFalse();
             verify(repository).save(any(Usuario.class));
             verify(auditoriaService).registrarLog(eq("Usuario"), eq(2L), eq(AcaoAuditoria.CRIACAO), eq(2L), any(Usuario.class));
-            verify(emailService, never()).sendEmail(anyString(), anyString(), anyString(), any());
+            verify(emailService).sendEmail(eq("novo@uece.br"), eq("Cadastro confirmado no Inova27"), contains("Novo Usu"), eq(EmailType.WELCOME));
+        }
+
+        @Test
+        @DisplayName("Deve lançar BusinessException se auto-cadastro não informar código de confirmação")
+        void deveLancarExcecaoQuandoCodigoConfirmacaoAusente() {
+            RegisterDTO dto = new RegisterDTO("novo@uece.br", "senha123", "Novo Usuário", UserRole.PROFESSOR, "secundario@email.com");
+
+            when(repository.findByEmail(dto.email())).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> authenticationService.registrar(dto, null, null))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessage("Código de confirmação de e-mail é obrigatório.");
+
+            verify(repository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Deve lançar BusinessException se código de confirmação do auto-cadastro for inválido")
+        void deveLancarExcecaoQuandoCodigoConfirmacaoInvalido() {
+            RegisterDTO dto = new RegisterDTO("novo@uece.br", "senha123", "Novo Usuário", UserRole.PROFESSOR, "secundario@email.com", "000000");
+
+            when(repository.findByEmail(dto.email())).thenReturn(Optional.empty());
+            when(mfaService.validarCodigo(MfaService.FINALIDADE_CONFIRMACAO_CADASTRO, "novo@uece.br", "000000")).thenReturn(false);
+
+            assertThatThrownBy(() -> authenticationService.registrar(dto, null, null))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessage("Código de confirmação inválido ou expirado.");
+
+            verify(repository, never()).save(any());
         }
 
         @Test
@@ -237,6 +270,67 @@ class AuthenticationServiceTest {
             assertThatThrownBy(() -> authenticationService.registrar(dto, null, null))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("Erro: O e-mail secundário fornecido já é o e-mail principal de outra conta.");
+        }
+    }
+
+    // =========================================================
+    // SOLICITAR CÓDIGO DE CONFIRMAÇÃO DE CADASTRO
+    // =========================================================
+    @Nested
+    @DisplayName("solicitarCodigoConfirmacaoCadastro()")
+    class SolicitarCodigoConfirmacaoCadastro {
+
+        @Test
+        @DisplayName("Deve gerar código e enviar e-mail de confirmação para o e-mail institucional")
+        void deveEnviarCodigoComSucesso() {
+            RegisterDTO dto = new RegisterDTO("novo@uece.br", "senha123", "Novo Usuário", UserRole.PROFESSOR, "secundario@email.com");
+
+            when(repository.findByEmail(dto.email())).thenReturn(Optional.empty());
+            when(repository.findByEmailSecundario(dto.emailSecundario())).thenReturn(Optional.empty());
+            when(repository.findByEmail(dto.emailSecundario())).thenReturn(Optional.empty());
+            when(mfaService.podeReenviar(MfaService.FINALIDADE_CONFIRMACAO_CADASTRO, "novo@uece.br")).thenReturn(true);
+            when(mfaService.gerarCodigo(MfaService.FINALIDADE_CONFIRMACAO_CADASTRO, "novo@uece.br")).thenReturn("987654");
+
+            authenticationService.solicitarCodigoConfirmacaoCadastro(dto);
+
+            verify(emailService).sendEmail(
+                    eq("novo@uece.br"),
+                    eq("Código de confirmação de cadastro - Inova27"),
+                    contains("987654"),
+                    eq(EmailType.WELCOME)
+            );
+        }
+
+        @Test
+        @DisplayName("Deve bloquear reenvio antes do intervalo mínimo")
+        void deveBloquearReenvioAntesDoIntervalo() {
+            RegisterDTO dto = new RegisterDTO("novo@uece.br", "senha123", "Novo Usuário", UserRole.PROFESSOR, "secundario@email.com");
+
+            when(repository.findByEmail(dto.email())).thenReturn(Optional.empty());
+            when(repository.findByEmailSecundario(dto.emailSecundario())).thenReturn(Optional.empty());
+            when(repository.findByEmail(dto.emailSecundario())).thenReturn(Optional.empty());
+            when(mfaService.podeReenviar(MfaService.FINALIDADE_CONFIRMACAO_CADASTRO, "novo@uece.br")).thenReturn(false);
+
+            assertThatThrownBy(() -> authenticationService.solicitarCodigoConfirmacaoCadastro(dto))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("60 segundos");
+
+            verify(emailService, never()).sendEmail(anyString(), anyString(), anyString(), any());
+        }
+
+        @Test
+        @DisplayName("Deve rejeitar solicitação de código para role ADMIN")
+        void deveRejeitarRoleAdmin() {
+            RegisterDTO dto = new RegisterDTO("novo@uece.br", "senha123", "Novo Admin", UserRole.ADMIN, "secundario@email.com");
+
+            when(repository.findByEmail(dto.email())).thenReturn(Optional.empty());
+            when(repository.findByEmailSecundario(dto.emailSecundario())).thenReturn(Optional.empty());
+            when(repository.findByEmail(dto.emailSecundario())).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> authenticationService.solicitarCodigoConfirmacaoCadastro(dto))
+                    .isInstanceOf(AccessDeniedException.class);
+
+            verify(emailService, never()).sendEmail(anyString(), anyString(), anyString(), any());
         }
     }
 
